@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1562339409989.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "F5CD8E02",
+    "lastKnownWriteTime" : 7308604914264011873,
+    "last_content_update" : 1562339409989,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "DEC0E3C8",
+        "caption" : "iDat",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=iDat&cache_key=DEC0E3C8",
+        "displayedObservations" : 1023,
+        "environment" : "",
+        "object" : "iDat",
+        "preview" : 0,
+        "totalObservations" : 1023,
+        "variables" : 16
+    },
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}

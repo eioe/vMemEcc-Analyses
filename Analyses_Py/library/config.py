@@ -1,0 +1,37 @@
+"""
+===========
+Config file
+===========
+Configuration parameters for the study. This should be in a folder called
+``library/`` inside the ``processing/`` directory.
+
+Code inspired by: 
+https://github.com/mne-tools/mne-biomag-group-demo/blob/master/scripts/processing/library/config.py
+
+"""
+
+import os  
+import os.path as op
+import numpy as np
+from pathlib import Path
+
+study_path = '../../'
+
+# Paths:
+path_study = Path(os.getcwd()).parents[1]
+path_data = os.path.join(path_study, 'Data')
+path_postICA = op.join(path_data, 'DataMNE', 'EEG', '05.3_rejICA')
+path_evokeds = op.join(path_data, 'DataMNE', 'EEG', '07_evokeds')
+path_tfrs = op.join(path_data, 'DataMNE', 'EEG', '08_tfr')
+path_epos_sorted = op.join(path_data, 'DataMNE', 'EEG', '07_epos_sorted')
+
+for pp in [path_postICA, path_evokeds, path_epos_sorted]:
+    if not op.exists(pp):
+        os.makedirs(pp)
+        print('creating dir: ' + pp) 
+
+# conditions:
+factor_levels = [load + ecc for load in ['LoadLow', 'LoadHigh',''] 
+                 for ecc in ['EccS', 'EccM', 'EccL','']][:-1] 
+
+factor_dict = {name: factor_levels.index(name) for name in factor_levels}

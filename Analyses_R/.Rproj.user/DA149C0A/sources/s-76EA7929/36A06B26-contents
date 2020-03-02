@@ -1,0 +1,14 @@
+
+dat <- read_csv2('C:/Users/Felix/Seafile/Experiments/CentralKollegs18/centralkollegs18/Data/VRTask/Logfiles/ExpSubjects/S25/S25_PlayerLog_10-03-48-04-03-2019.txt', skip = 6)
+
+dat %>% filter(Training == FALSE, Phase == 'Stimuli', Round > 0)  ->cdat
+
+cc <- cdat$Stimulus
+dd <- c(cc[2:720], 0)
+
+idx <- cc == dd
+which(idx)
+cc[idx]
+
+recc <- recode(cc, Pig = 1, Crocodile = 2, Scorpio = 3, 
+       Rabbit = 4, FinalWolf = 5, Deer = 6, FinalSnake = 7, Turtle = 8)

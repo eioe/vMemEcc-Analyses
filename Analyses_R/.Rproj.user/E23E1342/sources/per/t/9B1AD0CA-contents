@@ -1,0 +1,189 @@
+---
+title: "vMemEcc Behavior Analysis"
+author: "Felix Klotzsche    ---    eioe"
+date: "July 11, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+Imports & loadings:
+
+```{r, warning=F, message=F}
+library(tidyverse)
+library(here)
+
+
+source(here("Utils", "wrangle_data.R"))
+source(here("Utils", "plot_behavior.R"))
+```
+
+# Data loading 
+
+It's a bit of a mess as all of this is pilot data and data format changed 
+between testing sessions. So I don't include this here. 
+Only relevant info: for now it is data from 4 pilot subjects who ran the 
+experiment at different stages. The core manipulation (eccentricity) was the same for 
+everyone but they differ in the number of trials, whether they had trials with 
+cortical magnification, how serious they answered in all of the trials (or if 
+they sometimes were just testing the system), ...
+
+_overview_:  
+__P001 & P002__:  
+  - very early pilots that did lots of beta testing  
+  - only vMem Task, no perception task  
+P001: 432 trials   
+P002: 288 trials  
+
+__P01, P02, P03, P04__:   
+  - more serious pilots (I also have EEG data of them)  
+  - their trials include 20 training trials and  
+  - 144 (P01) and 96 (P02, P03, P04) trials from the "perception"/Change detection task  
+P01: 607 trials   
+P02: 260 trials (no cortical magnification)  
+P03: 548 trials (no cortical magnification, cM)  
+P04: 960 trials (no cM), was not fixating in the first 4 blocks  
+     (so basically only the last 3 blocks of the experimental condition are reliable), 
+     s/he was also ocassionally mixing up the response buttons
+P05: 960 trials
+
+
+```{r, include=F, message=F}
+setwd(here())
+
+d2Path <- "../../Data/PilotData"
+
+pilots <- c("P01/Unity/S001", "P01/Unity/S002", 
+            "P02/Unity/S001", 
+            "Micha/P01/S001", 
+            "Sven", 
+            "P03/Unity/S001", 
+            "P04/Unity/S001", 
+            "P05/Unity/S001")
+
+datP01_1 <- read_csv(file.path(d2Path, pilots[1], "trial_results.csv"))
+datP01_2 <- read_csv(file.path(d2Path, pilots[2], "trial_results.csv"))
+
+datP01 <- bind_rows(datP01_1, datP01_2) %>% mutate(ppid = "P01")
+
+datP02 <- read_csv(file.path(d2Path, pilots[3], "trial_results.csv"))
+datP02 <- mutate(datP02, ppid = "P02")
+
+datP001 <- read_csv(file.path(d2Path, pilots[4], "trial_results.csv"))
+datP001 <- convCortMagFac(datP001) %>% mutate(ppid = "P001", 
+                                                BlockStyle = "experiment")
+
+datP002 <- read_csv(file.path(d2Path, pilots[5], "trial_results.csv"))
+datP002 <- convCortMagFac(datP002) %>% mutate(ppid = "P002", 
+                                              BlockStyle = "experiment")
+
+datP03 <- read_csv(file.path(d2Path, pilots[6], "trial_results.csv"))
+datP03 <- mutate(datP03, ppid = "P03")
+
+
+datP04 <- read_csv(file.path(d2Path, pilots[7], "trial_results.csv"))
+datP04 <- mutate(datP04, ppid = "P04")
+
+
+datP05 <- read_csv(file.path(d2Path, pilots[8], "trial_results.csv"))
+datP05 <- mutate(datP05, ppid = "P05")
+```
+
+
+Finally, I put them all into one big data frame:
+
+```{r}
+
+# build a global data frame:
+fulldat <- bind_rows(datP01, datP02, datP03, datP04, datP05, datP001, datP002)
+
+# and restructure it:
+fulldat <- fulldat %>% 
+             mutate_at(vars(ppid, 
+                            c_Ecc,
+                            c_CortMag,
+                            c_StimN
+                       ), 
+                       factor) %>% 
+  
+             mutate_at(vars(c_ResponseCorrect), 
+                       as.logical) %>% 
+          
+             drop_na(c_Response) %>% 
+             
+             mutate(c_ResponseCorrect = (c_Response == c_Change))
+
+```
+
+_Noteworthy_: I filter out all trials in which the cortical magnification scaling
+was applied.
+```{r}
+fulldat_nocM <- filter(fulldat, c_CortMag == 0) 
+```
+
+
+## Plots
+
+Now we can take a look a the outcomes:
+
+__Visual Memory Task Performance:__
+
+```{r, results=T}
+plot_performance(fulldat_nocM, "experiment")
+```
+
+The average is plotted in black.  
+Apparently, there does not seem a very big effect of _Eccentrcity_ on the 
+performance for these subjects. 
+(these are all cases without cM scaling!)  
+But clearly the task is more difficult for 4 than for 2 items.
+
+
+__Change Perception Task__  
+(Length of the retention interval was set to 0.)  
+This task was only introduced for the latest 2 pilots.  
+
+
+```{r, results=T}
+plot_performance(fulldat_nocM, "perception")
+```
+
+This is wat we expected: people are really good in this. There is not even a real 
+difference between set size conditions. Surprisingly, here it looks more like 
+there could be an effect of _Eccentricity_, but it's a very small number of trials.
+
+
+Now the same for the trials where cort. Magn. scaling was applied:
+
+```{r}
+fulldat_cM <- filter(fulldat, c_CortMag == 2) 
+```
+__Visual Memory Task Performance:__
+
+```{r, results=T}
+plot_performance(fulldat_cM, "experiment")
+```
+
+__Change Perception Task__  
+(Only 1 subject underwent this condition)
+
+```{r, results=T}
+plot_performance(fulldat_cM, "perception")
+```
+
+
+__Sanity checks__
+```{r}
+datP04 %>% filter(BlockStyle == "experiment") %>% 
+  group_by(c_Ecc, c_CueDir, c_Change, c_StimN) %>% 
+  summarise(nT = n())
+
+datP04 %>% filter(BlockStyle == "experiment") %>% 
+  group_by(c_Response) %>% 
+  summarise(RespBias = n())
+```

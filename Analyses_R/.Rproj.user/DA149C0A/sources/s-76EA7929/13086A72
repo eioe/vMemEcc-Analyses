@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1580918987596.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "13086A72",
+    "lastKnownWriteTime" : 1581067931,
+    "last_content_update" : 1581067931434,
+    "path" : "C:/Users/Felix/Seafile/PhD/Experiments/NeVRo/NeVRo/Analysis/Statistics/plot_topo.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "15,30",
+        "scrollLine" : "0"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 12,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
