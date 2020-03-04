@@ -12,14 +12,23 @@ from pathlib import Path
 
 import mne
 
-subsub = 'VME_S02'
+subsub = 'VME_S05'
+get_data_from_sdrive = False
 
 # set paths:
+
 path_study = Path(os.getcwd()).parents[1] #str(Path(__file__).parents[2])
 # note: returns Path object >> cast for string
 
 path_data = os.path.join(path_study, 'Data')
-path_eegdata = os.path.join(path_data, 'SubjectData', '%s', 'EEG')
+
+if (get_data_from_sdrive): 
+    path_sdrive = os.path.join('S:\\', 'Meine Bibliotheken', 'Experiments', 'vMemEcc')
+    path_data_in = os.path.join(path_sdrive, 'Data')
+else:
+    path_data_in = path_data
+
+path_eegdata = os.path.join(path_data_in, 'SubjectData', '%s', 'EEG')
 path_outp = op.join(path_data, 'DataMNE', 'EEG', '00_raw')
 if not op.exists(path_outp):
     os.makedirs(path_outp)

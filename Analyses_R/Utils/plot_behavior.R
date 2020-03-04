@@ -27,11 +27,18 @@ plot_performance <- function(df, style) {
     summarise(meanErr = mean(meanErr))
   
   ggplot(df_mean_err, aes(x = c_Ecc,
-                          y = meanErr), 
-         ymax = 0.5) +
-    geom_dotplot(binaxis='y', stackdir='center', dotsize=0.6) +
-    stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), 
-                 geom="pointrange", aes(color=c_StimN)) + 
+                          y = meanErr)) +
+    geom_jitter(width = 0.1) + 
+    # geom_dotplot(binaxis='y', 
+    #              stackdir='center', 
+    #              dotsize=0.6, 
+    #              binwidth = 0.01, 
+    #              method = 'histodot') +
+    stat_summary(fun.data=mean_sdl, 
+                 fun.args = list(mult=1), 
+                 geom="pointrange", 
+                 aes(color=c_StimN), 
+                 size = 0.6) + 
     facet_wrap(~c_StimN, 
                labeller = labeller(c_StimN = c_StimN.labs)) +
     ylim(c(0.5,1.05)) + 

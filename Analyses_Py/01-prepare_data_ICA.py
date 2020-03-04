@@ -15,7 +15,7 @@ import mne
 from pathlib import Path
 
 # define dummy subject:
-subsub = 'VME_S02'
+subsub = 'VME_S05'
 
 # set paths:
 path_study = Path(os.getcwd()).parents[1] #str(Path(__file__).parents[2])
@@ -166,14 +166,14 @@ def setup_event_structures(events_, event_id_, srate_):
     if (key_b1_start in event_id_):
         trig_b1_start = event_id_[key_b1_start]
     else:
-        trig_b1_start = 0 #use first event ever in case of doubt
+        trig_b1_start = events[0][2] #use first event ever in case of doubt
         print("Warning: No event START BLOCK01 found. Using first event in structure.")
     # same for end of last block:
     key_b10_end = 'Stimulus/S247'
     if (key_b10_end in event_id_):
         trig_b10_end = event_id_[key_b10_end]
     else:
-        trig_b10_end = events_.shape[0]
+        trig_b10_end = events[events_.shape[0]][2]
         print("Warning: No event END BLOCK10 found. Using last event in structure.")
     rel_evs = events_[:,2]
     idx_start = np.where(rel_evs == trig_b1_start)[0][0] #use first element
