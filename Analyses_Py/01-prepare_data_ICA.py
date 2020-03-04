@@ -71,13 +71,13 @@ def calc_eog_chans(data_raw):
 
     # calculate bipolar EOG chans:
     raw.load_data()
-    VEOGl = raw.copy().pick_channels(['Fp1', 'IO1']) 
-    VEOGr = raw.copy().pick_channels(['Fp2', 'IO2']) 
-    dataL = VEOGl.get_data(['Fp1']) - VEOGl.get_data(['IO1']) 
-    dataR = VEOGr.get_data(['Fp2']) - VEOGr.get_data(['IO2']) 
+    #VEOGl = raw.copy().pick_channels(['Fp1', 'IO1']) 
+    #VEOGr = raw.copy().pick_channels(['Fp2', 'IO2']) 
+    dataL = raw.get_data(['Fp1']) - raw.get_data(['IO1']) #VEOGl.get_data(['Fp1']) - VEOGl.get_data(['IO1']) 
+    dataR = raw.get_data(['Fp2']) - raw.get_data(['IO2']) #VEOGr.get_data(['Fp2']) - VEOGr.get_data(['IO2']) 
     dataVEOG = np.stack((dataL,dataR), axis=0).mean(0)
-    HEOG = raw.copy().pick_channels(['LO1', 'LO2']) 
-    dataHEOG = HEOG.get_data(['LO1']) - HEOG.get_data(['LO2'])
+    #HEOG = raw.copy().pick_channels(['LO1', 'LO2']) 
+    dataHEOG = raw.get_data(['LO1']) - raw.get_data(['LO2']) #HEOG.get_data(['LO1']) - HEOG.get_data(['LO2'])
     dataEOG = np.concatenate((dataVEOG, dataHEOG), axis=0)
     info = mne.create_info(ch_names=['VEOG', 'HEOG'], sfreq=raw.info['sfreq'], ch_types=['eog', 'eog'])
     rawEOG = mne.io.RawArray(dataEOG, info=info)
@@ -212,13 +212,13 @@ def extract_epochs_ICA(raw_data, events):
 raw, events, event_id = get_events(subsub)
 raw = calc_eog_chans(raw)   
 set_ecg_chan(raw)
-save_data(raw, subsub, path_outp_prep, append='-raw') #TODO: replace by helper func
+#save_data(raw, subsub, path_outp_prep, append='-raw') #TODO: replace by helper func
 
 srate = raw.info['sfreq']
 events_fix, events_cue, events_stimon = setup_event_structures(events, event_id, srate)
 
 epos_ica = extract_epochs_ICA(raw, events_stimon)
-save_data(epos_ica, subsub + '-forica', path_outp_epo, '-epo')
+#save_data(epos_ica, subsub + '-forica', path_outp_epo, '-epo')
 
 
 # epoCueOn = mne.Epochs(filtered, 
