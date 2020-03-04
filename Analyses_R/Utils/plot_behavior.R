@@ -43,15 +43,16 @@ plot_performance <- function(df, style) {
                labeller = labeller(c_StimN = c_StimN.labs)) +
     ylim(c(0.5,1.05)) + 
     labs(x = "mean Eccentricity (dva)",
-                y = "% correct (+/-1SD)",
-                title = ifelse(style == "experiment",
-                               "Visual memory task",
-                               "Change detection task"),
-                col = "Memory Items",
-                linetype = "memory load",
-                shape = "memory load") +
-    theme_light() #+
-    #scale_color_jco() 
+         y = "% correct (+/-1SD)",
+         title = ifelse(style == "experiment",
+                        "Visual memory task",
+                        "Change detection task"),
+         col = "Memory Items",
+         linetype = "memory load",
+         shape = "memory load") +
+    theme_light() #+ 
+    #coord_fixed(ratio = 3.5)  #+
+  #scale_color_jco() 
   
   # ggplot(df_mean_err, aes(x = c_Ecc,
   #                         y = meanErr)) +

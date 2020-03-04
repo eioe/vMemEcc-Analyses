@@ -111,19 +111,6 @@ def load_data_raw(filename, path):
     return mne.io.Raw(ff)
     
 
-def extract_epochs_ICA(raw_data, events):
-    # filter the data:
-    filtered = raw.load_data().filter(l_freq=0.01, h_freq=40)
-    epos_ica = mne.Epochs(filtered, 
-                        events, 
-                        event_id=None, 
-                        tmin=-1.8, 
-                        tmax=4.0, 
-                        baseline=(None,0),
-                        preload=True)
-    return epos_ica
-
-
 def setup_event_structures(events_, event_id_, srate_):
     # TODO: This one is quite wild and could use refacoring!
 
@@ -195,14 +182,14 @@ def setup_event_structures(events_, event_id_, srate_):
 
 def extract_epochs_ICA(raw_data, events):
     # filter the data:
-    filtered = raw.load_data().filter(l_freq=1, h_freq=40)
+    filtered = raw_data.load_data().filter(l_freq=1, h_freq=40)
     epos_ica_ = mne.Epochs(filtered, 
                         events, 
                         event_id=None, 
                         tmin=-1.8, 
                         tmax=2.2, 
-                        baseline=(None,0),
-                        preload=True)
+                        baseline=None,
+                        preload=False)
     return epos_ica_
 
 
@@ -218,7 +205,7 @@ srate = raw.info['sfreq']
 events_fix, events_cue, events_stimon = setup_event_structures(events, event_id, srate)
 
 epos_ica = extract_epochs_ICA(raw, events_stimon)
-#save_data(epos_ica, subsub + '-forica', path_outp_epo, '-epo')
+save_data(epos_ica, subsub + '-forica', path_outp_epo, '-epo')
 
 
 # epoCueOn = mne.Epochs(filtered, 
