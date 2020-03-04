@@ -17,7 +17,7 @@ from datetime import datetime
 
 
 # define dummy subject:
-subsub = 'VME_S02'
+subsub = 'VME_S22'
 
 # set paths:
 path_study = Path(os.getcwd()).parents[1] #str(Path(__file__).parents[2])
@@ -45,7 +45,7 @@ for pp in [path_outp_rejepo, path_outp_rejepo_summaries, path_outp_ICA, path_out
 def mark_bad_epos_for_ica(subID):
     data_epo = mne.read_epochs(fname=op.join(path_prep_epo, subID + '-forica-epo.fif'))
     data_epo.plot(scalings=dict(eeg=20e-5), 
-                    n_epochs=10, 
+                    n_epochs=6, 
                     n_channels=64, 
                     block=True)
     return data_epo
@@ -54,8 +54,9 @@ def write_bads_to_file(subsub_, data_, out_file):
     with open(out_file, 'a') as ff:
         bad_epos = ",".join([str(idx) for idx in np.where(data_.drop_log)[0]])
         bad_chans = ",".join(data_.info['bads'])
+        n_epos_remain = str(len(data_))
         timestamp = str(datetime.now())
-        ff.write(subsub_ + ";" + bad_epos + ";" + bad_chans + ";" + timestamp + "\n")
+        ff.write(subsub_ + ";" + bad_epos + ";" + bad_chans + ";" + n_epos_remain + ";" + timestamp + "\n")
 
 
 def get_ica_weights(subID, ica_from_disc = False, data_epo = None):

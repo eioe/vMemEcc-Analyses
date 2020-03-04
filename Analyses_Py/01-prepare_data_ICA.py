@@ -15,7 +15,7 @@ import mne
 from pathlib import Path
 
 # define dummy subject:
-subsub = 'VME_S05'
+subsub = 'VME_S06'
 
 # set paths:
 path_study = Path(os.getcwd()).parents[1] #str(Path(__file__).parents[2])
@@ -179,8 +179,8 @@ def setup_event_structures(events_, event_id_, srate_):
 
     return events_fix_, events_cue_, events_stimon_
 
-
-def extract_epochs_ICA(raw_data, events):
+#FIXME: event_id
+def extract_epochs_ICA(raw_data, events, event_id_):
     # filter the data:
     filtered = raw_data.load_data().filter(l_freq=1, h_freq=40)
     epos_ica_ = mne.Epochs(filtered, 
@@ -199,12 +199,12 @@ def extract_epochs_ICA(raw_data, events):
 raw, events, event_id = get_events(subsub)
 raw = calc_eog_chans(raw)   
 set_ecg_chan(raw)
-#save_data(raw, subsub, path_outp_prep, append='-raw') #TODO: replace by helper func
+save_data(raw, subsub, path_outp_prep, append='-raw') #TODO: replace by helper func
 
 srate = raw.info['sfreq']
 events_fix, events_cue, events_stimon = setup_event_structures(events, event_id, srate)
 
-epos_ica = extract_epochs_ICA(raw, events_stimon)
+epos_ica = extract_epochs_ICA(raw, events_stimon, event_id)
 save_data(epos_ica, subsub + '-forica', path_outp_epo, '-epo')
 
 
