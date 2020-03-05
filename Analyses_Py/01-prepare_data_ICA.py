@@ -15,7 +15,7 @@ import mne
 from pathlib import Path
 
 # define dummy subject:
-subsub = 'VME_S20'
+subsub = 'VME_S03'
 
 # set paths:
 path_study = Path(os.getcwd()).parents[1] #str(Path(__file__).parents[2])

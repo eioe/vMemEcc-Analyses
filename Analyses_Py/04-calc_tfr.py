@@ -8,7 +8,7 @@ import mne
 from pathlib import Path
 from library import helpers, config
 
-subsub = 'VME_S22'
+subsub = 'VME_S01'
 
 eposIpsi = helpers.load_data(subsub, config.path_epos_sorted + '/RoiIpsi' , '-epo')
 eposContra = helpers.load_data(subsub, config.path_epos_sorted + '/RoiContra' , '-epo')
@@ -33,14 +33,14 @@ powDiff._data = powerC.reorder_channels(powerI.info['ch_names'])._data - powerI.
 
 img = powDiff.plot(baseline=None, picks='all', mode='logratio', tmin=-1.3, tmax=2, title='contra-ipsi', cmap='RdBu')
 ff = 'tfr_' + subsub + '.png'
-img.savefig(op.join(config.path_tfrs, 'Plots', ff))
+# img.savefig(op.join(config.path_tfrs, 'Plots', ff))
 
 # save to file:
 helpers.save_data(powDiff, subsub + '-PowDiff', config.path_tfrs, append='-tfr')
 
 # Combine subjects:
 
-sub_list = [3, 7, 22]
+sub_list = [1,2] #3, 7, 22]
 all_tfrs = []
 for idx, sub in enumerate(sub_list):
     subID = 'VME_S%02d' % sub
@@ -48,7 +48,7 @@ for idx, sub in enumerate(sub_list):
     all_tfrs.append(tfr[0])  # Insert to the container
 
 glob_tfr = all_tfrs[0].copy()
-glob_tfr._data = np.stack(all_tfrs[i]._data for i in range(3)).mean(0)
+glob_tfr._data = np.stack(all_tfrs[i]._data for i in range(len(sub_list))).mean(0)
 img = glob_tfr.plot(baseline=None, picks='all', mode='logratio', tmin=-1.3, tmax=2, title='contra-ipsi', cmap='RdBu')
 ff = 'tfr_' + 'avg' + '.png'
-img.savefig(op.join(config.path_tfrs, 'Plots', ff))
+#img.savefig(op.join(config.path_tfrs, 'Plots', ff))

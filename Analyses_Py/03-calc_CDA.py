@@ -15,7 +15,7 @@ import mne
 from pathlib import Path
 from library import helpers, config
 
-subsub = 'VME_S01'
+subsub = 'VME_S03'
 
 chans_CDA = [['P3', 'P5', 'PO3', 'PO7', 'O1'], 
              ['P4', 'P6', 'PO4', 'PO8', 'O2']]
@@ -28,7 +28,7 @@ data.apply_baseline((-0.3,0))
 
 # Keep only CDA channels:
 ch_cda = [ch for sublist in chans_CDA for ch in sublist]
-#data.pick_channels(ch_cda)
+data.pick_channels(ch_cda)
 
 # reject bad epochs:
 rej_dict = dict(eeg = 100e-6)
@@ -136,7 +136,7 @@ def write_mean_amp_to_file(ID):
                 data_txt = ";".join([ID, load, ecc, str(mean_amplitues_dict[load+ecc]*10e6)])
                 ffile.write(data_txt + "\n")
 
-
+write_mean_amp_to_file(subsub)
 
 #TODO: Check if we're safe and delete following:
 # evoHi = epos_dict["LoadHigh"].average()
@@ -165,7 +165,7 @@ mne.write_evokeds(ff, [evoked_dict[coo] for coo in config.factor_levels])
 # https://github.com/mne-tools/mne-biomag-group-demo/blob/master/scripts/processing/11-group_average_sensors.py
 
 all_evokeds = [list() for _ in range(11)] 
-for sub in [1]: #[3, 7, 22]:
+for sub in [1, 2, 3]: #[3, 7, 22]:
     subID = 'VME_S%02d' % sub
     evokeds = mne.read_evokeds(op.join(config.path_evokeds, subID + '-ave.fif'))
     for idx, evoked in enumerate(evokeds):
@@ -181,16 +181,16 @@ res = mne.viz.plot_compare_evokeds(dict(High = all_evokeds[config.factor_dict['L
                              vlines=[-0.8, 0], 
                              ylim=dict(eeg=[-4,2]))
 ff = 'MainEff_Load.png'
-res[0].savefig(op.join(config.path_evokeds, 'Plots', ff))
+# res[0].savefig(op.join(config.path_evokeds, 'Plots', ff))
 
 
 # Main effect Ecc:
 res = mne.viz.plot_compare_evokeds(dict(Small = all_evokeds[config.factor_dict['EccS']], 
                                   Medium = all_evokeds[config.factor_dict['EccM']], 
                                   Large = all_evokeds[config.factor_dict['EccL']]), 
-                                  combine='mean', vlines=[-0.5, 0], title = 'Eccentricity')
+                                  combine='mean', vlines=[-0.8, 0], title = 'Eccentricity')
 ff = 'MainEff_Ecc.png'
-res[0].savefig(op.join(config.path_evokeds, 'Plots', ff))
+# res[0].savefig(op.join(config.path_evokeds, 'Plots', ff))
 
 # Interaction:
 for ecc, tt in zip(['EccS', 'EccM', 'EccL'], ['Ecc = 4°', 'Ecc = 9°', 'Ecc = 14°']):
@@ -201,7 +201,7 @@ for ecc, tt in zip(['EccS', 'EccM', 'EccL'], ['Ecc = 4°', 'Ecc = 9°', 'Ecc = 1
                                  ylim=dict(eeg=[-4,2]), 
                                  title = tt)
     ff = 'Load_' + ecc + '.png'
-    res[0].savefig(op.join(config.path_evokeds, 'Plots', ff))
+    # res[0].savefig(op.join(config.path_evokeds, 'Plots', ff))
 
 
 
