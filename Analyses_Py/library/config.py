@@ -24,9 +24,10 @@ path_postICA = op.join(path_data, 'DataMNE', 'EEG', '05.3_rejICA')
 path_evokeds = op.join(path_data, 'DataMNE', 'EEG', '07_evokeds')
 path_evokeds_summaries = op.join(path_evokeds, 'summaries')
 path_tfrs = op.join(path_data, 'DataMNE', 'EEG', '08_tfr')
+path_tfrs_summaries = op.join(path_tfrs, 'summaries')
 path_epos_sorted = op.join(path_data, 'DataMNE', 'EEG', '07_epos_sorted')
 
-for pp in [path_postICA, path_evokeds, path_evokeds_summaries, path_epos_sorted]:
+for pp in [path_postICA, path_evokeds, path_evokeds_summaries, path_epos_sorted, path_tfrs_summaries]:
     if not op.exists(pp):
         os.makedirs(pp)
         print('creating dir: ' + pp) 
@@ -36,3 +37,7 @@ factor_levels = [load + ecc for load in ['LoadLow', 'LoadHigh','']
                  for ecc in ['EccS', 'EccM', 'EccL','']][:-1] 
 
 factor_dict = {name: factor_levels.index(name) for name in factor_levels}
+
+# times:
+times_dict = dict(CDA_start = 0.450, 
+                  CDA_end = 1.450)

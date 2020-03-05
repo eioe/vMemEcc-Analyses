@@ -15,7 +15,7 @@ import mne
 from pathlib import Path
 from library import helpers, config
 
-subsub = 'VME_S03'
+subsub = 'VME_S02'
 
 chans_CDA = [['P3', 'P5', 'PO3', 'PO7', 'O1'], 
              ['P4', 'P6', 'PO4', 'PO8', 'O2']]
@@ -85,6 +85,12 @@ epos_dict["RoiIpsiLoadLow"] = epos_dict["RoiIpsi"][event_dict['LoadLow']]
 epos_dict["RoiIpsiLoadHigh"] = epos_dict["RoiIpsi"][event_dict['LoadHigh']]
 
 
+for roi in ["RoiContra", "RoiIpsi"]:
+    for load in ["LoadLow", "LoadHigh"]:
+        for ecc in ["EccS", "EccM", "EccL"]:
+            epos_dict[roi+load+ecc] = epos_dict[roi][event_dict[load]][event_dict[ecc]]
+
+
 epos_dict["CDA"] = epos_dict["RoiContra"].copy()
 epos_dict["CDA"]._data = epos_dict["RoiContra"]._data - epos_dict["RoiIpsi"]._data
 
@@ -124,7 +130,8 @@ mean_amplitues_dict = dict()
 
 for cond in evoked_dict.keys():
     dat = evoked_dict[cond]._data
-    mean_amplitues_dict[cond] = np.mean(np.mean(evoked_dict[cond]._data, 0)[450:1225])
+    tms_idx = np.where((0.400 < evoked_dict[cond].times) & (evoked_dict[cond].times < 1.45))
+    mean_amplitues_dict[cond] = np.mean(np.mean(evoked_dict[cond]._data, 0)[tms_idx])
 
 def write_mean_amp_to_file(ID):
     #conds = ['LoadHighEccS', 'LoadHighEccM', 'LoadHighEccL', 'LoadLowEccS', 'LoadLowEccM', 'LoadLowEccL']
