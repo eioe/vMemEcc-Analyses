@@ -8,7 +8,7 @@
 
 ## Mauchly test for sphericity:
 
-wf <- sumstat %>% select(ppid, c_Ecc, mean_acc, c_StimN) %>% 
+hansi <- sumstat %>% select(ppid, c_Ecc, mean_acc, c_StimN) %>% 
   pivot_wider(names_from = c(c_Ecc), values_from = mean_acc) %>% 
   select('4', '9', '14')
 
@@ -22,7 +22,7 @@ for (bb in levels(sumstat$c_Ecc)) {
 }
 #}
 # make mlm object:
-mlm <- lm(as.matrix(wf)~1)
+mlm <- lm(as.matrix(hansi)~1)
 # test it:
 mauchly.test(mlm, x = ~ 1)
 

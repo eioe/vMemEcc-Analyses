@@ -15,21 +15,35 @@ import mne
 from pathlib import Path
 from library import helpers, config
 
-subsub = 'VME_S22'
-
-data = helpers.load_data(subsub + '-rejcomp', config.path_postICA, '-epo')
+subsub = 'VME_S01'
 
 chans_CDA = [['P3', 'P5', 'PO3', 'PO7', 'O1'], 
              ['P4', 'P6', 'PO4', 'PO8', 'O2']]
 
+
+data = helpers.load_data(subsub + '-forcda-postica', config.path_postICA, '-epo')
+
+# remove baseline:
+data.apply_baseline((-0.3,0))
+
+# Keep only CDA channels:
+ch_cda = [ch for sublist in chans_CDA for ch in sublist]
+#data.pick_channels(ch_cda)
+
+# reject bad epochs:
+rej_dict = dict(eeg = 100e-6)
+data.drop_bad(rej_dict)
+
+
 # Define relevant events:
 #TODO: Check if this does the correct thing:
-targ_evs = [i for i in data.event_id.values()]
+targ_evs = [i for i in data.event_id.keys()]
 epo_keys = ['CueL', 'CueR', 'LoadLow', 'LoadHigh', 'EccS', 'EccM', 'EccL']
 
 event_dict = {key: [] for key in epo_keys}
 for ev in targ_evs:
-    ev0 = ev - 150
+    ev_int = int(ev[-3:]) #int(ev.split('/S')[1])
+    ev0 = ev_int - 150
     if (ev0 % 2) == 0:
         event_dict['CueL'].append(str(ev))
     else:
@@ -131,7 +145,7 @@ mne.write_evokeds(ff, [evoked_dict[coo] for coo in config.factor_levels])
 # https://github.com/mne-tools/mne-biomag-group-demo/blob/master/scripts/processing/11-group_average_sensors.py
 
 all_evokeds = [list() for _ in range(11)] 
-for sub in [3, 7, 22]:
+for sub in [1]: #[3, 7, 22]:
     subID = 'VME_S%02d' % sub
     evokeds = mne.read_evokeds(op.join(config.path_evokeds, subID + '-ave.fif'))
     for idx, evoked in enumerate(evokeds):
@@ -144,7 +158,7 @@ for idx, evokeds in enumerate(all_evokeds):
 res = mne.viz.plot_compare_evokeds(dict(High = all_evokeds[config.factor_dict['LoadHigh']], 
                                   Low = all_evokeds[config.factor_dict['LoadLow']]), 
                              combine='mean', 
-                             vlines=[-0.5, 0], 
+                             vlines=[-0.8, 0], 
                              ylim=dict(eeg=[-4,2]))
 ff = 'MainEff_Load.png'
 res[0].savefig(op.join(config.path_evokeds, 'Plots', ff))

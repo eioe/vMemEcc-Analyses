@@ -15,7 +15,7 @@ import mne
 from pathlib import Path
 
 # define dummy subject:
-subsub = 'VME_S06'
+subsub = 'VME_S23'
 
 # set paths:
 path_study = Path(os.getcwd()).parents[1] #str(Path(__file__).parents[2])
@@ -160,7 +160,7 @@ def setup_event_structures(events_, event_id_, srate_):
     if (key_b10_end in event_id_):
         trig_b10_end = event_id_[key_b10_end]
     else:
-        trig_b10_end = events[events_.shape[0]][2]
+        trig_b10_end = events[-1][2]
         print("Warning: No event END BLOCK10 found. Using last event in structure.")
     rel_evs = events_[:,2]
     idx_start = np.where(rel_evs == trig_b1_start)[0][0] #use first element
@@ -185,12 +185,25 @@ def extract_epochs_ICA(raw_data, events, event_id_):
     filtered = raw_data.load_data().filter(l_freq=1, h_freq=40)
     epos_ica_ = mne.Epochs(filtered, 
                         events, 
-                        event_id=None, 
+                        event_id=event_id_, 
                         tmin=-1.8, 
                         tmax=2.2, 
                         baseline=None,
                         preload=False)
     return epos_ica_
+
+#FIXME: event_id
+def extract_epochs_stimon(raw_data, events, event_id_):
+    # filter the data:
+    filtered = raw_data.load_data().filter(l_freq=0.01, h_freq=40)
+    epos_stimon_ = mne.Epochs(filtered, 
+                        events, 
+                        event_id=event_id_, 
+                        tmin=-1, 
+                        tmax=2.7, 
+                        baseline=None,
+                        preload=False)
+    return epos_stimon_
 
 
 
@@ -204,9 +217,16 @@ save_data(raw, subsub, path_outp_prep, append='-raw') #TODO: replace by helper f
 srate = raw.info['sfreq']
 events_fix, events_cue, events_stimon = setup_event_structures(events, event_id, srate)
 
-epos_ica = extract_epochs_ICA(raw, events_stimon, event_id)
+event_id_fix = {key: event_id[key] for key in event_id if event_id[key] in events_fix[:,2]}
+event_id_cue = {key: event_id[key] for key in event_id if event_id[key] in events_cue[:,2]}
+event_id_stimon = {key: event_id[key] for key in event_id if event_id[key] in events_stimon[:,2]}
+
+
+epos_ica = extract_epochs_ICA(raw.copy(), events_stimon, event_id_stimon)
 save_data(epos_ica, subsub + '-forica', path_outp_epo, '-epo')
 
+epos_stimon = extract_epochs_stimon(raw, events_stimon, event_id_stimon)
+save_data(epos_stimon, subsub + '-stimon', path_outp_epo, '-epo')
 
 # epoCueOn = mne.Epochs(filtered, 
 #                         events, 
