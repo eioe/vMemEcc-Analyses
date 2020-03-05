@@ -66,7 +66,7 @@ def read_bads_from_file(ID, file_):
                 return bad_epos_, bad_chans_
             else:
                 continue
-    print(f'Subject {subsub} not found in {file_}')
+    print(f'Subject {ID} not found in {file_}')
         
 
 
@@ -162,20 +162,20 @@ def interpolate_bad_chans(data_):
 data_forica = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-forica-epo.fif'))
 
 # get BP [0.01; 40Hz] filtered data to apply ICA weights:
-data_forcda = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-stimon-epo.fif'))
+#data_forcda = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-stimon-epo.fif'))
 
 data_forica = reject_bads(subsub, data_forica, 'manual', write_results_to_file=False)
-#data_forica, n_interp_chans = interpolate_bad_chans(data_forica)
+## Skip this for now:
+###data_forica, n_interp_chans = interpolate_bad_chans(data_forica)
 n_interp_chans = 0
 
-data_forcda = reject_bads(subsub, data_forcda, mode='fromfile')
-#data_forcda, _ = interpolate_bad_chans(data_forcda)
+#data_forcda = reject_bads(subsub, data_forcda, mode='fromfile')
 
-# helpers.save_data(data_rejepo, subsub + '-rejepo', path_outp_rejepo, '-epo')
-# data_rejepo = helpers.load_data(subsub + '-rejepo', path_outp_rejepo, '-epo')
+## Skip this for now:
+###data_forcda, _ = interpolate_bad_chans(data_forcda)
 
-data_ica = get_ica_weights(subsub, data_forica, n_interp_chans, ica_from_disc=True)
-data_forcda = rej_ica_eog(data_ica, data_forica, data_forcda)
+data_ica = get_ica_weights(subsub, data_forica, n_interp_chans, ica_from_disc=False)
+#data_forcda = rej_ica_eog(data_ica, data_forica, data_forcda)
 
-vis_compare_ica(data_forcda, data_forcda)
-helpers.save_data(data_forcda, subsub + '-forcda-postica', path_outp_rejICA, append='-epo')
+#vis_compare_ica(data_forcda, data_forcda)
+#helpers.save_data(data_forcda, subsub + '-forcda-postica', path_outp_rejICA, append='-epo')

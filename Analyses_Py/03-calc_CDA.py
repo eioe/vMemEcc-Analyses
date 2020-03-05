@@ -109,6 +109,7 @@ for key in epos_dict:
                       config.path_epos_sorted + '/' + key, append='-epo')
 
 
+
 for load in ['LoadHigh', 'LoadLow']:
     evoked_dict[load] = epos_dict[load].average()
 
@@ -117,6 +118,25 @@ for load in ['LoadHigh', 'LoadLow']:
             evoked_dict[ecc] = epos_dict[ecc].average()
         
         evoked_dict[load + ecc] = epos_dict[load + ecc].average()
+
+# store mean amplitudes:
+mean_amplitues_dict = dict()
+
+for cond in evoked_dict.keys():
+    dat = evoked_dict[cond]._data
+    mean_amplitues_dict[cond] = np.mean(np.mean(evoked_dict[cond]._data, 0)[450:1225])
+
+def write_mean_amp_to_file(ID):
+    #conds = ['LoadHighEccS', 'LoadHighEccM', 'LoadHighEccL', 'LoadLowEccS', 'LoadLowEccM', 'LoadLowEccL']
+    #data = [str(mean_amplitues_dict[key] * 1000) for key in conds]
+    file_mean_amp = op.join(config.path_evokeds_summaries, ID + 'mean_amp_CDA.csv')
+    with open(file_mean_amp, 'w') as ffile:
+        for load in ['LoadHigh', 'LoadLow']:
+            for ecc in ['EccS', 'EccM', 'EccL']:
+                data_txt = ";".join([ID, load, ecc, str(mean_amplitues_dict[load+ecc]*10e6)])
+                ffile.write(data_txt + "\n")
+
+
 
 #TODO: Check if we're safe and delete following:
 # evoHi = epos_dict["LoadHigh"].average()
