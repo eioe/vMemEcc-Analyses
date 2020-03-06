@@ -30,11 +30,11 @@ source(here("Utils", "plot_behavior.R"))
 # set data choices:
 write_fulldat_to_disk <- FALSE
 get_fulldat_from_disk <- TRUE
-
+get_data_from_sdrive <- FALSE
 
 # If were on my laptop, get data from virtual drive:
 current_machine = Sys.info()['nodename']
-if (current_machine == "DESKTOP-7DGG1KH") {
+if (current_machine == "DESKTOP-7DGG1KH" & get_data_from_sdrive) {
   wd = file.path('S:', 'Meine Bibliotheken', 'Experiments', 'vMemEcc')
 } else {
   wd = here('../..')
@@ -124,7 +124,7 @@ __Summarize avg. performance & run ANOVA:__
 ```{r message=FALSE, include=T}
 
 sumstat <- fulldat %>% 
-  filter(BlockStyle %in% c('experiment')) %>% 
+  filter(BlockStyle %in% c('perception')) %>% 
   group_by(c_StimN, c_Ecc, ppid) %>% 
   summarise(mean_acc = mean(c_ResponseCorrect))
 
@@ -193,3 +193,88 @@ bxp
 ```
 
 The same pattern seems to be deflected in the RTs. Faster repsonses for trials with (a) smaller memory load, (b) stimuli closer to the center of the FOV, (c) trials with correct responses. However, no significant interactions. This speaks against a speed-accuracy trade-off (where higher accuracies would be associated with slower responses) causing the effects observed in accuracy. 
+
+```{r, include=T, message=F}
+
+path_eeg_data <- file.path(wd, 'Data', 'DataMNE', 'EEG')
+path_meanamp_data <- file.path(path_eeg_data, '07_evokeds', 'summaries')
+path_apwr_data <- file.path(path_eeg_data, '08_tfr', 'summaries')
+
+
+## get meanamp data: 
+ma_files <- list.files(path_meanamp_data)
+
+meanamp_dat <- NULL
+for (ffile in ma_files) {
+  fpath <- file.path(path_meanamp_data, ffile)
+  # dat <- read_csv2(fpath, col_names = FALSE, col_types = cols(ID = col_factor(), 
+  #                                                             Load = col_factor(), 
+  #                                                             Ecc = col_factor(), 
+  #                                                             mean_amp = col_character()))
+  dat <- read.csv2(fpath, header = FALSE) 
+  meanamp_dat <- bind_rows(meanamp_dat, dat)
+}
+
+meanamp_dat$V4 <- as.numeric(meanamp_dat$V4)
+colnames(meanamp_dat) <- c('ppid', 'c_StimN', 'c_Ecc', 'mean_amp')
+
+sumstat_ma <- meanamp_dat %>% 
+  group_by(c_StimN, c_Ecc, ppid) %>% 
+  summarise(mean_ma = mean(mean_amp))
+
+aov.res <- anova_test(data = meanamp_dat, 
+                      dv = mean_amp, 
+                      wid = ppid, 
+                      within = c(c_StimN, c_Ecc))
+aov.res
+get_anova_table(aov.res)
+
+bxp <- ggboxplot(
+  meanamp_dat, x = c("c_StimN"), y = "mean_amp",
+  color = c("c_Ecc"), palette = "jco"
+  )
+bxp
+
+
+```
+
+```{r, include=T, message=F}
+
+## get meanamp data: 
+apwr_files <- list.files(path_apwr_data)
+
+apwr_dat <- NULL
+for (ffile in apwr_files) {
+  fpath <- file.path(path_apwr_data, ffile)
+  # dat <- read_csv2(fpath, col_names = FALSE, col_types = cols(ID = col_factor(), 
+  #                                                             Load = col_factor(), 
+  #                                                             Ecc = col_factor(), 
+  #                                                             mean_amp = col_character()))
+  dat <- read.csv2(fpath, header = FALSE) 
+  apwr_dat <- bind_rows(apwr_dat, dat)
+}
+
+apwr_dat$V4 <- as.numeric(apwr_dat$V4)
+colnames(apwr_dat) <- c('ppid', 'c_StimN', 'c_Ecc', 'mean_alpha')
+
+aov.res <- anova_test(data = apwr_dat, 
+                      dv = mean_alpha, 
+                      wid = ppid, 
+                      within = c(c_StimN, c_Ecc))
+aov.res
+
+get_anova_table(aov.res)
+
+bxp <- ggboxplot(
+  apwr_dat, x = c("c_StimN"), y = "mean_alpha",
+  color = c("c_Ecc"), palette = "jco"
+  )
+bxp
+
+apwr_dat %>% 
+  as_tibble() %>% 
+  filter(c_StimN == 'LoadLow') %>% 
+  pairwise_t_test(mean_alpha ~ c_Ecc, paired = TRUE, 
+    p.adjust.method = "bonferroni")
+
+```

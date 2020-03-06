@@ -1,4 +1,5 @@
 
+
 import os
 import os.path as op
 import numpy as np
@@ -8,7 +9,7 @@ import mne
 from pathlib import Path
 from library import helpers, config
 
-subsub = 'VME_S03'
+subsub = 'VME_S01'
 
 def get_lateralized_tfr(ID, condition_=''):
     eposIpsi = helpers.load_data(ID, config.path_epos_sorted + '/RoiIpsi' + condition_, '-epo')
@@ -40,8 +41,6 @@ def extract_alpha_pow(data_diff_):
 # powNorm._data = powDiff._data / powSum._data
 
 # store mean tfrs:
-mean_tfrs_dict = dict()
-
 
 def write_mean_alphapwr_to_file(ID):
     #conds = ['LoadHighEccS', 'LoadHighEccM', 'LoadHighEccL', 'LoadLowEccS', 'LoadLowEccM', 'LoadLowEccL']
@@ -58,24 +57,23 @@ def write_mean_alphapwr_to_file(ID):
 write_mean_alphapwr_to_file(subsub)
 
 pD = get_lateralized_tfr(subsub, '')
-img = pD.plot(baseline=None, picks='all', mode='logratio', tmin=-1.3, tmax=2, title='contra-ipsi', cmap='RdBu')
+img = pD.plot(baseline=None, 
+              picks='all', 
+              mode='mean', 
+              tmin=-1.3, 
+              tmax=2, 
+              title='contra-ipsi', 
+              cmap='RdBu')
 ff = 'tfr_' + subsub + '.png'
 # img.savefig(op.join(config.path_tfrs, 'Plots', ff))
 
-# save to file:
-helpers.save_data(pD, subsub + '-PowDiff', config.path_tfrs, append='-tfr')
+sub_list = [1,2,3,5, 6, 7, 8, 9, 10, 13, 16, 17, 18, 20, 22, 23, 24, 26, 27]
 
-# Combine subjects:
+for sub in sub_list:
+    subsub = 'VME_S%02d' % sub
+    for load in ['LoadLow', 'LoadHigh']:
+        pD = get_lateralized_tfr(subsub, load)
+        # save to file:
+        cond_str = '-'+load
+        helpers.save_data(pD, subsub + '-PowDiff'+cond_str, config.path_tfrs, append='-tfr')
 
-sub_list = [1,2,3] #3, 7, 22]
-all_tfrs = []
-for idx, sub in enumerate(sub_list):
-    subID = 'VME_S%02d' % sub
-    tfr = mne.time_frequency.read_tfrs(op.join(config.path_tfrs, subID + '-PowDiff-tfr.fif'))
-    all_tfrs.append(tfr[0])  # Insert to the container
-
-glob_tfr = all_tfrs[0].copy()
-glob_tfr._data = np.stack(all_tfrs[i]._data for i in range(len(sub_list))).mean(0)
-img = glob_tfr.plot(baseline=None, picks='all', mode='logratio', tmin=-1.3, tmax=2, title='contra-ipsi', cmap='RdBu')
-ff = 'tfr_' + 'avg' + '.png'
-img.savefig(op.join(config.path_tfrs, 'plots', ff))

@@ -16,7 +16,7 @@ from library import helpers
 from datetime import datetime
 
 # define subject:
-subsub = 'VME_S16'
+subsub = 'VME_S27'
 
 # set paths:
 path_study = Path(os.getcwd()).parents[1] #str(Path(__file__).parents[2])
@@ -99,8 +99,9 @@ def rej_ica_eog(data_ica_, data_forica_, data_to_clean_):
 
     # Plot marked components:
     data_ica_.plot_components(inst=data_forica_, picks=EOGexclude)
+    data_ica_.plot_components(inst=data_forica_)
     # Ask user which of the suggested components shall stay in data:
-    data_ica_.exclude = EOGexclude
+    data_ica_.exclude.extend([comp for comp in EOGexclude if not comp in data_ica_.exclude])
     # and kick out components:
     # data_rejcomp = data_to_clean_.copy()
     data_ica_.apply(data_to_clean_)

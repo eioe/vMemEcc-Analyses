@@ -15,7 +15,8 @@ import mne
 from pathlib import Path
 from library import helpers, config
 
-subsub = 'VME_S02'
+subsub = 'VME_S01'
+sub_list = [1, 2, 3, 5, 6, 7, 8, 9, 10, 13, 16, 17, 18, 20, 22, 23, 24, 26, 27]
 
 chans_CDA = [['P3', 'P5', 'PO3', 'PO7', 'O1'], 
              ['P4', 'P6', 'PO4', 'PO8', 'O2']]
@@ -33,6 +34,7 @@ data.pick_channels(ch_cda)
 # reject bad epochs:
 rej_dict = dict(eeg = 100e-6)
 data.drop_bad(rej_dict)
+perc_bads_dropped = data.drop_log_stats()
 
 
 # Define relevant events:
@@ -136,7 +138,7 @@ for cond in evoked_dict.keys():
 def write_mean_amp_to_file(ID):
     #conds = ['LoadHighEccS', 'LoadHighEccM', 'LoadHighEccL', 'LoadLowEccS', 'LoadLowEccM', 'LoadLowEccL']
     #data = [str(mean_amplitues_dict[key] * 1000) for key in conds]
-    file_mean_amp = op.join(config.path_evokeds_summaries, ID + 'mean_amp_CDA.csv')
+    file_mean_amp = op.join(config.path_evokeds_summaries, ID + '_mean_amp_CDA.csv')
     with open(file_mean_amp, 'w') as ffile:
         for load in ['LoadHigh', 'LoadLow']:
             for ecc in ['EccS', 'EccM', 'EccL']:
@@ -144,6 +146,7 @@ def write_mean_amp_to_file(ID):
                 ffile.write(data_txt + "\n")
 
 write_mean_amp_to_file(subsub)
+
 
 #TODO: Check if we're safe and delete following:
 # evoHi = epos_dict["LoadHigh"].average()
@@ -172,43 +175,53 @@ mne.write_evokeds(ff, [evoked_dict[coo] for coo in config.factor_levels])
 # https://github.com/mne-tools/mne-biomag-group-demo/blob/master/scripts/processing/11-group_average_sensors.py
 
 all_evokeds = [list() for _ in range(11)] 
-for sub in [1, 2, 3]: #[3, 7, 22]:
+for sub in sub_list: #[3, 7, 22]:
     subID = 'VME_S%02d' % sub
     evokeds = mne.read_evokeds(op.join(config.path_evokeds, subID + '-ave.fif'))
     for idx, evoked in enumerate(evokeds):
         all_evokeds[idx].append(evoked)  # Insert to the container
 
 for idx, evokeds in enumerate(all_evokeds):
-    all_evokeds[idx] = mne.combine_evoked(evokeds, 'equal')  # Combine subjects
+    all_evokeds[idx] = mne.combine_evoked(evokeds, 'nave')  # Combine subjects
+
+print(f'\n###################\nPercent of bad epos dropped: {perc_bads_dropped} \n###################\n')
 
 # Main effect Load:
-res = mne.viz.plot_compare_evokeds(dict(High = all_evokeds[config.factor_dict['LoadHigh']], 
-                                  Low = all_evokeds[config.factor_dict['LoadLow']]), 
+res = mne.viz.plot_compare_evokeds(dict(High = all_evokeds[config.factor_dict['LoadHigh']].crop(tmin=-0.3, tmax=2.3), 
+                                  Low = all_evokeds[config.factor_dict['LoadLow']].crop(tmin=-0.3, tmax=2.3)), 
                              combine='mean', 
-                             vlines=[-0.8, 0], 
-                             ylim=dict(eeg=[-4,2]))
+                             vlines=[0], 
+                             ci=True,
+                             ylim=dict(eeg=[-1.5,1.5]),
+                             title="Memory Load"
+                             )
 ff = 'MainEff_Load.png'
-# res[0].savefig(op.join(config.path_evokeds, 'Plots', ff))
+res[0].savefig(op.join(config.path_evokeds, 'Plots', ff))
 
 
 # Main effect Ecc:
-res = mne.viz.plot_compare_evokeds(dict(Small = all_evokeds[config.factor_dict['EccS']], 
-                                  Medium = all_evokeds[config.factor_dict['EccM']], 
-                                  Large = all_evokeds[config.factor_dict['EccL']]), 
-                                  combine='mean', vlines=[-0.8, 0], title = 'Eccentricity')
+res = mne.viz.plot_compare_evokeds(dict(Small = all_evokeds[config.factor_dict['EccS']].crop(tmin=-0.3, tmax=2.3), 
+                                        Medium = all_evokeds[config.factor_dict['EccM']].crop(tmin=-0.3, tmax=2.3), 
+                                        Large = all_evokeds[config.factor_dict['EccL']].crop(tmin=-0.3, tmax=2.3)), 
+                                  combine='mean', 
+                                  vlines=[0], 
+                                  ci=True,
+                                  ylim=dict(eeg=[-1.5,1.5]),
+                                  title = 'Eccentricity')
 ff = 'MainEff_Ecc.png'
-# res[0].savefig(op.join(config.path_evokeds, 'Plots', ff))
+res[0].savefig(op.join(config.path_evokeds, 'plots', ff))
 
 # Interaction:
 for ecc, tt in zip(['EccS', 'EccM', 'EccL'], ['Ecc = 4°', 'Ecc = 9°', 'Ecc = 14°']):
-    res = mne.viz.plot_compare_evokeds(dict(High = all_evokeds[config.factor_dict['LoadHigh' + ecc]],
-                                      Low = all_evokeds[config.factor_dict['LoadLow' + ecc]]),
+    res = mne.viz.plot_compare_evokeds(dict(High = all_evokeds[config.factor_dict['LoadHigh' + ecc]].crop(tmin=-0.3, tmax=2.3),
+                                      Low = all_evokeds[config.factor_dict['LoadLow' + ecc]].crop(tmin=-0.3, tmax=2.3)),
                                  combine = 'mean', 
-                                 vlines=[-0.5, 0], 
-                                 ylim=dict(eeg=[-4,2]), 
-                                 title = tt)
+                                 vlines=[0], 
+                                 ylim=dict(eeg=[-1.5,1.5]), 
+                                 title = tt, 
+                                 show=False)
     ff = 'Load_' + ecc + '.png'
-    # res[0].savefig(op.join(config.path_evokeds, 'Plots', ff))
+    res[0].savefig(op.join(config.path_evokeds, 'plots', ff))
 
 
 
