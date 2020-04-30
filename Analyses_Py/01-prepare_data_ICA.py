@@ -15,7 +15,16 @@ import mne
 from pathlib import Path
 
 # define dummy subject:
-subsub = 'VME_S27'
+#subsub = 'VME_S27'
+# define subject:
+subsub_list = ['VME_S26', 'VME_S27'] #'VME_S12', 'VME_S25'
+               # ['VME_S01', 'VME_S02', 'VME_S03', 'VME_S05', 
+               # 'VME_S06', 'VME_S07', 'VME_S08', 'VME_S09', 
+               # 'VME_S10', 
+               #'VME_S13', 'VME_S16', 
+               #'VME_S17', 'VME_S18', 'VME_S20', 'VME_S22', 
+               #'VME_S23', 'VME_S24', 
+
 
 # set paths:
 path_study = Path(os.getcwd()).parents[1] #str(Path(__file__).parents[2])
@@ -176,6 +185,7 @@ def setup_event_structures(events_, event_id_, srate_):
     events_cue_ = np.array([ev for ev in events_ if ev[2] == event_id_['Stimulus/S  1']])
     events_stimon_ = np.array([ev for ev in events_ if ev[2] == event_id_['Stimulus/S  2']])
     events_stimon_[:,2] = events_fix_[:,2]
+    events_cue_[:,2] = events_fix_[:,2]
 
     return events_fix_, events_cue_, events_stimon_
 
@@ -205,29 +215,44 @@ def extract_epochs_stimon(raw_data, events, event_id_):
                         preload=False)
     return epos_stimon_
 
+def extract_epochs_cue(raw_data, events, event_id_):
+    # filter the data:
+    filtered = raw_data.load_data().filter(l_freq=0.01, h_freq=40)
+    epos_cue_ = mne.Epochs(filtered, 
+                        events, 
+                        event_id=event_id_, 
+                        tmin=-1, 
+                        tmax=1.5, 
+                        baseline=None,
+                        preload=False)
+    return epos_cue_
+
 
 
 ######################################################################################################
+for subsub in subsub_list:
+    raw, events, event_id = get_events(subsub)
+    raw = calc_eog_chans(raw)   
+    set_ecg_chan(raw)
+    #save_data(raw, subsub, path_outp_prep, append='-raw') #TODO: replace by helper func
 
-raw, events, event_id = get_events(subsub)
-raw = calc_eog_chans(raw)   
-set_ecg_chan(raw)
-save_data(raw, subsub, path_outp_prep, append='-raw') #TODO: replace by helper func
+    srate = raw.info['sfreq']
+    events_fix, events_cue, events_stimon = setup_event_structures(events, event_id, srate)
 
-srate = raw.info['sfreq']
-events_fix, events_cue, events_stimon = setup_event_structures(events, event_id, srate)
-
-event_id_fix = {key: event_id[key] for key in event_id if event_id[key] in events_fix[:,2]}
-event_id_cue = {key: event_id[key] for key in event_id if event_id[key] in events_cue[:,2]}
-event_id_stimon = {key: event_id[key] for key in event_id if event_id[key] in events_stimon[:,2]}
+    event_id_fix = {key: event_id[key] for key in event_id if event_id[key] in events_fix[:,2]}
+    event_id_cue = {key: event_id[key] for key in event_id if event_id[key] in events_cue[:,2]}
+    event_id_stimon = {key: event_id[key] for key in event_id if event_id[key] in events_stimon[:,2]}
 
 
-epos_ica = extract_epochs_ICA(raw.copy(), events_stimon, event_id_stimon)
-save_data(epos_ica, subsub + '-forica', path_outp_epo, '-epo')
+    """ 
+    epos_ica = extract_epochs_ICA(raw.copy(), events_stimon, event_id_stimon)
+    save_data(epos_ica, subsub + '-forica', path_outp_epo, '-epo')
 
-epos_stimon = extract_epochs_stimon(raw, events_stimon, event_id_stimon)
-save_data(epos_stimon, subsub + '-stimon', path_outp_epo, '-epo')
-
+    epos_stimon = extract_epochs_stimon(raw, events_stimon, event_id_stimon)
+    save_data(epos_stimon, subsub + '-stimon', path_outp_epo, '-epo')
+    """
+    epos_cue = extract_epochs_cue(raw.copy(), events_cue, event_id_cue)
+    save_data(epos_cue, subsub + '-cue', path_outp_epo, '-epo')
 # epoCueOn = mne.Epochs(filtered, 
 #                         events, 
 #                         event_id=event_id['Stimulus/S  1'], #=targ_evs, #

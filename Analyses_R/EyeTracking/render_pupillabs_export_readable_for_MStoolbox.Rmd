@@ -1,0 +1,608 @@
+---
+title: "Making PL exports readable for MS Toolbox"
+author: "FK"
+date: "14 4 2020"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+library(here)
+library(kableExtra)
+library(tidyverse)
+library(zoo)
+```
+
+
+```{r Loading, message=FALSE, warning=FALSE, class.source=NULL}
+
+path_data <- here('EyeTracking/example_data/VME_S08_Block4')
+data_annot  <- read_csv(file.path(path_data, 'annotations.csv'))
+data_gaze   <- read_csv(file.path(path_data, 'gaze_positions.csv '))
+data_blinks <- read_csv(file.path(path_data, 'blinks.csv'))
+data_pupils <- read_csv(file.path(path_data, 'pupil_positions.csv')) 
+
+
+```
+
+
+## Problem
+
+ET data exported from Pupil Player is not directly compatible for analysis with the MS toolbox. The latter expects the data in this format: 
+
+
+```{r ex data, class.source='fold-hide', eval= TRUE}
+
+# Create examplary data:
+ms_ex_data <- data.frame(time = seq(2, 10, by = 2), 
+                     eye0_x = runif(5), 
+                     eye0_y = runif(5), 
+                     eye1_x = runif(5), 
+                     eye1_y = runif(5))
+
+kable(ms_ex_data, digits = 3) %>% 
+  kable_styling(full_width = F, 
+                position = "left") %>% 
+  column_spec(1:5, width = "5em")
+  
+```
+
+where each row gives a paired sample of x/y coordinates for each of the eyes. Importantly, these samples share the same timestamp, and these timestamps are expected  by the MSTB to be equally spaced (according to a given sampling frequency (below: `SAMPLING`)). 
+However, the exported gaze data from Pupil Player (`gaze_positions.csv`) looks like this (only relevant columns printed): 
+
+```{r pl data, class.source='fold-hide', eval= TRUE}
+
+# Create examplary data:
+
+data_gaze %>%  
+  mutate(gaze_timestamp = gaze_timestamp - min(gaze_timestamp)) %>% 
+  slice(50715:50725) %>% 
+  select(gaze_timestamp, gaze_normal0_x, gaze_normal0_y, gaze_normal1_x, gaze_normal1_y) %>% 
+  kable(digits = 8) %>% 
+  kable_styling(full_width = F, 
+                position = "left") %>% 
+  column_spec(1:5, width = "5em")
+
+
+```
+
+Note: timestamps here are in seconds (relative to the first sample), normals can be interpreted as coordinates for now. 
+
+There are a few issues with this:
+
+1. The sampling frequency (SF) is uneven, i.e. the samples are not spread out equidistantly in time.
+2. The SF seems to be higher than what is reported about the hardware (~200 Hz).
+3. For each sample only one of the eyes gets updated while info for the other one remains identical.
+4. There are NAs in the data and MSTB does not cope well with NAs.
+
+Let's first check whether NAs are a big chunck of the data: 
+
+```{r count NAs, class.source='fold-hide'}
+
+data_gaze %>%  
+  select(gaze_normal0_x, gaze_normal1_x) %>% 
+  pivot_longer(everything()) %>% 
+  mutate(name = recode(name, 
+                       gaze_normal0_x = "eye0", 
+                       gaze_normal1_x = "eye1")) %>% 
+  group_by(name) %>% 
+  summarise(n = n(), 
+            NA_count = sum(is.na(value)), 
+            NA_proportion = NA_count/n) %>% 
+  kable() %>% 
+  kable_styling()
+
+
+data_stimon <- data_annot %>%  
+  mutate(ttype = parse_number(label)) %>% 
+  filter(ttype == 2) 
+
+data_trials = list()
+
+```
+
+Ok, so for this (admittedly rather good) data set, we see that ~3% of samples per eye consist of NAs. Considering that this is data of the full block, including quite some garbage (brefore start of the block, during little breaks between trials, ...), it's probably no big issue. 
+Here is the same output for the data cropped to the relevant parts (from Cue Onset to the end of the retention interval):
+
+```{r count NAs in clean data, class.source='fold-hide'}
+data_stimon <- data_annot %>%  
+  mutate(ttype = parse_number(label)) %>% 
+  filter(ttype == 2) 
+
+data_trials = list()
+
+for (i in 1:nrow(data_stimon)) {
+  tts <- vector(length = 0)
+  # epoch data:
+  idx <- which((data_gaze$gaze_timestamp > (data_stimon$timestamp[i] - 0.8)) & data_gaze$gaze_timestamp < data_stimon$timestamp[i] + 2.2)
+  tts <- append(tts, idx)
+  data_fix <-  data_gaze[tts, ]
+  data_trials[[i]] <- data_fix
+}
+
+data_clean <- bind_rows(data_trials, .id = "trial") %>% 
+  mutate(trial = as.integer(as.character(trial)))
+
+data_clean %>%  
+  select(gaze_normal0_x, gaze_normal1_x) %>% 
+  pivot_longer(c(gaze_normal0_x, gaze_normal1_x)) %>% 
+  mutate(name = recode(name, 
+                       gaze_normal0_x = "eye0", 
+                       gaze_normal1_x = "eye1")) %>% 
+  group_by(name) %>% 
+  summarise(n = n(), 
+            NA_count = sum(is.na(value)), 
+            NA_proportion = NA_count/n) %>% 
+  kable() %>% 
+  kable_styling()
+
+```
+
+This brings the proportions belwo 1%. But here we can see that there are significant differences between trials in this block:
+
+```{r, NA per trial, class.source='fold-hide'}
+data_clean %>%  
+  select(trial, gaze_normal0_x, gaze_normal1_x) %>% 
+  pivot_longer(c(gaze_normal0_x, gaze_normal1_x)) %>% 
+  mutate(name = recode(name, 
+                       gaze_normal0_x = "eye0", 
+                       gaze_normal1_x = "eye1"), 
+         trial = as_factor(trial)) %>% 
+  group_by(trial, name) %>% 
+  summarise(n = n(), 
+            NA_count = sum(is.na(value)), 
+            NA_proportion = NA_count/n) %>% 
+  kable() %>% 
+  kable_styling() %>% 
+  scroll_box(width = "100%", height = "200px")
+
+```
+
+
+
+It still unclear how much of this might be caused by blinks (which  we will check for in another step).  
+
+**Therefore, regarding the NA issue, I conclude:**  
+**1. Introduce a threshold (0.05?) per trial how much data per eye can consist of NAs before the trial is rejected for ET analyses.**  
+**2. Compare NA times against blink times. Blinks are treated separately. **  
+**3. Finally, NAs could potentially be interpolated to make the data ready for MSTB.**  
+
+** BUT: Some trials will be more affected by this tahn others + this strategy does not solve the other issues mentioned above.**
+
+### Let's check other approaches:
+
+I will from now on work with the "clean" data (aka. the one cropped to the trial intervals).
+
+```{r, class.source = 'fold-show'}
+
+data_gaze <- data_clean
+
+```
+
+
+Furthermore, problematic are samples whose `gaze_timestamp` is a duplicate, because these create ambiguous mappings.  
+**Therefore, I suggest to kick out duplicate samples from `gaze_positions.csv` entirely:**  
+[This bit could be moved up]
+
+```{r, remove samples w/ duplicated timestamps, class.source='fold-show', warning=TRUE}
+
+n_duplic_timestamps <- sum(duplicated(data_gaze$gaze_timestamp))
+
+data_gaze <- data_gaze %>% 
+  distinct_at(vars(gaze_timestamp), .keep_all = TRUE)
+
+if (n_duplic_timestamps > 0) {
+  warning(sprintf("Removing %i samples with identical timestamps. Keeping first instance of each.", n_duplic_timestamps))
+}
+```
+
+Regarding point "3.  For each sample only one of the eyes gets updated while info for the other one remains identical.":  
+
+The samples in the data in `gaze_positions.csv` are actually merged mappings from the data in `pupil_positions.csv`. (ideally) two of these samples are combined by the gaze mapper and merged into one sample in the gaze positions file. This merging is done for each incoming data message from one of the pupil cams (which both run at ~200 Hz). This leads to the observed behavior, namely more than 200 samples per second (almost double) and updates only for one eye. This is useful for binocular gaze mapping, but for saccade detection, we want to avoid this. To do so, we can use the information in the column `base_data` in `pupil_positions.csv` which identifies the pupil samples from which the gaze sample has been merged.  
+We can split up this column into two separate ones that list the respective timestamps of the original samples: 
+
+```{r, add columns with base data timestamps, class.source = 'fold-show'}
+
+# get separate cols for eye samples: 
+data_gaze <- data_gaze %>% 
+  separate(base_data, c('timestamp_eye_0','eye0' ,'timestamp_eye_1', 'eye1'), '[- ]', convert = TRUE, remove = FALSE) %>% 
+  mutate(timestamp_eye_1 = if_else(eye0 == 1, timestamp_eye_0, timestamp_eye_1), 
+         timestamp_eye_0 = if_else(eye0 == 1, NA_real_ , timestamp_eye_0)) %>% 
+  select(-c(eye0, eye1))
+
+data_gaze %>%  
+  mutate(gaze_timestamp = gaze_timestamp - min(gaze_timestamp), 
+         timestamp_eye_0 = timestamp_eye_0 - min(timestamp_eye_0, na.rm = T), 
+         timestamp_eye_1 = timestamp_eye_1 - min(timestamp_eye_1, na.rm = T), ) %>% 
+  slice(50715:50725) %>% 
+  select(gaze_timestamp, 
+         gaze_normal0_x, 
+         gaze_normal0_y, 
+         gaze_normal1_x, 
+         gaze_normal1_y, 
+         timestamp_eye_0, 
+         timestamp_eye_1, 
+         trial) %>% 
+  kable(digits = 8) %>% 
+  kable_styling(full_width = T, 
+                position = "left") %>% 
+  column_spec(1:5, width = "5em")
+
+```
+
+
+We can now get rid of the duplicates per eye and have a closer look:
+
+In the following, I do:
+
++ create a new df per eye with the relevant columns
++ drop the rows with duplicated rows in the actually relevant columns (as there is no new information in these)
++ drop the rows with NA timestamps (this should be only one per df, after the `distinct` command)
++ sort the rows ascending in time
++ calculate the distance between the samples (`diff()`)
++ add a column with the (5 point) running average (note that `k` in `rollmean()` here needs to be 1 step smaller as x in the wanted x-point average to account for the fact that it is run on differences)
+
+
+```{r, checks per eye, class.source = 'fold-show'}
+
+timings_eye0 <- data_gaze %>% 
+  select(timestamp_eye_0, trial, gaze_timestamp, gaze_normal0_x, gaze_normal0_y) %>% 
+  distinct_at(vars(timestamp_eye_0, gaze_normal0_x, gaze_normal0_y), .keep_all = TRUE) %>% 
+  drop_na(timestamp_eye_0, gaze_normal0_x, gaze_normal0_y) %>% 
+  group_by(trial) %>% 
+  arrange(timestamp_eye_0) %>% 
+  mutate(sample_dist = c(NA_real_, diff(timestamp_eye_0)), 
+         sample_dist_smooth = rollmean(sample_dist, 4, fill = NA))  # k = 
+
+timings_eye1 <- data_gaze %>% 
+  select(timestamp_eye_1, trial, gaze_timestamp, gaze_normal1_x, gaze_normal1_y) %>% 
+  distinct_at(vars(timestamp_eye_1, gaze_normal1_x, gaze_normal1_y), .keep_all = TRUE) %>% 
+  drop_na(timestamp_eye_1, gaze_normal1_x, gaze_normal1_y) %>% 
+  group_by(trial) %>% 
+  arrange(timestamp_eye_1) %>% 
+  mutate(sample_dist = c(NA_real_, diff(timestamp_eye_1)), 
+         sample_dist_smooth = rollmean(sample_dist, 4, fill = NA))
+
+```
+
+We dropped all relevant NAs by now. Is this problemeatic, i.e. did we kick out a lot of samples?  
+According to what we did above, we would kill samples where the relevant columns for both eyes would be NA. So these are no bad loss. (And actually, there shouldn't be any: `sum(is.na(data_gaze$timestamp_eye_0) & is.na(data_gaze$timestamp_eye_1)) = ` ``r sum(is.na(data_gaze$timestamp_eye_0) & is.na(data_gaze$timestamp_eye_1))``.)  
+All other samples that we loose must be such which are duplicates for *both* eyes, or NA for one eye and a duplicate for the other. Also these are no dramatic loss.  We can check for their number/proportion: 
+
+```{r, chk n of lost samples}
+
+remaining_samples <- unique(c(timings_eye0$gaze_timestamp, timings_eye1$gaze_timestamp))
+n_dropped_samples <- length(setdiff(data_gaze$gaze_timestamp, remaining_samples))
+prop_dropped_samples <- n_dropped_samples/nrow(data_gaze)
+
+```
+Number of discarded samples: `r n_dropped_samples`  
+Which accounts for `r round(prop_dropped_samples * 100, 3)`% of all samples. 
+
+So this is not so problematic.   
+
+
+**Does it resolve the problem of the uneven SF?**
+
+```{r}
+
+mean_sample_dist_eye0 <- mean(timings_eye0$sample_dist, na.rm = T)
+mean_sample_dist_eye1 <- mean(timings_eye1$sample_dist, na.rm = T)
+
+# SF right eye:
+mean_SF_eye0 <- 1/mean_sample_dist_eye0
+# SF left eye:
+mean_SF_eye1 <- 1/mean_sample_dist_eye1
+
+```
+
+Avg. SF right eye: `r mean_SF_eye0`  
+Avg. SF left eye: `r mean_SF_eye1`  
+
+These means are very close to the 200 Hz that we expected. However, the spacing unfortunately is not as uniform as one might hope: 
+
+```{r, checks per sele, class.source = 'fold-show'}
+
+timings_eye0 %>% 
+  ggplot(aes(x = sample_dist)) + 
+  geom_histogram(bins = 300) + 
+  #xlim(c(0, 0.01)) + 
+  labs(x = "Avg. time between samples (s)", 
+       title = "Right eye") + 
+  theme_minimal()
+
+```
+
+
+It seems like the inverse of the mean time betwwen two samples is not the best representative of the SF actually. For most of the samples the SF is actually a bit higher than expected (~ 250 Hz), but for around 25% of the samples, it looks like a camera frame/sample was lost and therefore the SF is about half (~125 Hz). Also, the automatic fit of the x axis shows that there seems to be at least 1 outlier with a delay of around 4x the average.
+
+```{r, check outliers, class.source = 'fold-show'}
+
+summary(timings_eye0$sample_dist)
+
+prop_outliers_larger_10ms <- sum(timings_eye0$sample_dist > 0.01, na.rm = T)/nrow(timings_eye1)
+idx_outliers_larger_10ms <- which(timings_eye0$sample_dist > 0.01)
+
+plot(1:89, as_vector(timings_eye0[(idx_outliers_larger_10ms[15]-44):(idx_outliers_larger_10ms[15]+44),6]))
+plot(1:89, as_vector(timings_eye0[(idx_outliers_larger_10ms[15]-44):(idx_outliers_larger_10ms[15]+44),4]))
+lines(c(45, 45), c(-100, 100))
+lines(c(25, 25), c(-100, 100))
+
+```
+So roughly `r round(prop_outliers_larger_10ms, 3)*100`% of samples have a delay larger than 10ms (ideal would be 5ms). 
+Knowing that MSTB applies a 5-point running average to smoothen the data, I applied the same procedure above to the time delays between samples. Here's the result:
+
+```{r, check outliers smoothed data, class.source = 'fold-show'}
+
+timings_eye0 %>% 
+  ggplot(aes(x = sample_dist_smooth)) + 
+  geom_histogram(bins = 3000) + 
+  #xlim(c(0, 0.01)) + 
+  labs(x = "Avg. time between samples (s)", 
+       title = "Right eye") + 
+  theme_minimal()
+
+summary(timings_eye0$sample_dist_smooth)
+
+prop_outliers_larger_10ms <- sum(timings_eye0$sample_dist_smooth > 0.01, na.rm = T)/nrow(timings_eye1)
+
+```
+  
+The smoothing removes the outlier problem (at least for this data set) and most widely gets us rid of the 2 peaks in the distribution. But note that  `rollmean()` (standard 5 point avg over the sample distances) does not give the same result as the "running average" implemented in MSTB (see `vecvel.R`). `vecvel.R` with smoothing `TYPE==2` is not a plain implementation of a 5p moving average over velocities:
+
+<math><mtext>v</mtext><mtext>→</mtext><msub><mi></mi><mn>n</mn></msub><mtext>=</mtext><mtext>x</mtext><mtext>→</mtext><msub><mi></mi><mn>n+2</mn></msub><mtext>+</mtext><mtext>x</mtext><mtext>→</mtext><msub><mi></mi><mn>n+1</mn></msub><mtext>−</mtext><mtext>x</mtext><mtext>→</mtext><msub><mi></mi><mn>n−1</mn></msub><mtext>−</mtext><mtext>x</mtext><mtext>→</mtext><msub><mi></mi><mn>n−2</mn></msub><mtext>6</mtext><mspace sp="0.12" width="2px" linebreak="nobreak" is="true"></mspace><mtext>Δ</mtext><mtext>t</mtext><mtext>,</mtext></math>
+
+(from: [Engbert & Kliegl, 2003](https://www.sciencedirect.com/science/article/pii/S0042698903000841))
+
+
+Here's a first draft for a pipeable version of `vecvel.R`. For now it only calculates the smoothened version of the timestamps.
+(It's important that it is pipeable, so that it can take into account the group nature of the data frame.)
+
+```{r, class.source='fold-show'}
+
+vectime_custom <- function(.data, ...) {
+
+  
+  if (dplyr::is_grouped_df(.data)) {
+    return(dplyr::do(.data, vectime_custom(., ...)))
+  }
+
+  
+  args <- list(...)
+  
+  d <- dim(.data)
+  N <- d[1]
+  v <- matrix(rep(0,N),ncol=1)
+  
+  if (args$type == 2) {
+    slice_ <- list()
+    for (i in c(1,2,4,5)) {
+      end <- N-(5-i)
+      slice_[[i]] <- slice(.data, i:end)
+    }
+    
+    v[3:(N-2), ] <- 1/6* (slice_[[5]]$timestamp_eye_0 
+                          + slice_[[4]]$timestamp_eye_0 
+                          - slice_[[2]]$timestamp_eye_0
+                          - slice_[[1]]$timestamp_eye_0)
+    
+    
+    #v[3:(N-2),] <- 1/6*(x[5:N,] + x[4:(N-1),] - x[2:(N-3),] - x[1:(N-4),])
+    
+  
+    v[2,] = 1/2*(.data$timestamp_eye_0[3] - .data$timestamp_eye_0[1])
+    v[(N-1),] = 1/2*(.data$timestamp_eye_0[N] - .data$timestamp_eye_0[(N-2)])  
+  } else {
+    
+    if ("winsize" %in% names(args)) {
+      if (!(args$winsize %% 2)) {
+        stop("Window size must be an odd number.")
+      }
+      winsize_ <- args$winsize
+    } else {
+      winsize_ <- 3
+    }
+    
+    slice_ <- list()
+    slice_[['lower']] <- slice(.data, 1:(N-(winsize_ - 1)))
+    slice_[['upper']] <- slice(.data, winsize_:(N))
+    
+   #v <- rollmean(c(NA_real_, diff(.data$timestamp_eye_0)), winsize_ - 1, na.pad = T)   # this is for demo purposes; yields the same result
+    
+   v[ceiling(winsize_/2):(N-floor(winsize_/2)), ] <- 1/(winsize_ - 1) * (slice_[['upper']]$timestamp_eye_0 - slice_[['lower']]$timestamp_eye_0)
+    
+  }
+  
+  
+  .data$timestamp_eye_0 <- v
+  return(.data)
+}
+
+```
+
+
+Here's the original version, to compare:
+
+```
+vecvel <- function(x,SAMPLING=500,TYPE=2) {
+  d <- dim(x)
+  N <- d[1]
+  v <- matrix(rep(0,2*N),ncol=2)
+  
+  if ( TYPE==2 ) {
+    v[3:(N-2),] <- SAMPLING/6*(x[5:N,] + x[4:(N-1),] - x[2:(N-3),] - x[1:(N-4),])
+    v[2,] = SAMPLING/2*(x[3,] - x[1,])
+    v[(N-1),] = SAMPLING/2*(x[N,] - x[(N-2),])   
+  }  else  {
+    v[2:(N-1),] <- SAMPLING/2*(x[3:N,] - x[1:(N-2),])
+  }
+  return(v)
+}
+
+``` 
+
+here is the result of applying `vectime_custom.R` to our gaze data frame:
+
+```{r, class.source = 'fold-show'} 
+timings_eye0 %>% 
+  select(timestamp_eye_0, trial) %>% 
+  vectime_custom(., type = 2) %>% 
+  ggplot(aes(x = timestamp_eye_0)) +
+  geom_histogram(bins = 3000) +
+  labs(x = "Avg. time between samples (s)",
+       title = "Right eye") +
+  theme_minimal()
+
+```
+
+The two peaks are now closer together but still very prominent. 
+
+My custom adaptation of `vecvel` allows for a similar usage of the `type`argument as the original. So if we use `type == 1` (actually just any number but 2), we get the result for running a plain 3-point average: 
+
+```{r, class.source = 'fold-show'} 
+timings_eye0 %>% 
+  select(timestamp_eye_0, trial) %>% 
+  vectime_custom(., type = 1) %>% 
+  ggplot(aes(x = timestamp_eye_0)) +
+  geom_histogram(bins = 3000) +
+  labs(x = "Avg. time between samples (s)",
+       title = "Right eye") +
+  theme_minimal()
+
+```
+  
+This does not make a big difference. Interesting though is the difference to the plain 5-point average that I showed above. Bug in the code?  
+I don't think so. My `vectime_custom` now also allows to adaptively set a window size with the parameter `winsize` (must be an odd number). So here's the result for a 5-point window: 
+
+```{r, class.source = 'fold-show'} 
+timings_eye0 %>% 
+  select(timestamp_eye_0, trial) %>% 
+  vectime_custom(., type = 1, winsize = 5) %>% 
+  ggplot(aes(x = timestamp_eye_0)) +
+  geom_histogram(bins = 3000) +
+  labs(x = "Avg. time between samples (s)",
+       title = "Right eye") +
+  theme_minimal()
+
+```
+  
+
+That's the same result as shown above with `rollmean()` over `diff(timestamp)`. So the difference between `vecvel.R`'s 5-point running average and the classical 5-point average seems to play a role here. 
+
+**Preliminary summary:**  
+The choice of the windowing/averaging parameter seems to play an essential role. I see three options:  
+
+1. Use the classical `vecvel.R` algorithm and pretend the SF was constantly 200 Hz, which is pretty much in the center of the two peaks and they are not too wide apart. 
+2. Use "normal" 5-point averaging (so set `TYPE`to 1 in `vecvel.R`). This leads to a centered distribution in the time domain (which does not necessarily say something about what it does to the velocities) and therefore hurt the assumption of a stable SF less. This would require tweaking the implementations of the MSTB just a bit because only a 3-point averaging is implemented (for `TYPE != 2`).
+3. Implement a custom version of `vecvel.R` and all other scripts in the MSTB that expect a stable SF so that they respect the timestamps and calculate the velocity in respect of the actual temporal distance between two samples. This would probably be the cleanest option but requires digging into MSTB further, finding out which scripts depend on the SF and fix them accordingly. 
+
+
+## Update: Info from PL developers:
+
+```{r, out.width = "100%"}
+
+knitr::include_graphics(here("EyeTracking/timestamp_info_pl.png"))
+```
+
+
+So, many of the considerations from above can be neglected and we **should** assume a stable sampling rate.  
+Remaining to-dos:  
+
+* Scan for dropped frames (10ms threshold)
+* Cope with these frames (replace/interpolated them?)
+
+PL dev papr suggests to assume that a dropped frame happened when the inter-sample distance is >10ms. However, as we've seen from the results of the 5p running average, these frames seem to be surrounded by frames with under-average sample distances- becuase averaging brings them into the center of the distribution. Let's check: 
+
+```{r}
+
+# indices of frames with sample distance >10 ms (see above): idx_outliers_larger_10ms
+idx_outliers_larger_10ms <- which(timings_eye0$sample_dist > 0.01)
+
+# Let's look at the sample distances before and after these frames:
+steps <- -35:35
+sdists <- list()
+for (step in steps) {
+  sdists[[as.character(step)]] <- timings_eye0[(idx_outliers_larger_10ms + step), 'sample_dist']
+}
+df_sdist <- bind_rows(sdists, .id = "step") %>%  
+  mutate(step = as.factor(as.integer(step))) %>% 
+  group_by(step) 
+
+ggplot(df_sdist, aes(x = step, y = sample_dist)) + 
+  geom_boxplot()
+
+
+```
+
+  
+We see  that the samples right after the "delayed" sample actually have shorter delays than average. I think that speaks for hickups in the timing estimation (as described by the PL dev) rather than for an actaully dropped frame (which should not lead to "faster" SF in the following frames). In the plot above we can also see that around these problematic frames, there is somwe weird eigenfrequence dynamic going on with a phase of 4 samples (look at the means). This also explains why 25% of the samples have a higher delay.  
+For a random sample this effect is not so evident: 
+
+```{r} 
+idx_rnd <- sample(nrow(timings_eye0), length(idx_outliers_larger_10ms))
+
+# Let's look at the sample distances before and after these frames:
+steps <- -35:35
+sdists <- list()
+for (step in steps) {
+  sdists[[as.character(step)]] <- timings_eye0[(idx_rnd + step), 'sample_dist']
+}
+df_sdist <- bind_rows(sdists, .id = "step") %>%  
+  mutate(step = as.factor(as.integer(step))) %>% 
+  group_by(step) 
+
+ggplot(df_sdist, aes(x = step, y = sample_dist)) + 
+  geom_boxplot()
+
+```
+
+  
+Further, if these longer delays would really stand for dropped samples, the distance of the x/y gaze normals in relation to the samples before (aka travelled distance of the pupil) should be higher for these samples (becuase there was more time to travel). So let's compare the relative differences for the accoring samples with those of the samples right before (avg. length) and the ones after (shorter length; see above): 
+
+```{r}
+
+timings_eye0 %>% 
+  mutate(x_diff = c(NA_real_, abs(diff(gaze_normal0_x)))) %>% 
+  ungroup() %>% 
+  rownames_to_column() %>% 
+  mutate(step = case_when(
+    rowname %in% idx_outliers_larger_10ms ~ 0.0, 
+    rowname %in% (idx_outliers_larger_10ms - 1) ~ -1,
+    rowname %in% (idx_outliers_larger_10ms + 1) ~ 1, 
+    TRUE ~ NA_real_), 
+    mean_samp_dist = mean(sample_dist)) %>%  
+  filter(! is.na(step)) %>% 
+  mutate(step = as_factor(step)) -> bp_data01
+
+bp_data02 <- bp_data01 %>% 
+  group_by(step) %>% 
+  summarise(mean_sample_dist = mean(sample_dist, na.rm = T))
+
+
+bp_data01 %>% 
+  ggplot(aes(x = step , y = x_diff)) + 
+  geom_boxplot() + 
+  geom_text(data = bp_data02,
+            aes(
+           label = round(mean_sample_dist, 4),
+           x = step, 
+           y = 0.02), 
+           fontface = 'bold') +
+  ylab('distance x gaze normal') +
+  annotate(geom = 'text', 
+           label = 'avg. sample dist.:', 
+                x = 2, 
+                y = 0.022, 
+           fontface = 'bold') +
+  theme_bw()
+  
+
+```
+
+Also here

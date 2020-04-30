@@ -28,7 +28,7 @@ plot_performance <- function(df, style) {
   
   ggplot(df_mean_err, aes(x = c_Ecc,
                           y = meanErr)) +
-    geom_jitter(width = 0.1) + 
+    geom_jitter(width = 0.1, height = 0.0) + 
     # geom_dotplot(binaxis='y', 
     #              stackdir='center', 
     #              dotsize=0.6, 
@@ -41,7 +41,7 @@ plot_performance <- function(df, style) {
                  size = 0.6) + 
     facet_wrap(~c_StimN, 
                labeller = labeller(c_StimN = c_StimN.labs)) +
-    ylim(c(0.5,1.05)) + 
+    #ylim(c(0.5,1.05)) + 
     labs(x = "mean Eccentricity (dva)",
          y = "% correct (+/-1SD)",
          title = ifelse(style == "experiment",

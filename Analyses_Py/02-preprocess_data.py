@@ -16,7 +16,14 @@ from library import helpers
 from datetime import datetime
 
 # define subject:
-subsub = 'VME_S27'
+#subsub = 'VME_S27'
+subsub_list = ['VME_S01', 'VME_S02', 'VME_S03', 'VME_S05', 
+               'VME_S06', 'VME_S07', 'VME_S08', 'VME_S09', 
+               'VME_S10', 
+               'VME_S13', 'VME_S16', 
+               'VME_S17', 'VME_S18', 'VME_S20', 'VME_S22', 
+               'VME_S23', 'VME_S24', 'VME_S26', 'VME_S27'] #'VME_S12', 'VME_S25'
+               
 
 # set paths:
 path_study = Path(os.getcwd()).parents[1] #str(Path(__file__).parents[2])
@@ -159,23 +166,28 @@ def interpolate_bad_chans(data_):
 
 ######################################################################################################
 
-# get BP [1; 40Hz] filtered data to train ICA:
-data_forica = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-forica-epo.fif'))
+for subsub in subsub_list:
+    # get BP [1; 40Hz] filtered data to train ICA:
+    data_forica = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-forica-epo.fif'))
 
-# get BP [0.01; 40Hz] filtered data to apply ICA weights:
-data_forcda = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-stimon-epo.fif'))
+    # get BP [0.01; 40Hz] filtered data to apply ICA weights:
+    #data_forcda = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-stimon-epo.fif'))
+    data_forcue = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-cue-epo.fif'))
 
-data_forica = reject_bads(subsub, data_forica, 'fromfile', write_results_to_file=False)
-## Skip this for now:
-###data_forica, n_interp_chans = interpolate_bad_chans(data_forica)
-n_interp_chans = 0
+    data_forica = reject_bads(subsub, data_forica, 'fromfile', write_results_to_file=False)
+    ## Skip this for now:
+    ###data_forica, n_interp_chans = interpolate_bad_chans(data_forica)
+    n_interp_chans = 0
 
-data_forcda = reject_bads(subsub, data_forcda, mode='fromfile')
-## Skip this for now:
-###data_forcda, _ = interpolate_bad_chans(data_forcda)
+    #data_forcda = reject_bads(subsub, data_forcda, mode='fromfile')
+    data_forcue = reject_bads(subsub, data_forcue, 'fromfile')
+    ## Skip this for now:
+    ###data_forcda, _ = interpolate_bad_chans(data_forcda)
 
-data_ica = get_ica_weights(subsub, data_forica, n_interp_chans, ica_from_disc=True)
-data_forcda = rej_ica_eog(data_ica, data_forica, data_forcda)
+    data_ica = get_ica_weights(subsub, data_forica, n_interp_chans, ica_from_disc=True)
+    #data_forcda = rej_ica_eog(data_ica, data_forica, data_forcda)
+    data_forcue = rej_ica_eog(data_ica, data_forica, data_forcue)
 
-vis_compare_ica(data_forcda, data_forcda)
-helpers.save_data(data_forcda, subsub + '-forcda-postica', path_outp_rejICA, append='-epo')
+    vis_compare_ica(data_forcue, data_forcue)
+    #helpers.save_data(data_forcda, subsub + '-forcda-postica', path_outp_rejICA, append='-epo')
+    helpers.save_data(data_forcue, subsub + '-cue-postica', path_outp_rejICA, append='-epo')

@@ -28,11 +28,11 @@ source(here("Utils", "plot_behavior.R"))
 ```{r, include=F, message=F}
 
 # set data choices:
-write_fulldat_to_disk <- FALSE
-get_fulldat_from_disk <- TRUE
-get_data_from_sdrive <- FALSE
+write_fulldat_to_disk <- TRUE
+get_fulldat_from_disk <- FALSE
+get_data_from_sdrive <- TRUE
 
-# If were on my laptop, get data from virtual drive:
+# If we're on my laptop, get data from virtual drive:
 current_machine = Sys.info()['nodename']
 if (current_machine == "DESKTOP-7DGG1KH" & get_data_from_sdrive) {
   wd = file.path('S:', 'Meine Bibliotheken', 'Experiments', 'vMemEcc')
@@ -57,7 +57,7 @@ if (get_fulldat_from_disk) {
   for (ID in IDs) {
     for (cond in list('S001', 'S002')) {
       fname <- 'trial_results.csv'
-      fpath <- file.path(d2Path, ID, 'Unity', cond, fname)
+      fpath <- file.path(path_subject_data, ID, 'Unity', cond, fname)
       
       if (!file.exists(fpath)) next
       
@@ -124,7 +124,7 @@ __Summarize avg. performance & run ANOVA:__
 ```{r message=FALSE, include=T}
 
 sumstat <- fulldat %>% 
-  filter(BlockStyle %in% c('perception')) %>% 
+  filter(BlockStyle %in% c('experiment')) %>% 
   group_by(c_StimN, c_Ecc, ppid) %>% 
   summarise(mean_acc = mean(c_ResponseCorrect))
 
@@ -216,11 +216,22 @@ for (ffile in ma_files) {
 }
 
 meanamp_dat$V4 <- as.numeric(meanamp_dat$V4)
-colnames(meanamp_dat) <- c('ppid', 'c_StimN', 'c_Ecc', 'mean_amp')
+colnames(meanamp_dat) <- c('ppid', 'c_StimN', 'c_Ecc', 'CDA_amp')
+data_CDA <- meanamp_dat %>% mutate(c_StimN = recode(c_StimN, 
+                                        LoadLow = 2, 
+                                        LoadHigh = 4), 
+                       c_Ecc = recode(c_Ecc, 
+                                      EccS = 4,
+                                      EccM = 9, 
+                                      EccL = 14)) 
+if (False) {
+  fname <- file.path(path_r_data, 'data_CDA.rds')
+  saveRDS(data_CDA, fname)
+}
 
 sumstat_ma <- meanamp_dat %>% 
   group_by(c_StimN, c_Ecc, ppid) %>% 
-  summarise(mean_ma = mean(mean_amp))
+  summarise(mean_ma = mean(CDA_amp))
 
 aov.res <- anova_test(data = meanamp_dat, 
                       dv = mean_amp, 
@@ -255,7 +266,21 @@ for (ffile in apwr_files) {
 }
 
 apwr_dat$V4 <- as.numeric(apwr_dat$V4)
-colnames(apwr_dat) <- c('ppid', 'c_StimN', 'c_Ecc', 'mean_alpha')
+colnames(apwr_dat) <- c('ppid', 'c_StimN', 'c_Ecc', 'alpha_pwr')
+
+data_alpha <- apwr_dat %>% mutate(c_StimN = recode(c_StimN, 
+                                        LoadLow = 2, 
+                                        LoadHigh = 4), 
+                       c_Ecc = recode(c_Ecc, 
+                                      EccS = 4,
+                                      EccM = 9, 
+                                      EccL = 14)) 
+
+if (False) {
+  fname <- file.path(path_r_data, 'data_alpha.rds')
+  saveRDS(data_alpha, fname)
+}
+
 
 aov.res <- anova_test(data = apwr_dat, 
                       dv = mean_alpha, 
