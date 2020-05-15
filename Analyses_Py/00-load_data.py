@@ -12,7 +12,7 @@ from pathlib import Path
 
 import mne
 
-subsub = 'VME_S27'
+subsub = 'VME_S15'
 get_data_from_sdrive = False
 
 # set paths:

@@ -49,4 +49,9 @@ factor_dict = {name: factor_levels.index(name) for name in factor_levels}
 
 # times:
 times_dict = dict(CDA_start = 0.450, 
-                  CDA_end = 1.450)
+                  CDA_end = 1.450, 
+                  blink_dur = 0.8,
+                  fix_dur = 0.8, 
+                  cue_dur = 0.8, 
+                  stim_dur = 0.2, 
+                  retention_dur = 2.0)

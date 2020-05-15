@@ -15,7 +15,7 @@ import mne
 from pathlib import Path
 from library import helpers, config
 
-subsub = 'VME_S01'
+subsub = 'VME_S27'
 sub_list = [1, 2, 3, 5, 6, 7, 8, 9, 10, 13, 16, 17, 18, 20, 22, 23, 24, 26, 27]
 
 chans_CDA = [['P3', 'P5', 'PO3', 'PO7', 'O1'], 

@@ -13,11 +13,12 @@ import os.path as op
 import numpy as np
 import mne
 from pathlib import Path
+from library import helpers, config
 
 # define dummy subject:
 #subsub = 'VME_S27'
 # define subject:
-subsub_list = ['VME_S26', 'VME_S27'] #'VME_S12', 'VME_S25'
+subsub_list = ['VME_S04'] #'VME_S26', 'VME_S27'] #, 'VME_S25'
                # ['VME_S01', 'VME_S02', 'VME_S03', 'VME_S05', 
                # 'VME_S06', 'VME_S07', 'VME_S08', 'VME_S09', 
                # 'VME_S10', 
@@ -41,6 +42,8 @@ for pp in [path_outp_ev, path_outp_prep, path_outp_filt, path_outp_epo]:
     if not op.exists(pp):
         os.makedirs(pp)
         print('creating dir: ' + pp)
+
+
 
 def get_events(subID, save_eeg=True, save_eve_to_file=True):
     fname_inp = op.join(path_inp, subID + '-raw.fif')
@@ -77,6 +80,38 @@ def calc_eog_chans(data_raw):
             'right': ['LO2']
         }
     }
+
+    # For a few subjects electrodes 'Fp1' and 'LO1' were mistakenly exchanged. 
+    # Let's find out for which and repair it:
+
+    picks = ['Fp1', 'Fp2', 'IO1', 'IO2']
+    rr = data_raw.load_data().copy().pick_channels(picks).filter(l_freq = 1, h_freq= 5, picks=['eeg','misc'])
+    # Create pseudo epochs to loop over:
+    events = mne.make_fixed_length_events(rr, duration=20)
+    epochs = mne.Epochs(rr, events, tmin=0.0, tmax=20, baseline = (0,1))
+    # For each epoch we calculate the correlations between the vert EOG channels and store it
+    holder = [] 
+    for epo in epochs:
+        fp1 = epo
+        fp1 = fp1 - fp1.mean(axis = 1, keepdims=True)
+        # plt.plot(epochs.times, fp1.transpose())
+        # plt.legend(picks)
+        # plt.show()
+        tmp = np.corrcoef(fp1)
+        holder.append(tmp)
+
+    res = np.stack(holder).mean(axis=0)
+    # cross: corr between Fp1-LO1, Fp1-LO2, Fp2-LO1, Fp2-LO2 (should be neg)
+    # equal: corr between Fp1-Fp2, LO1-LO2 (should be pos)
+    # fp_cor: corr betw. Fp1 and Fp2
+    cross = np.concatenate([res[0,2:4].flatten(), res[1,2:4].flatten()]).mean() #, [1,2], [1,3]])
+    equal = np.mean([res[0,1], res[2,3]]) 
+    fp_cor = res[0,1]
+    if not fp_cor > 0.8:
+        tmp = raw_data.get_data(picks = ['Fp1', 'LO1'])
+        raw['Fp1'] = tmp[1]
+        raw['LO1'] = tmp[0]
+
 
     # calculate bipolar EOG chans:
     raw.load_data()
@@ -149,12 +184,26 @@ def setup_event_structures(events_, event_id_, srate_):
         else:
             event_dict['EccM'].append(str(ev))
 
-    # clean from double markers in trials with PostureCalib:
-    trig_postcal = event_id_['Stimulus/S228']
+    
+    # clean from double markers in restarted trials:
+    # same routine as in ET analysis
 
-    for i in range(len(events_)):
-        if events_[i,2] in targ_evs and events_[i+2,2] == trig_postcal:
-            events_[i:i+2,2] = 999
+    # temporary list of trial onsets (fixation Onsets) and StimOnsets:
+    tmp_ev_fix = np.array([ev for ev in events_ if ev[2] in targ_evs])
+    stimon_times = np.array([ev[0] for ev in events_ if ev[2] == event_id_['Stimulus/S  2']])
+    for i in range(1,len(tmp_ev_fix)):
+        # We know that for restarted trials the same trial type comes 2x in a row:
+        if tmp_ev_fix[i,2] == tmp_ev_fix[i-1,2]: 
+            times_between = np.arange(tmp_ev_fix[i-1,0], tmp_ev_fix[i,0])
+            # if no StimOnset between these two markers:
+            if not len(np.intersect1d(times_between, stimon_times)) > 0:
+                # we know that this was a restarted trial, and we overwrite all events between the two 
+                # relevant markers:
+                idx = np.in1d(events_[:,0], times_between)
+                for ee in events_[idx]:
+                    ev_name = [n for n,v in event_id_.items() if v == ee[2]]
+                    print('Trial restarted: Overwriting event -- ' + str(ev_name))
+                events_[idx,2] = 999
 
     # crop off all markers before first and after last exp block:
     # TODO: refactor this
@@ -179,15 +228,57 @@ def setup_event_structures(events_, event_id_, srate_):
     # set up event arrays:
     events_fix_ = np.array([ev for ev in events_ if ev[2] in targ_evs])
     # add duration of blinking interval:
-    # FIXME: replace 800 with variable 
-    events_fix_[:,0] = events_fix_[:,0] + 800*srate_/1000
+    events_fix_[:,0] = events_fix_[:,0] + config.times_dict['blink_dur'] * srate_
 
     events_cue_ = np.array([ev for ev in events_ if ev[2] == event_id_['Stimulus/S  1']])
     events_stimon_ = np.array([ev for ev in events_ if ev[2] == event_id_['Stimulus/S  2']])
+
+    bad_epos = dict()
+    # Check if for all relevant events 720 instances were found:
+    if any(np.array([len(events_fix_), len(events_cue_), len(events_stimon_)]) < 720):
+        
+        # Missing triggers that code for the trial type are tricky. It's better to fix that manually instead of silently tring to fix it.
+        if (len(events_fix_) != 720): 
+            raise ValueError("There is a trigger missing that codes for the trial type. You have to fix this manually, I'm afraid!")
+        
+        # For CueOnset triggers we can check their distance to the trial onsets (ie, fixation onset triggers). 
+        # If no stimonset trigger is found in the relevant time window, this is probably the trial where something went wrong.  
+        if (len(events_cue_) != 720): 
+            idx = np.argwhere([np.min(np.abs(ev[0] - events_cue_[:,0])) >             
+                (config.times_dict['fix_dur'] + 0.1) * srate for ev in events_fix_])
+            if (len(idx) != (720 - len(events_cue_))): 
+                raise ValueError("There is a timing issue apart from missing triggers. Check your triggers manually!")
+            else: 
+                for i in idx: 
+                    print('Replacing missing trigger for Cue and adding to "bads" list.')
+                    new_ev = [int(events_fix_[i[0],0] + config.times_dict['fix_dur'] * srate_), 0, event_id_['Stimulus/S  1']]
+                    events_tmp = np.vstack([events_cue_, new_ev])
+                    # sort events ascending in time:
+                    events_cue_ = events_tmp[events_tmp[:,0].argsort()]
+            bad_epos['cue'] = idx.flatten()
+
+
+        # For StimOnset triggers we can check their distance to the trial onsets (ie, fixation onset triggers). 
+        # If no stimonset trigger is found in the relevant time window, this is probably the trial where something went wrong.  
+        if (len(events_stimon_) != 720): 
+            idx = np.argwhere([np.min(np.abs(ev[0] - events_stimon_[:,0])) >             
+            (config.times_dict['fix_dur'] + config.times_dict['cue_dur'] + 0.1) * srate for ev in events_fix_])
+            if (len(idx) != (720 - len(events_stimon_))): 
+                raise ValueError("There is a timing issue apart from missing triggers. Check your triggers manually!")
+            else: 
+                for i in idx: 
+                    print('Replacing missing trigger for StimOnset and adding to "bads" list.')
+                    new_ev = [int(events_fix_[i[0],0] + (config.times_dict['fix_dur'] + config.times_dict['cue_dur']) * srate_), 0, event_id_['Stimulus/S  2']]
+                    events_tmp = np.vstack([events_stimon_, new_ev])
+                    # sort events ascending in time:
+                    events_stimon_ = events_tmp[events_tmp[:,0].argsort()]
+            bad_epos['stimon'] = idx.flatten()
+    
+    # Add trial type info to last column:
     events_stimon_[:,2] = events_fix_[:,2]
     events_cue_[:,2] = events_fix_[:,2]
 
-    return events_fix_, events_cue_, events_stimon_
+    return events_fix_, events_cue_, events_stimon_, bad_epos
 
 #FIXME: event_id
 def extract_epochs_ICA(raw_data, events, event_id_):
@@ -203,7 +294,7 @@ def extract_epochs_ICA(raw_data, events, event_id_):
     return epos_ica_
 
 #FIXME: event_id
-def extract_epochs_stimon(raw_data, events, event_id_):
+def extract_epochs_stimon(raw_data, events, event_id_, bad_epos_):
     # filter the data:
     filtered = raw_data.load_data().filter(l_freq=0.01, h_freq=40)
     epos_stimon_ = mne.Epochs(filtered, 
@@ -213,18 +304,20 @@ def extract_epochs_stimon(raw_data, events, event_id_):
                         tmax=2.7, 
                         baseline=None,
                         preload=False)
+    epos_stimon_.drop(bad_epos_, 'BADRECORDING')
     return epos_stimon_
 
-def extract_epochs_cue(raw_data, events, event_id_):
+def extract_epochs_cue(raw_data, events, event_id_, tmin_, tmax_, bad_epos_):
     # filter the data:
     filtered = raw_data.load_data().filter(l_freq=0.01, h_freq=40)
     epos_cue_ = mne.Epochs(filtered, 
                         events, 
                         event_id=event_id_, 
-                        tmin=-1, 
-                        tmax=1.5, 
+                        tmin=tmin_, 
+                        tmax=tmax_, 
                         baseline=None,
                         preload=False)
+    epos_cue_.drop(bad_epos_, 'BADRECORDING')
     return epos_cue_
 
 
@@ -237,22 +330,23 @@ for subsub in subsub_list:
     #save_data(raw, subsub, path_outp_prep, append='-raw') #TODO: replace by helper func
 
     srate = raw.info['sfreq']
-    events_fix, events_cue, events_stimon = setup_event_structures(events, event_id, srate)
+    events_fix, events_cue, events_stimon, bad_epos = setup_event_structures(events, event_id, srate)
 
     event_id_fix = {key: event_id[key] for key in event_id if event_id[key] in events_fix[:,2]}
     event_id_cue = {key: event_id[key] for key in event_id if event_id[key] in events_cue[:,2]}
     event_id_stimon = {key: event_id[key] for key in event_id if event_id[key] in events_stimon[:,2]}
 
 
-    """ 
+    
     epos_ica = extract_epochs_ICA(raw.copy(), events_stimon, event_id_stimon)
     save_data(epos_ica, subsub + '-forica', path_outp_epo, '-epo')
 
-    epos_stimon = extract_epochs_stimon(raw, events_stimon, event_id_stimon)
+    epos_stimon = extract_epochs_stimon(raw, events_stimon, event_id_stimon, bad_epos.get('stimon',[]))
     save_data(epos_stimon, subsub + '-stimon', path_outp_epo, '-epo')
     """
-    epos_cue = extract_epochs_cue(raw.copy(), events_cue, event_id_cue)
+    epos_cue = extract_epochs_cue(raw.copy(), events_cue, event_id_cue, tmin_ = -1, tmax_ = 1.5, bad_epos.get('cue', []))
     save_data(epos_cue, subsub + '-cue', path_outp_epo, '-epo')
+    """
 # epoCueOn = mne.Epochs(filtered, 
 #                         events, 
 #                         event_id=event_id['Stimulus/S  1'], #=targ_evs, #
