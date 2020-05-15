@@ -11,6 +11,7 @@ import os.path as op
 import numpy as np
 import csv
 import mne
+import autoreject
 from pathlib import Path
 from library import helpers
 from datetime import datetime
@@ -32,6 +33,7 @@ path_outp_rejepo = op.join(path_data, 'DataMNE', 'EEG', '05.1_rejepo')
 path_outp_rejepo_summaries = op.join(path_data, 'DataMNE', 'EEG', '05.1_rejepo', 'summaries')
 path_outp_ICA = op.join(path_data, 'DataMNE', 'EEG', '05.2_ICA')
 path_outp_rejICA = op.join(path_data, 'DataMNE', 'EEG', '05.3_rejICA')
+
 
 
 
