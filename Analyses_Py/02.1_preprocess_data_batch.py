@@ -84,6 +84,7 @@ def clean_with_ar_local(data_):
     picks = mne.pick_types(data_.info, meg=False, eeg=True, stim=False,
                        eog=False)
     ar = autoreject.AutoReject(n_interpolate=np.array([2,8,16]), 
+                               consensus= np.linspace(0.5, 1.0, 6),
                                picks=picks, 
                                n_jobs=config.n_jobs, 
                                verbose='tqdm')
