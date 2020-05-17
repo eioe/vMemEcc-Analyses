@@ -189,11 +189,11 @@ def save_rejlog(rejlog, fname):
 
 
 # define subject:
-subsub_list = ['VME_S01']# , 'VME_S13', 'VME_S16', 'VME_S22']
+#subsub_list = ['VME_S03', 'VME_S04', 'VME']# , 'VME_S13', 'VME_S16', 'VME_S22']
+sub_list = np.setdiff1d(np.arange(3,8), config.ids_missing_subjects)
 
-
-for subsub in subsub_list:
-
+for subsub in sub_list:
+    subsub = 'VME_S%02d' % subsub
     helpers.print_msg('Starting with subject: ' + subsub)
 
     # get BP [1; 40Hz] filtered data to train ICA:
@@ -205,7 +205,7 @@ for subsub in subsub_list:
     data_forica_c, _, _ = clean_with_ar_local(data_forica)
     
     # fit ICA to cleaned data:
-    data_ica = get_ica_weights(subsub, data_forica_c, ica_from_disc=True)
+    data_ica = get_ica_weights(subsub, data_forica_c, ica_from_disc=False)
     # remove eog components and project to actual data:
     data_stimon = rej_ica_eog(data_ica, data_forica_c, data_stimon)
     data_cue = rej_ica_eog(data_ica, data_forica_c, data_cue)
