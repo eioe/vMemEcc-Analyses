@@ -26,3 +26,16 @@ def save_data(data, filename, path, append=''):
     ff = op.join(path, filename + append + '.fif')
     #print("Saving %s ..." % ff)
     data.save(fname=ff, overwrite=True)
+
+
+
+def print_msg(msg):
+    n_line_marks = min([len(msg)+20, 100])
+    print('\n' + n_line_marks*'#' + '\n' + msg + '\n' + n_line_marks*'#' + '\n')
+
+    
+def plot_scaled(data, picks = None):
+    data.plot(scalings = dict(eeg=10e-5), 
+              n_channels = len(data.ch_names), 
+              picks = picks)
+

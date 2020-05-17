@@ -13,17 +13,14 @@ import csv
 import mne
 import autoreject
 from pathlib import Path
-from library import helpers
+from library import helpers, config
 from datetime import datetime
-
-# define subject:
-subsub_list = ['VME_S10', 'VME_S13', 'VME_S16', 'VME_S22']
 
 # set paths:
 path_study = Path(os.getcwd()).parents[1] #str(Path(__file__).parents[2])
 # note: returns Path object >> cast for string
 
-#TODO: give reasonable names
+#TODO: get from config
 path_data = os.path.join(path_study, 'Data')
 path_inp = os.path.join(path_data, 'DataMNE', 'EEG', '00_raw')
 path_outp_ev = op.join(path_data, 'DataMNE', 'EEG', '01_events')
@@ -50,6 +47,8 @@ def mark_bad_epos_for_ica(data_):
                     block=True)
     return data_
 
+
+
 def write_bads_to_file(subsub_, data_, out_file):
     with open(out_file, 'a') as ff:
         bad_epos = ",".join([str(idx) for idx in np.where(data_.drop_log)[0]])
@@ -71,15 +70,34 @@ def read_bads_from_file(ID, file_):
     print(f'Subject {ID} not found in {file_}')
         
 
+def get_rejthresh_for_ica(subID, data_, out_file=None): 
+    thresh = autoreject.get_rejection_threshold(data_, ch_types='eeg')
+    data_clean = data_.copy().drop_bad(reject=thresh)
+    n_epos_rejected = len(data_) - len(data_clean)
+    if not out_file is None:
+        with open(out_file, 'a') as ff:
+            ff.write(subID + ';' + str(thresh) + ';' + str(n_epos_rejected) + '\n')
+        
+    return thresh
 
-def get_ica_weights(subID, data_, n_interp_chans_, ica_from_disc = False):
+def clean_with_ar_local(data_):
+    picks = mne.pick_types(data_.info, meg=False, eeg=True, stim=False,
+                       eog=False)
+    ar = autoreject.AutoReject(n_interpolate=np.array([2,8,16]), 
+                               picks=picks, 
+                               n_jobs=config.n_jobs, 
+                               verbose='tqdm')
+    epo_clean, reject_log = ar.fit_transform(data_, return_log=True)
+    return epo_clean, ar, reject_log
+
+def get_ica_weights(subID, data_, ica_from_disc = False, reject=None):
     ### Load ICA data (after comp rejection)?
     if ica_from_disc:
         ica = mne.preprocessing.read_ica(fname=op.join(path_outp_ICA, subID + '-ica.fif.'))
     else:
+        data_.drop_bad(reject=reject)
         ica = mne.preprocessing.ICA(method='infomax', 
-                                    fit_params=dict(extended=True), 
-                                    max_pca_components = len(data_.info['ch_names']) - 3 - len(data_.info['bads']) - n_interp_chans)
+                                    fit_params=dict(extended=True))
         ica.fit(data_)
         ica.save(fname=op.join(path_outp_ICA, subID + '-ica.fif.'))
     return ica
@@ -93,16 +111,16 @@ def rej_ica_eog(data_ica_, data_forica_, data_to_clean_):
     Find EOG components, remove them, and apply ICA weights to full data.
     """
     EOGexclude = []
-    for ch in ('VEOG', 'HEOG'):
-        eog_indices, eog_scores = data_ica_.find_bads_eog(data_forica_, ch_name=ch) #, threshold=2)
-        EOGexclude.extend(np.argsort(eog_scores)[-2:])
+    
+    eog_indices, eog_scores = data_ica_.find_bads_eog(data_forica_)  #, threshold=2)
+        #EOGexclude.extend(np.argsort(eog_scores)[-2:])
 
-        data_ica_.plot_scores(eog_scores)
+    #    data_ica_.plot_scores(eog_scores)
 
-    # Plot marked components:
-    data_ica_.plot_components(inst=data_forica_, picks=EOGexclude)
-    # Ask user which of the suggested components shall stay in data:
-    data_ica_.exclude = EOGexclude
+    ## Plot marked components:
+    # data_ica_.plot_components(inst=data_forica_, picks=EOGexclude)
+    
+    data_ica_.exclude = eog_indices
     # and kick out components:
     # data_rejcomp = data_to_clean_.copy()
     data_ica_.apply(data_to_clean_)
@@ -157,29 +175,79 @@ def interpolate_bad_chans(data_):
     data_.interpolate_bads()
     return data_, n_bads_
 
+def save_rejlog(rejlog, fname):
+    np.savetxt(fname, rejlog.labels, header=','.join(rejlog_stimon.ch_names), 
+                                     delimiter='',
+                                     comments='',
+                                     fmt='%1.0f')
+                                    
+    
+
 
 ######################################################################################################
 
+
+# define subject:
+subsub_list = ['VME_S01']# , 'VME_S13', 'VME_S16', 'VME_S22']
+
+
 for subsub in subsub_list:
+
+    helpers.print_msg('Starting with subject: ' + subsub)
 
     # get BP [1; 40Hz] filtered data to train ICA:
     data_forica = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-forica-epo.fif'))
+    data_stimon = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-stimon-epo.fif'))
+    data_cue = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-cue-epo.fif'))
+    
+    # clean it with autoreject local:
+    # data_forica_c, _, _ = clean_with_ar_local(data_forica)
+    
+    # fit ICA to cleaned data:
+    data_ica = get_ica_weights(subsub, data_forica, ica_from_disc=True)
+    # remove eog components and project to actual data:
+    data_stimon = rej_ica_eog(data_ica, data_forica, data_stimon)
+    data_cue = rej_ica_eog(data_ica, data_forica, data_cue)
+
+    # clean actual data with autoreject local:
+    data_stimon_c, ar_stimon, rejlog_stimon = clean_with_ar_local(data_stimon)
+    data_cue_c, ar_cue, rejlog_cue = clean_with_ar_local(data_cue)
+
+    # Save results: 
+    helpers.save_data(data_stimon_c, 
+                      subsub + '-stimon-postica', 
+                      config.path_postICA, 
+                      append = '-epo')
+    helpers.save_data(ar_stimon, 
+                      subsub + '-stimon-arlocal', 
+                      config.path_autorej)
+    helpers.save_data(data_stimon_c, 
+                      subsub + '-cue-postica', 
+                      config.path_postICA, 
+                      append = '-epo')
+    helpers.save_data(ar_cue, 
+                      subsub + '-cue-arlocal', 
+                      config.path_autorej)
+    # save autoreject logs: 
+    fname = os.path.join(config.path_autoreject_logs, 'stimon-rejlog.csv')
+    save_rejlog(rejlog_stimon, fname)
+    fname = os.path.join(config.path_autoreject_logs, 'cue-rejlog.csv')
+    save_rejlog(rejlog_cue, fname)
+    
 
     # get BP [0.01; 40Hz] filtered data to apply ICA weights:
     #data_forcda = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-stimon-epo.fif'))
 
-    data_forica = reject_bads(subsub, data_forica, 'fromfile', write_results_to_file=False)
-    ## Skip this for now:
-    ###data_forica, n_interp_chans = interpolate_bad_chans(data_forica)
-    n_interp_chans = 0
+    #data_forica = reject_bads(subsub, data_forica, 'fromfile', write_results_to_file=False)
+
 
     #data_forcda = reject_bads(subsub, data_forcda, mode='fromfile')
 
     ## Skip this for now:
     ###data_forcda, _ = interpolate_bad_chans(data_forcda)
 
-    data_ica = get_ica_weights(subsub, data_forica, n_interp_chans, ica_from_disc=False)
-    #data_forcda = rej_ica_eog(data_ica, data_forica, data_forcda)
+    #
 
     #vis_compare_ica(data_forcda, data_forcda)
     #helpers.save_data(data_forcda, subsub + '-forcda-postica', path_outp_rejICA, append='-epo')
+

@@ -21,6 +21,7 @@ study_path = '../../'
 path_study = Path(os.getcwd()).parents[1]
 path_data = os.path.join(path_study, 'Data')
 path_postICA = op.join(path_data, 'DataMNE', 'EEG', '05.3_rejICA')
+path_autoreject_logs = op.join(path_data, 'DataMNE', 'EEG', '05.4_autorej')
 path_evokeds = op.join(path_data, 'DataMNE', 'EEG', '07_evokeds')
 path_evokeds_cue = op.join(path_data, 'DataMNE', 'EEG', '07_evokeds', 'cue')
 path_evokeds_summaries = op.join(path_evokeds, 'summaries')
@@ -36,7 +37,8 @@ for pp in [path_postICA,
            path_evokeds_summaries, 
            path_epos_sorted, 
            path_tfrs_summaries, 
-           path_epos_sorted_cue]:
+           path_epos_sorted_cue, 
+           path_autoreject_logs]:
     if not op.exists(pp):
         os.makedirs(pp)
         print('creating dir: ' + pp) 
@@ -55,3 +57,10 @@ times_dict = dict(CDA_start = 0.450,
                   cue_dur = 0.8, 
                   stim_dur = 0.2, 
                   retention_dur = 2.0)
+
+# parallelization: 
+n_jobs = -2 # let's leave the CPU some air to breath
+
+# subjects: 
+n_subjects_total = 27
+ids_missing_subjects = [11, 14, 19]

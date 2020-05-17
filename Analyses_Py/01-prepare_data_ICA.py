@@ -16,15 +16,16 @@ from pathlib import Path
 from library import helpers, config
 
 # define dummy subject:
-#subsub = 'VME_S27'
+#subID = 'VME_S27'
 # define subject:
-subsub_list = ['VME_S04'] #'VME_S26', 'VME_S27'] #, 'VME_S25'
+#subID_list = ['VME_S04'] #'VME_S26', 'VME_S27'] #, 'VME_S25'
                # ['VME_S01', 'VME_S02', 'VME_S03', 'VME_S05', 
                # 'VME_S06', 'VME_S07', 'VME_S08', 'VME_S09', 
                # 'VME_S10', 
                #'VME_S13', 'VME_S16', 
                #'VME_S17', 'VME_S18', 'VME_S20', 'VME_S22', 
                #'VME_S23', 'VME_S24', 
+
 
 
 # set paths:
@@ -85,10 +86,10 @@ def calc_eog_chans(data_raw):
     # Let's find out for which and repair it:
 
     picks = ['Fp1', 'Fp2', 'IO1', 'IO2']
-    rr = data_raw.load_data().copy().pick_channels(picks).filter(l_freq = 1, h_freq= 5, picks=['eeg','misc'])
+    rr = data_raw.load_data().copy().pick_channels(picks).filter(l_freq = 1, h_freq= 5, picks=['eeg','misc'], verbose=False)
     # Create pseudo epochs to loop over:
     events = mne.make_fixed_length_events(rr, duration=20)
-    epochs = mne.Epochs(rr, events, tmin=0.0, tmax=20, baseline = (0,1))
+    epochs = mne.Epochs(rr, events, tmin=0.0, tmax=20, baseline = (0,1), verbose= False)
     # For each epoch we calculate the correlations between the vert EOG channels and store it
     holder = [] 
     for epo in epochs:
@@ -108,30 +109,31 @@ def calc_eog_chans(data_raw):
     equal = np.mean([res[0,1], res[2,3]]) 
     fp_cor = res[0,1]
     if not fp_cor > 0.8:
-        tmp = raw_data.get_data(picks = ['Fp1', 'LO1'])
-        raw['Fp1'] = tmp[1]
-        raw['LO1'] = tmp[0]
+        helpers.print_msg('Swopping channels LO1 and Fp1.')
+        tmp = data_raw.get_data(picks = ['Fp1', 'LO1'])
+        data_raw['Fp1'] = tmp[1]
+        data_raw['LO1'] = tmp[0]
 
 
     # calculate bipolar EOG chans:
-    raw.load_data()
+    data_raw.load_data()
     #VEOGl = raw.copy().pick_channels(['Fp1', 'IO1']) 
     #VEOGr = raw.copy().pick_channels(['Fp2', 'IO2']) 
-    dataL = raw.get_data(['Fp1']) - raw.get_data(['IO1']) #VEOGl.get_data(['Fp1']) - VEOGl.get_data(['IO1']) 
-    dataR = raw.get_data(['Fp2']) - raw.get_data(['IO2']) #VEOGr.get_data(['Fp2']) - VEOGr.get_data(['IO2']) 
+    dataL = data_raw.get_data(['Fp1']) - data_raw.get_data(['IO1']) #VEOGl.get_data(['Fp1']) - VEOGl.get_data(['IO1']) 
+    dataR = data_raw.get_data(['Fp2']) - data_raw.get_data(['IO2']) #VEOGr.get_data(['Fp2']) - VEOGr.get_data(['IO2']) 
     dataVEOG = np.stack((dataL,dataR), axis=0).mean(0)
     #HEOG = raw.copy().pick_channels(['LO1', 'LO2']) 
-    dataHEOG = raw.get_data(['LO1']) - raw.get_data(['LO2']) #HEOG.get_data(['LO1']) - HEOG.get_data(['LO2'])
+    dataHEOG = data_raw.get_data(['LO1']) - data_raw.get_data(['LO2']) #HEOG.get_data(['LO1']) - HEOG.get_data(['LO2'])
     dataEOG = np.concatenate((dataVEOG, dataHEOG), axis=0)
     info = mne.create_info(ch_names=['VEOG', 'HEOG'], sfreq=raw.info['sfreq'], ch_types=['eog', 'eog'])
     rawEOG = mne.io.RawArray(dataEOG, info=info)
-    raw.add_channels([rawEOG], force_update_info=True)
+    data_raw.add_channels([rawEOG], force_update_info=True)
     # set chan type of original channels to EEG:
     ch_type_dict = {
-        'IO1': 'eeg',
-        'IO2': 'eeg', 
-        'LO1': 'eeg', 
-        'LO2': 'eeg'
+        'IO1': 'misc',
+        'IO2': 'misc', 
+        'LO1': 'misc', 
+        'LO2': 'misc'
     }
     data_raw.set_channel_types(ch_type_dict)
 
@@ -281,22 +283,22 @@ def setup_event_structures(events_, event_id_, srate_):
     return events_fix_, events_cue_, events_stimon_, bad_epos
 
 #FIXME: event_id
-def extract_epochs_ICA(raw_data, events, event_id_):
+def extract_epochs_ICA(raw_data, events, event_id_, n_jobs = 1):
     # filter the data:
-    filtered = raw_data.load_data().filter(l_freq=1, h_freq=40)
+    filtered = raw_data.load_data().filter(l_freq=1, h_freq=40, n_jobs = n_jobs)
     epos_ica_ = mne.Epochs(filtered, 
                         events, 
                         event_id=event_id_, 
-                        tmin=-1.8, 
-                        tmax=2.2, 
-                        baseline=None,
+                        tmin=-1, 
+                        tmax=2.7, 
+                        baseline=(-0.5,0),
                         preload=False)
     return epos_ica_
 
 #FIXME: event_id
-def extract_epochs_stimon(raw_data, events, event_id_, bad_epos_):
+def extract_epochs_stimon(raw_data, events, event_id_, bad_epos_, n_jobs = 1):
     # filter the data:
-    filtered = raw_data.load_data().filter(l_freq=0.01, h_freq=40)
+    filtered = raw_data.load_data().filter(l_freq=0.01, h_freq=40, n_jobs = n_jobs)
     epos_stimon_ = mne.Epochs(filtered, 
                         events, 
                         event_id=event_id_, 
@@ -307,9 +309,9 @@ def extract_epochs_stimon(raw_data, events, event_id_, bad_epos_):
     epos_stimon_.drop(bad_epos_, 'BADRECORDING')
     return epos_stimon_
 
-def extract_epochs_cue(raw_data, events, event_id_, tmin_, tmax_, bad_epos_):
+def extract_epochs_cue(raw_data, events, event_id_, tmin_, tmax_, bad_epos_, n_jobs = 1):
     # filter the data:
-    filtered = raw_data.load_data().filter(l_freq=0.01, h_freq=40)
+    filtered = raw_data.load_data().filter(l_freq=0.01, h_freq=40, n_jobs = n_jobs)
     epos_cue_ = mne.Epochs(filtered, 
                         events, 
                         event_id=event_id_, 
@@ -323,34 +325,36 @@ def extract_epochs_cue(raw_data, events, event_id_, tmin_, tmax_, bad_epos_):
 
 
 ######################################################################################################
-for subsub in subsub_list:
-    raw, events, event_id = get_events(subsub)
+
+## Full procedure:
+#sub_list = np.setdiff1d(np.arange(10,config.n_subjects_total+1), config.ids_missing_subjects)
+
+## Running only a subset:
+sub_list = np.setdiff1d(np.arange(9,config.n_subjects_total+1), config.ids_missing_subjects)
+sub_list = sub_list[10:11]
+
+for idx, sub in enumerate(sub_list):
+    subID = 'VME_S%02d' % sub
+    helpers.print_msg('Processing subject ' + subID + '.')
+    raw, events, event_id = get_events(subID)
     raw = calc_eog_chans(raw)   
     set_ecg_chan(raw)
-    #save_data(raw, subsub, path_outp_prep, append='-raw') #TODO: replace by helper func
+    #save_data(raw, subID, path_outp_prep, append='-raw') #TODO: replace by helper func
 
     srate = raw.info['sfreq']
     events_fix, events_cue, events_stimon, bad_epos = setup_event_structures(events, event_id, srate)
 
-    event_id_fix = {key: event_id[key] for key in event_id if event_id[key] in events_fix[:,2]}
-    event_id_cue = {key: event_id[key] for key in event_id if event_id[key] in events_cue[:,2]}
+    event_id_fix    = {key: event_id[key] for key in event_id if event_id[key] in events_fix[:,2]}
+    event_id_cue    = {key: event_id[key] for key in event_id if event_id[key] in events_cue[:,2]}
     event_id_stimon = {key: event_id[key] for key in event_id if event_id[key] in events_stimon[:,2]}
 
+    epos_ica = extract_epochs_ICA(raw.copy(), events_stimon, event_id_stimon, n_jobs = config.n_jobs)
+    save_data(epos_ica, subID + '-forica', path_outp_epo, '-epo')
 
+    epos_stimon = extract_epochs_stimon(raw.copy(), events_stimon, event_id_stimon, bad_epos_ = bad_epos.get('stimon',[]), n_jobs = config.n_jobs)
+    save_data(epos_stimon, subID + '-stimon', path_outp_epo, '-epo')
     
-    epos_ica = extract_epochs_ICA(raw.copy(), events_stimon, event_id_stimon)
-    save_data(epos_ica, subsub + '-forica', path_outp_epo, '-epo')
+    epos_cue = extract_epochs_cue(raw.copy(), events_cue, event_id_cue, tmin_ = -1, tmax_ = 1.5, bad_epos_ = bad_epos.get('cue', []), n_jobs = config.n_jobs)
+    save_data(epos_cue, subID + '-cue', path_outp_epo, '-epo')
+    
 
-    epos_stimon = extract_epochs_stimon(raw, events_stimon, event_id_stimon, bad_epos.get('stimon',[]))
-    save_data(epos_stimon, subsub + '-stimon', path_outp_epo, '-epo')
-    """
-    epos_cue = extract_epochs_cue(raw.copy(), events_cue, event_id_cue, tmin_ = -1, tmax_ = 1.5, bad_epos.get('cue', []))
-    save_data(epos_cue, subsub + '-cue', path_outp_epo, '-epo')
-    """
-# epoCueOn = mne.Epochs(filtered, 
-#                         events, 
-#                         event_id=event_id['Stimulus/S  1'], #=targ_evs, #
-#                         tmin=-0.5, 
-#                         tmax=2.2, 
-#                         baseline=(None,0),
-#                         preload=True)
