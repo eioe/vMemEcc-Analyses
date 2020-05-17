@@ -201,13 +201,13 @@ for subsub in subsub_list:
     data_cue = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-cue-epo.fif'))
     
     # clean it with autoreject local:
-    # data_forica_c, _, _ = clean_with_ar_local(data_forica)
+    data_forica_c, _, _ = clean_with_ar_local(data_forica)
     
     # fit ICA to cleaned data:
-    data_ica = get_ica_weights(subsub, data_forica, ica_from_disc=True)
+    data_ica = get_ica_weights(subsub, data_forica_c, ica_from_disc=True)
     # remove eog components and project to actual data:
-    data_stimon = rej_ica_eog(data_ica, data_forica, data_stimon)
-    data_cue = rej_ica_eog(data_ica, data_forica, data_cue)
+    data_stimon = rej_ica_eog(data_ica, data_forica_c, data_stimon)
+    data_cue = rej_ica_eog(data_ica, data_forica_c, data_cue)
 
     # clean actual data with autoreject local:
     data_stimon_c, ar_stimon, rejlog_stimon = clean_with_ar_local(data_stimon)
@@ -220,14 +220,14 @@ for subsub in subsub_list:
                       append = '-epo')
     helpers.save_data(ar_stimon, 
                       subsub + '-stimon-arlocal', 
-                      config.path_autorej)
+                      config.path_autoreject)
     helpers.save_data(data_stimon_c, 
                       subsub + '-cue-postica', 
                       config.path_postICA, 
                       append = '-epo')
     helpers.save_data(ar_cue, 
                       subsub + '-cue-arlocal', 
-                      config.path_autorej)
+                      config.path_autoreject)
     # save autoreject logs: 
     fname = os.path.join(config.path_autoreject_logs, 'stimon-rejlog.csv')
     save_rejlog(rejlog_stimon, fname)

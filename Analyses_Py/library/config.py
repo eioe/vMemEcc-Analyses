@@ -22,6 +22,7 @@ path_study = Path(os.getcwd()).parents[1]
 path_data = os.path.join(path_study, 'Data')
 path_postICA = op.join(path_data, 'DataMNE', 'EEG', '05.3_rejICA')
 path_autoreject_logs = op.join(path_data, 'DataMNE', 'EEG', '05.4_autorej')
+path_autoreject = op.join(path_data, 'DataMNE', 'EEG', '05.4_autorej')
 path_evokeds = op.join(path_data, 'DataMNE', 'EEG', '07_evokeds')
 path_evokeds_cue = op.join(path_data, 'DataMNE', 'EEG', '07_evokeds', 'cue')
 path_evokeds_summaries = op.join(path_evokeds, 'summaries')
@@ -38,7 +39,8 @@ for pp in [path_postICA,
            path_epos_sorted, 
            path_tfrs_summaries, 
            path_epos_sorted_cue, 
-           path_autoreject_logs]:
+           path_autoreject_logs, 
+           path_autoreject]:
     if not op.exists(pp):
         os.makedirs(pp)
         print('creating dir: ' + pp) 
