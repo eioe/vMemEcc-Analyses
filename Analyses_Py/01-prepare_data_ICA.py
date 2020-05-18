@@ -10,26 +10,19 @@ TODO: Write doc
 
 import os
 import os.path as op
+import sys
 import numpy as np
 import mne
 from pathlib import Path
 from library import helpers, config
 
-# define dummy subject:
-#subID = 'VME_S27'
-# define subject:
-#subID_list = ['VME_S04'] #'VME_S26', 'VME_S27'] #, 'VME_S25'
-               # ['VME_S01', 'VME_S02', 'VME_S03', 'VME_S05', 
-               # 'VME_S06', 'VME_S07', 'VME_S08', 'VME_S09', 
-               # 'VME_S10', 
-               #'VME_S13', 'VME_S16', 
-               #'VME_S17', 'VME_S18', 'VME_S20', 'VME_S22', 
-               #'VME_S23', 'VME_S24', 
-
-
+# parse args:
+helpers.print_msg('Running Job Nr. ' + sys.argv[1])
+helpers.print_msg('Study path set to ' + str(path_study))
+job_nr = int(float(sys.argv[1]))
 
 # set paths:
-path_study = Path(os.getcwd()).parents[1] #str(Path(__file__).parents[2])
+path_study = Path(os.getcwd())  # .parents[1] #str(Path(__file__).parents[2])
 # note: returns Path object >> cast for string
 
 path_data = os.path.join(path_study, 'Data')
@@ -289,9 +282,9 @@ def extract_epochs_ICA(raw_data, events, event_id_, n_jobs = 1):
     epos_ica_ = mne.Epochs(filtered, 
                         events, 
                         event_id=event_id_, 
-                        tmin=-1, 
-                        tmax=2.7, 
-                        baseline=(-0.5,0),
+                        tmin=-0.6, 
+                        tmax=2.3, 
+                        baseline=(-0.4,0),
                         preload=False)
     return epos_ica_
 
@@ -302,9 +295,9 @@ def extract_epochs_stimon(raw_data, events, event_id_, bad_epos_, n_jobs = 1):
     epos_stimon_ = mne.Epochs(filtered, 
                         events, 
                         event_id=event_id_, 
-                        tmin=-1, 
-                        tmax=2.7, 
-                        baseline=None,
+                        tmin=-0.6, 
+                        tmax=2.3, 
+                        baseline=(-0.4,0),
                         preload=False)
     epos_stimon_.drop(bad_epos_, 'BADRECORDING')
     return epos_stimon_
@@ -317,7 +310,7 @@ def extract_epochs_cue(raw_data, events, event_id_, tmin_, tmax_, bad_epos_, n_j
                         event_id=event_id_, 
                         tmin=tmin_, 
                         tmax=tmax_, 
-                        baseline=None,
+                        baseline=(-0.4,0),
                         preload=False)
     epos_cue_.drop(bad_epos_, 'BADRECORDING')
     return epos_cue_
@@ -330,8 +323,15 @@ def extract_epochs_cue(raw_data, events, event_id_, tmin_, tmax_, bad_epos_, n_j
 #sub_list = np.setdiff1d(np.arange(10,config.n_subjects_total+1), config.ids_missing_subjects)
 
 ## Running only a subset:
-sub_list = np.setdiff1d(np.arange(9,config.n_subjects_total+1), config.ids_missing_subjects)
+sub_list = np.setdiff1d(np.arange(1,config.n_subjects_total+1), config.ids_missing_subjects)
 sub_list = sub_list[10:11]
+
+# sub_list = np.setdiff1d(np.arange(15,28), config.ids_missing_subjects)
+if job_nr > len(sub_list)-1: 
+    helpers.print_msg('All jobs taken.')
+    exit()
+
+sub_list = np.array([sub_list[job_nr]])
 
 for idx, sub in enumerate(sub_list):
     subID = 'VME_S%02d' % sub
@@ -354,7 +354,7 @@ for idx, sub in enumerate(sub_list):
     epos_stimon = extract_epochs_stimon(raw.copy(), events_stimon, event_id_stimon, bad_epos_ = bad_epos.get('stimon',[]), n_jobs = config.n_jobs)
     save_data(epos_stimon, subID + '-stimon', path_outp_epo, '-epo')
     
-    epos_cue = extract_epochs_cue(raw.copy(), events_cue, event_id_cue, tmin_ = -1, tmax_ = 1.5, bad_epos_ = bad_epos.get('cue', []), n_jobs = config.n_jobs)
+    epos_cue = extract_epochs_cue(raw.copy(), events_cue, event_id_cue, tmin_ = -0.6, tmax_ = 1, bad_epos_ = bad_epos.get('cue', []), n_jobs = config.n_jobs)
     save_data(epos_cue, subID + '-cue', path_outp_epo, '-epo')
     
 
