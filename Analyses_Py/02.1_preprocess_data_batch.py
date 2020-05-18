@@ -8,6 +8,7 @@ TODO: Write doc
 
 import os
 import os.path as op
+import sys
 import numpy as np
 import csv
 import mne
@@ -17,7 +18,8 @@ from library import helpers, config
 from datetime import datetime
 
 # set paths:
-path_study = Path(os.getcwd()).parents[1] #str(Path(__file__).parents[2])
+path_study = Path(os.getcwd()) #str(Path(__file__).parents[2])
+# path_study = os.path.join(path_study, 'Experiments', 'vMemEcc')
 # note: returns Path object >> cast for string
 
 #TODO: get from config
@@ -31,7 +33,10 @@ path_outp_rejepo_summaries = op.join(path_data, 'DataMNE', 'EEG', '05.1_rejepo',
 path_outp_ICA = op.join(path_data, 'DataMNE', 'EEG', '05.2_ICA')
 path_outp_rejICA = op.join(path_data, 'DataMNE', 'EEG', '05.3_rejICA')
 
-
+# parse args:
+helpers.print_msg('Running Job Nr. ' + sys.argv[1])
+helpers.print_msg('Study path set to ' + str(path_study))
+job_nr = int(float(sys.argv[1]))
 
 
 for pp in [path_outp_rejepo, path_outp_rejepo_summaries, path_outp_ICA, path_outp_rejICA]:
@@ -189,8 +194,13 @@ def save_rejlog(rejlog, fname):
 
 
 # define subject:
-#subsub_list = ['VME_S03', 'VME_S04', 'VME']# , 'VME_S13', 'VME_S16', 'VME_S22']
-sub_list = np.setdiff1d(np.arange(3,8), config.ids_missing_subjects)
+sub_list = [10, 13]# , 'VME_S13', 'VME_S16', 'VME_S22']
+# sub_list = np.setdiff1d(np.arange(15,28), config.ids_missing_subjects)
+if job_nr > len(sub_list)-1: 
+    helpers.print_msg('All jobs taken.')
+    exit()
+
+sub_list = np.array([sub_list[job_nr]])
 
 for subsub in sub_list:
     subsub = 'VME_S%02d' % subsub
