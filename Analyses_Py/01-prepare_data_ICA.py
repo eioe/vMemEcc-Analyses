@@ -34,9 +34,9 @@ for pp in [path_outp_ev, path_outp_prep, path_outp_filt, path_outp_epo]:
 
 
 # parse args:
-helpers.print_msg('Running Job Nr. ' + sys.argv[1])
-helpers.print_msg('Study path set to ' + str(path_study))
-job_nr = int(float(sys.argv[1]))
+#helpers.print_msg('Running Job Nr. ' + sys.argv[1])
+#helpers.print_msg('Study path set to ' + str(path_study))
+#job_nr = int(float(sys.argv[1]))
 
 
 def get_events(subID, save_eeg=True, save_eve_to_file=True):
@@ -324,14 +324,14 @@ def extract_epochs_cue(raw_data, events, event_id_, tmin_, tmax_, bad_epos_, n_j
 
 ## Running only a subset:
 sub_list = np.setdiff1d(np.arange(1,config.n_subjects_total+1), config.ids_missing_subjects)
-sub_list = sub_list[10:11]
+#sub_list = sub_list[10:11]
 
 # sub_list = np.setdiff1d(np.arange(15,28), config.ids_missing_subjects)
-if job_nr > len(sub_list)-1: 
-    helpers.print_msg('All jobs taken.')
-    exit()
+# if job_nr > len(sub_list)-1: 
+#     helpers.print_msg('All jobs taken.')
+#     exit()
 
-sub_list = np.array([sub_list[job_nr]])
+#sub_list = np.array([sub_list[job_nr]])
 
 for idx, sub in enumerate(sub_list):
     subID = 'VME_S%02d' % sub

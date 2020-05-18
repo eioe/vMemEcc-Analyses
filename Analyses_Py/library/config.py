@@ -18,7 +18,7 @@ from pathlib import Path
 study_path = '../../'
 
 # Paths:
-path_study = Path(os.getcwd()).parents[1]
+path_study = Path(os.getcwd())#.parents[1]
 path_study = os.path.join(path_study, 'Experiments', 'vMemEcc')
 path_data = os.path.join(path_study, 'Data')
 path_postICA = op.join(path_data, 'DataMNE', 'EEG', '05.3_rejICA')

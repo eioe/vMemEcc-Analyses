@@ -112,7 +112,7 @@ def get_ica_weights(subID, data_, ica_from_disc = False, reject=None):
 ## Reject components:
 
 # Via correlation w/ EOG channels:
-def rej_ica_eog(data_ica_, data_forica_, data_to_clean_):
+def rej_ica_eog(subID, data_ica_, data_forica_, data_to_clean_):
     """
     Find EOG components, remove them, and apply ICA weights to full data.
     """
@@ -127,8 +127,9 @@ def rej_ica_eog(data_ica_, data_forica_, data_to_clean_):
     # data_ica_.plot_components(inst=data_forica_, picks=EOGexclude)
     
     data_ica_.exclude = eog_indices
+    # overwrite on disk with updated version:
+    data_ica_.save(fname=op.join(path_outp_ICA, subID + '-ica.fif.'))
     # and kick out components:
-    # data_rejcomp = data_to_clean_.copy()
     data_ica_.apply(data_to_clean_)
     return data_to_clean_
 
@@ -194,8 +195,8 @@ def save_rejlog(rejlog, fname):
 
 
 # define subject:
-sub_list = [10, 13]# , 'VME_S13', 'VME_S16', 'VME_S22']
-# sub_list = np.setdiff1d(np.arange(15,28), config.ids_missing_subjects)
+#sub_list = [10, 13]# , 'VME_S13', 'VME_S16', 'VME_S22']
+sub_list = np.setdiff1d(np.arange(1,28), config.ids_missing_subjects)
 if job_nr > len(sub_list)-1: 
     helpers.print_msg('All jobs taken.')
     exit()
@@ -211,20 +212,30 @@ for subsub in sub_list:
     data_stimon = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-stimon-epo.fif'))
     data_cue = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-cue-epo.fif'))
     
+    # crop them and apply baseline:
+    data_forica.crop(tmin=-0.6, tmax=2.3).apply_baseline((-0.4,0))
+    data_stimon.crop(tmin=-0.6, tmax=2.3).apply_baseline((-0.4,0))
+    data_cue.crop(tmin=-0.6, tmax=2.3).apply_baseline((-0.4,0))
+
     # clean it with autoreject local:
     data_forica_c, _, _ = clean_with_ar_local(data_forica)
     
     # fit ICA to cleaned data:
     data_ica = get_ica_weights(subsub, data_forica_c, ica_from_disc=False)
     # remove eog components and project to actual data:
-    data_stimon = rej_ica_eog(data_ica, data_forica_c, data_stimon)
-    data_cue = rej_ica_eog(data_ica, data_forica_c, data_cue)
+    data_stimon = rej_ica_eog(subsub, data_ica, data_forica_c, data_stimon)
+    data_cue = rej_ica_eog(subsub, data_ica, data_forica_c, data_cue)
 
     # clean actual data with autoreject local:
     data_stimon_c, ar_stimon, rejlog_stimon = clean_with_ar_local(data_stimon)
     data_cue_c, ar_cue, rejlog_cue = clean_with_ar_local(data_cue)
 
     # Save results: 
+    helpers.save_data(data_forica_c, 
+                      subsub + '-forica-postar', 
+                      path_outp_rejepo, 
+                      append = '-epo')
+
     helpers.save_data(data_stimon_c, 
                       subsub + '-stimon-postica', 
                       config.path_postICA, 
@@ -232,7 +243,7 @@ for subsub in sub_list:
     helpers.save_data(ar_stimon, 
                       subsub + '-stimon-arlocal', 
                       config.path_autoreject)
-    helpers.save_data(data_stimon_c, 
+    helpers.save_data(data_cue_c, 
                       subsub + '-cue-postica', 
                       config.path_postICA, 
                       append = '-epo')
