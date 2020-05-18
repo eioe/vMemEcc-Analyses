@@ -16,11 +16,6 @@ import mne
 from pathlib import Path
 from library import helpers, config
 
-# parse args:
-helpers.print_msg('Running Job Nr. ' + sys.argv[1])
-helpers.print_msg('Study path set to ' + str(path_study))
-job_nr = int(float(sys.argv[1]))
-
 # set paths:
 path_study = Path(os.getcwd())  # .parents[1] #str(Path(__file__).parents[2])
 # note: returns Path object >> cast for string
@@ -37,6 +32,11 @@ for pp in [path_outp_ev, path_outp_prep, path_outp_filt, path_outp_epo]:
         os.makedirs(pp)
         print('creating dir: ' + pp)
 
+
+# parse args:
+helpers.print_msg('Running Job Nr. ' + sys.argv[1])
+helpers.print_msg('Study path set to ' + str(path_study))
+job_nr = int(float(sys.argv[1]))
 
 
 def get_events(subID, save_eeg=True, save_eve_to_file=True):
