@@ -19,13 +19,13 @@ def load_data(filename, path, append):
 
     
 
-def save_data(data, filename, path, append=''):
+def save_data(data, filename, path, append='', overwrite=True):
     if not op.exists(path):
         os.makedirs(path)
         print('creating dir: ' + path) 
     ff = op.join(path, filename + append + '.fif')
     #print("Saving %s ..." % ff)
-    data.save(fname=ff, overwrite=True)
+    data.save(fname=ff, overwrite=overwrite)
 
 
 

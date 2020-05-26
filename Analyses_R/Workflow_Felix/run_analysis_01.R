@@ -37,7 +37,7 @@ func_analysis_01 <- function(condition) {
   #                       dv = meanAcc, 
   #                       wid = ppid, 
   #                       within = c(c_StimN, c_Ecc))
-  # get_anova_table(aov.res)
+  # get_anova_table(aov.re  s)
   
   #--------------------------------------------------------------------------
   ## Run post-hoc t tests:

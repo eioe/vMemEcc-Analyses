@@ -13,7 +13,7 @@ source("EyeTracking/MS_Toolbox_R/microsacc.R")
 source("EyeTracking/MS_Toolbox_R/binsacc.R")
 source("Utils/et_utils.R")
 
-
+data_from_hdd <- TRUE
 overwrite_existing_dataoutput <- TRUE
 suppress_plotting <- FALSE
 
@@ -42,10 +42,14 @@ sacc_params <- list(
 
 
 # Set paths: 
-path_data <- here('..', '..', 'Data', 'SubjectData')
+if (data_from_hdd) {
+  path_data <- file.path('D:', 'vMemEcc', 'SubjectData_extern', 'SubjectData')
+} else {
+  path_data <- here('..', '..', 'Data', 'SubjectData')
+}
 
 
-sub_ids <- str_c('VME_S', str_pad(c(24), 2, 'left', 0))
+sub_ids <- str_c('VME_S', str_pad(c(25,26,27), 2, 'left', 0))
 
 for (sub_id in sub_ids) {
   
@@ -241,10 +245,11 @@ for (sub_id in sub_ids) {
         # add saccade info:
         # get separate cols for eye samples: 
         data_fix <- data_fix %>% 
-          separate(base_data, c('timestamp_eye_0','eye0' ,'timestamp_eye_1', 'eye1'), 
-                   '[- ]', 
-                   convert = TRUE, 
-                   remove = FALSE) %>% 
+          separate(base_data, c('timestamp0', 'timestamp1'), ' ') %>% 
+          mutate(timestamp_eye_0 = substr(timestamp0, 1, nchar(timestamp0)-2), 
+                 eye0 = substr(timestamp0, nchar(timestamp0), nchar(timestamp0)),
+                 timestamp_eye_1 = substr(timestamp1, 1, nchar(timestamp1)-2), 
+                 eye1 = substr(timestamp1, nchar(timestamp1)-1, nchar(timestamp1))) %>% 
           mutate(timestamp_eye_0 = as.numeric(timestamp_eye_0), 
                  timestamp_eye_1 = as.numeric(timestamp_eye_1), 
                  timestamp_eye_1 = if_else(eye0 == 1, timestamp_eye_0, timestamp_eye_1), 

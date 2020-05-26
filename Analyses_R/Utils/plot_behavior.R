@@ -17,6 +17,7 @@ plot_performance <- function(df, style) {
   df_mean_err <- df %>%
     filter(BlockStyle == style, 
            c_Ecc %in% c(4, 9, 14)) %>%
+    mutate(c_StimN = as_factor(c_StimN)) %>% 
     group_by(c_StimN, c_Ecc, ppid) %>%
     summarise(meanErr = mean(c_ResponseCorrect,
                              na.rm = TRUE), 

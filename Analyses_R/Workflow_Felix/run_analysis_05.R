@@ -78,7 +78,7 @@ func_analysis_05 <- function() {
                      colour = as_factor(c_StimN))) #+ facet_wrap(~cond)
   #figa <- figa + geom_jitter(position=position_jitter(width=100))
   figa <- figa + geom_line(size=0.2358491) + geom_point(shape=15,size=0.8)
-  figa <- figa + scale_colour_manual(values=c(defblue,deforange,defgrey))
+  figa <- figa + scale_colour_manual(values=c(deforange,defblue,defgrey))
   figa <- figa + scale_fill_manual(values=c(defblue,deforange,defgrey))
   figa <- figa + geom_linerange(size=0.2358491)
   figa <- figa + scale_x_continuous(breaks=c(4,9,14))
@@ -86,7 +86,7 @@ func_analysis_05 <- function() {
   figa <- figa + mytheme
   figa <- figa + ylab("mean CDA amplitude (uV)") + xlab("Eccentricity")
   figa <- figa + labs(title = txt_title, color = "Size Memory Array")
-  figa <- figa + theme(legend.position = 'right')
+  figa <- figa + theme(legend.position = 'right', text = element_text(size=50), axis.text = element_text(size=50))
   
   figa
   

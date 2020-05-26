@@ -24,6 +24,7 @@ func_analysis_02 <- function(condition, dep_variable) {
   
   # Define contrast - baseline is Eccentricity = 9° and MemLoad = 2
   contrasts(data_filtered$c_Ecc) <- contr.treatment(3,base=2)
+  data_filtered$load_contrast <- ifelse(data_filtered$c_StimN==2,1,0)
   
   #--------------------------------------------------------------------------
   ## run glmer
@@ -32,9 +33,10 @@ func_analysis_02 <- function(condition, dep_variable) {
                         'binomial', 
                         'gaussian')
   
-  m1 <- glmer(c_ResponseCorrect ~ c_StimN*c_Ecc + (1|ppid), 
+  m1 <- glmer(c_ResponseCorrect ~load_contrast*c_Ecc + (1|ppid), 
                 data = data_filtered, 
-                family = glmer.family)
+                family = "binomial")
+  
   print_header(str_c('Summary glmer\n', 
                      dep_variable, ' ~ MemLoad * Eccentricity\n', 
                      'task: ', condition))
