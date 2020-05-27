@@ -39,3 +39,30 @@ def plot_scaled(data, picks = None):
               n_channels = len(data.ch_names), 
               picks = picks)
 
+# This is specific for this very experiment (vMemEcc)!
+def get_event_dict(event_ids): 
+    targ_evs = [i for i in event_ids]
+    epo_keys = ['CueL', 'CueR', 'LoadLow', 'LoadHigh', 'EccS', 'EccM', 'EccL']
+
+    event_dict = {key: [] for key in epo_keys}
+    for ev in targ_evs:
+        ev_int = int(ev[-3:]) 
+        ev0 = ev_int - 150
+        if (ev0 % 2) == 0:
+            event_dict['CueL'].append(str(ev))
+        else:
+            event_dict['CueR'].append(str(ev))
+
+        if (ev0 % 8) < 4:
+            event_dict['LoadLow'].append(str(ev))
+        else:
+            event_dict['LoadHigh'].append(str(ev))
+        
+        if (ev0 % 24) < 8:
+            event_dict['EccS'].append(str(ev))
+        elif (ev0 % 24) > 15:
+            event_dict['EccL'].append(str(ev))
+        else:
+            event_dict['EccM'].append(str(ev))
+        
+    return event_dict

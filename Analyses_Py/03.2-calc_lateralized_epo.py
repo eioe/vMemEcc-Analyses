@@ -42,7 +42,7 @@ for subNr in sub_list:
 
     # Make dict summarizing chans in regions 'Left', 'Midline', 'Right'
     region_dict = mne.channels.make_1020_channel_selections(data.info)
-    # Second dict that contains the channel names instead of their indexes:
+    # Second dict that contains the (eeg!) channel names instead of their indexes:
     chnames_eeg = data.copy().pick_types(eeg=True).ch_names
     region_dict_chnames = dict()
     for k in region_dict.keys(): 
@@ -87,76 +87,62 @@ for subNr in sub_list:
     epos_dict["CueL"] = data.copy()[event_dict['CueL']]
     epos_dict["CueR"] = data.copy()[event_dict['CueR']]
 
-    # We want to pretend that all contralateral channels are on the left side of the head:
-    rename_dict_R2L = {k: v for k,v in zip(region_dict_chnames['Right'], region_dict_chnames['Left'])}
-    # opposite direction:
-    rename_dict_L2R = {k: v for v, k in rename_dict_R2L.items()}
+    # We "mirror" all electrodes for the trials with a leftward pointing cue to collapse 
+    # over the 2 cue directions: 
+    epos_mirrored = epos_dict['CueL'].copy().rename_channels(rename_dict_mirror)
+    # Establish same order:
+    epos_mirrored.reorder_channels(epos_dict['CueR'].ch_names)
+    # Overwrite localization info:
+    epos_mirrored.info['chs'] = epos_dict['CueR'].copy().info['chs']
+    epos_mirrored.info['dig'] = epos_dict['CueR'].copy().info['dig']
+    # Change sign of HEOG - so that by convention all eye movements to the "right" are now 
+    # going to the stimulus:
+    idx_heog = epos_mirrored.ch_names.index('HEOG') 
+    epos_mirrored._data[:,idx_heog,:] *= -1
 
-    eposContra_CueL = epos_dict["CueL"].copy().pick_channels(region_dict_chnames['Right'], ordered=True)
-    eposContra_CueR = epos_dict["CueR"].copy().pick_channels(region_dict_chnames['Left'], ordered=True)
-    eposContra_CueL.rename_channels(rename_dict_R2L)
-    # we still have to correct the channel locations: 
-    eposContra_CueL.info['chs'] = eposContra_CueR.copy().info['chs']
-    eposContra_CueL.info['dig'] = eposContra_CueR.copy().info['dig']
+    # Combine the two conditions:
+    epos_collapsed = mne.concatenate_epochs([epos_dict['CueR'].copy(), epos_mirrored.copy()], add_offset=False)
+    # Notice that: 
+    #   (A) .drop_log and .selection of this object now have double the length.
+    #   (B) Channels on the "right" are now "Ipsi-", chans on the left are "Contralateral" to 
+    #       the cued stimulus. 
 
-    #rename_dict_mirror_cda = {k: v for k, v in rename_dict_mirror.items() if k in chans_CDA[0] or k in chans_CDA[1]}
-    epos_mirrored = epos_dict['CueR'].copy().rename_channels(rename_dict_mirror)
-    epos_mirrored.reorder_channels(epos_dict['CueL'].ch_names)
-    epos_mirrored.info['chs'] = epos_dict['CueL'].copy().info['chs']
-    epos_mirrored.info['dig'] = epos_dict['CueL'].copy().info['dig']
+    for _dict in [region_dict, region_dict_chnames]:
+        for n, o in zip(['Ipsi', 'Contra'], ['Right', 'Left']):
+            _dict.update({n: _dict[o]})   
 
-    epos_sorted = mne.concatenate_epochs([epos_dict['CueL'].copy(), epos_mirrored.copy()], add_offset=False)
-
-    epos_CDA = epos_sorted.copy()
-    _contra = epos_CDA.copy().pick_types(eeg=True).pick_channels(region_dict_chnames['Right'], ordered=True)
-    _ipsi = epos_CDA.copy().pick_types(eeg=True).pick_channels(region_dict_chnames['Left'], ordered=True)
+    # Now: Construct an epos object, that contains only the difference waves.
+    # These will be stored in the channels over the left hemisphere.
+    # Other channels will be dropped.
+    epos_CDA = epos_collapsed.copy()
+    _contra = epos_CDA.copy().pick_types(eeg=True).pick_channels(region_dict_chnames['Contra'], ordered=True)
+    _ipsi = epos_CDA.copy().pick_types(eeg=True).pick_channels(region_dict_chnames['Ipsi'], ordered=True)
     # make sure that the channels are in the same order:
     assert _contra.ch_names == [rename_dict_mirror[k] for k in _ipsi.ch_names], 'Channel names are not identical'
     data_contra = _contra._data
     data_ipsi = _ipsi._data
     data_diff = data_contra - data_ipsi
-    epos_CDA.pick_types(eeg=True).pick_channels(region_dict_chnames['Right'], ordered=True)
+    epos_CDA.pick_types(eeg=True).pick_channels(region_dict_chnames['Left'], ordered=True)
     # make sure that the channels are in the same order:
     assert epos_CDA.ch_names == _contra.ch_names
     epos_CDA._data = data_diff
 
-    mne.viz.plot_compare_evokeds([epos_CDA[event_dict['LoadLow']].average(), epos_CDA[event_dict['LoadHigh']].average()], combine='mean', picks = ['F2', 'Fp2', 'AF4', 'FC6', 'FT8'])
+    mne.viz.plot_compare_evokeds([epos_CDA[event_dict['EccL']].average(), epos_CDA[event_dict['EccS']].average()], combine='mean', picks = chans_CDA_dict['Left'])
 
-    epos_dict['Contra'] = mne.concatenate_epochs([eposContra_CueR.copy(), eposContra_CueL.copy()], add_offset=False)
-    epos_dict["RoiContraLoadLow"] = epos_dict["RoiContra"][event_dict['LoadLow']]
-    epos_dict["RoiContraLoadHigh"] = epos_dict["RoiContra"][event_dict['LoadHigh']]
+    epos_CDA_dict = dict() 
+    epos_collapsed_dict = dict() 
+    for _dict, epos in zip([epos_CDA_dict, epos_collapsed_dict], [epos_CDA, epos_collapsed]):
+        _dict['All'] = epos
+        for load in ['LoadHigh', 'LoadLow']:
+            # epos_CDA_dict[load] = epos_CDA[event_dict[load]]
+            # epos_collapsed_dict[load] = epos_collapsed[event_dict[load]]
+            _dict[load] = epos[event_dict[load]]
 
-    eposIpsiL = epos_dict["CueL"].copy().pick_channels(chans_CDA[0])
-    eposIpsiR = epos_dict["CueR"].copy().pick_channels(chans_CDA[1])
-    eposIpsiL.rename_channels(rename_dict)
-    epos_dict["RoiIpsi"] = mne.concatenate_epochs([eposIpsiL.copy(), eposIpsiR], add_offset=False)
-    epos_dict["RoiIpsiLoadLow"] = epos_dict["RoiIpsi"][event_dict['LoadLow']]
-    epos_dict["RoiIpsiLoadHigh"] = epos_dict["RoiIpsi"][event_dict['LoadHigh']]
+            for ecc in ['EccS', 'EccM', 'EccL']:
+                if not ecc in _dict:
+                    _dict[ecc] = epos[event_dict[ecc]]
+                _dict[load + ecc] = epos[event_dict[load]][event_dict[ecc]]
 
-
-    for roi in ["RoiContra", "RoiIpsi"]:
-        for load in ["LoadLow", "LoadHigh"]:
-            for ecc in ["EccS", "EccM", "EccL"]:
-                epos_dict[roi+load+ecc] = epos_dict[roi][event_dict[load]][event_dict[ecc]]
-
-
-    epos_dict["CDA"] = epos_dict["RoiContra"].copy()
-    epos_dict["CDA"]._data = epos_dict["RoiContra"]._data - epos_dict["RoiIpsi"]._data
-
-    epos_dict["LoadHigh"] = epos_dict["CDA"][event_dict['LoadHigh']]
-    epos_dict["LoadLow"] = epos_dict["CDA"][event_dict['LoadLow']]
-
-    epos_dict["EccS"] = epos_dict["CDA"][event_dict['EccS']]
-    epos_dict["EccM"] = epos_dict["CDA"][event_dict['EccM']]
-    epos_dict["EccL"] = epos_dict["CDA"][event_dict['EccL']]
-
-    epos_dict["LoadHighEccS"] = epos_dict["LoadHigh"][event_dict['EccS']]
-    epos_dict["LoadHighEccM"] = epos_dict["LoadHigh"][event_dict['EccM']]
-    epos_dict["LoadHighEccL"] = epos_dict["LoadHigh"][event_dict['EccL']]
-
-    epos_dict["LoadLowEccS"] = epos_dict["LoadLow"][event_dict['EccS']]
-    epos_dict["LoadLowEccM"] = epos_dict["LoadLow"][event_dict['EccM']]
-    epos_dict["LoadLowEccL"] = epos_dict["LoadLow"][event_dict['EccL']]
 
     # Save Epos:
     for key in epos_dict:
