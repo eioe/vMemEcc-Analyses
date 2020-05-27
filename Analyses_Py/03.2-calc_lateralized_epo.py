@@ -29,26 +29,33 @@ def write_mean_amp_to_file(ID):
 sub_list = np.setdiff1d(np.arange(1,28), config.ids_missing_subjects)
 #sub_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27]
 
+chans_CDA_dict = {'Left': ['P3', 'P5', 'PO3', 'PO7', 'O1'], 
+                  'Right': ['P4', 'P6', 'PO4', 'PO8', 'O2']}
+chans_CDA_all = [ch for v in list(chans_CDA_dict.values()) for ch in v]
 
-for subID in sub_list:
-    subsub = 'VME_S%02d' % subID
-    # subsub = 'VME_S02'
+for subNr in sub_list:
+    subID = 'VME_S%02d' % subNr
+    # subID = 'VME_S02'
 
-    chans_CDA = [['P3', 'P5', 'PO3', 'PO7', 'O1'], 
-                ['P4', 'P6', 'PO4', 'PO8', 'O2']]
+    # Load data:
+    data = helpers.load_data(subID + '-stimon-postica', config.path_postICA, '-epo')
 
-
-    data = helpers.load_data(subsub + '-stimon-postica', config.path_postICA, '-epo')
-
-
-    # Keep only CDA channels:
-    ch_cda = [ch for sublist in chans_CDA for ch in sublist]
-    data.pick_channels(ch_cda)
-
+    # Make dict summarizing chans in regions 'Left', 'Midline', 'Right'
+    region_dict = mne.channels.make_1020_channel_selections(data.info)
+    # Second dict that contains the channel names instead of their indexes:
+    chnames_eeg = data.copy().pick_types(eeg=True).ch_names
+    region_dict_chnames = dict()
+    for k in region_dict.keys(): 
+        region_dict_chnames[k] = [chnames_eeg[i] for i in region_dict[k]]
     
+    # Defina a dict that translates all lateralized channels to their 
+    # counterpart on the other hemisphere:
+    rename_dict_mirror = {k: v for k,v in zip(region_dict_chnames['Right'] + region_dict_chnames['Left'], 
+                                              region_dict_chnames['Left'] + region_dict_chnames['Right'])}
+
 
     # Define relevant events:
-    #TODO: Check if this does the correct thing:
+    #TODO: Put this to helpers:
     targ_evs = [i for i in data.event_id.keys()]
     epo_keys = ['CueL', 'CueR', 'LoadLow', 'LoadHigh', 'EccS', 'EccM', 'EccL']
 
@@ -76,22 +83,52 @@ for subID in sub_list:
     epos_dict = dict()
     evoked_dict = dict()
 
+    # Separate into epochs dep. on cue direction:
+    epos_dict["CueL"] = data.copy()[event_dict['CueL']]
+    epos_dict["CueR"] = data.copy()[event_dict['CueR']]
 
-    epos_dict["CueL"] = data[event_dict['CueL']]
-    epos_dict["CueR"] = data[event_dict['CueR']]
+    # We want to pretend that all contralateral channels are on the left side of the head:
+    rename_dict_R2L = {k: v for k,v in zip(region_dict_chnames['Right'], region_dict_chnames['Left'])}
+    # opposite direction:
+    rename_dict_L2R = {k: v for v, k in rename_dict_R2L.items()}
 
-    rename_dict = {chans_CDA[0][i]: chans_CDA[1][i]  for i in range(len(chans_CDA[0]))}
+    eposContra_CueL = epos_dict["CueL"].copy().pick_channels(region_dict_chnames['Right'], ordered=True)
+    eposContra_CueR = epos_dict["CueR"].copy().pick_channels(region_dict_chnames['Left'], ordered=True)
+    eposContra_CueL.rename_channels(rename_dict_R2L)
+    # we still have to correct the channel locations: 
+    eposContra_CueL.info['chs'] = eposContra_CueR.copy().info['chs']
+    eposContra_CueL.info['dig'] = eposContra_CueR.copy().info['dig']
 
-    eposContraL = epos_dict["CueL"].copy().pick_channels(chans_CDA[1])
-    eposContraR = epos_dict["CueR"].copy().pick_channels(chans_CDA[0])
-    eposContraR.rename_channels(rename_dict).reorder_channels(eposContraL.ch_names)
-    epos_dict["RoiContra"] = mne.concatenate_epochs([eposContraL.copy(), eposContraR], add_offset=False)
+    #rename_dict_mirror_cda = {k: v for k, v in rename_dict_mirror.items() if k in chans_CDA[0] or k in chans_CDA[1]}
+    epos_mirrored = epos_dict['CueR'].copy().rename_channels(rename_dict_mirror)
+    epos_mirrored.reorder_channels(epos_dict['CueL'].ch_names)
+    epos_mirrored.info['chs'] = epos_dict['CueL'].copy().info['chs']
+    epos_mirrored.info['dig'] = epos_dict['CueL'].copy().info['dig']
+
+    epos_sorted = mne.concatenate_epochs([epos_dict['CueL'].copy(), epos_mirrored.copy()], add_offset=False)
+
+    epos_CDA = epos_sorted.copy()
+    _contra = epos_CDA.copy().pick_types(eeg=True).pick_channels(region_dict_chnames['Right'], ordered=True)
+    _ipsi = epos_CDA.copy().pick_types(eeg=True).pick_channels(region_dict_chnames['Left'], ordered=True)
+    # make sure that the channels are in the same order:
+    assert _contra.ch_names == [rename_dict_mirror[k] for k in _ipsi.ch_names], 'Channel names are not identical'
+    data_contra = _contra._data
+    data_ipsi = _ipsi._data
+    data_diff = data_contra - data_ipsi
+    epos_CDA.pick_types(eeg=True).pick_channels(region_dict_chnames['Right'], ordered=True)
+    # make sure that the channels are in the same order:
+    assert epos_CDA.ch_names == _contra.ch_names
+    epos_CDA._data = data_diff
+
+    mne.viz.plot_compare_evokeds([epos_CDA[event_dict['LoadLow']].average(), epos_CDA[event_dict['LoadHigh']].average()], combine='mean', picks = ['F2', 'Fp2', 'AF4', 'FC6', 'FT8'])
+
+    epos_dict['Contra'] = mne.concatenate_epochs([eposContra_CueR.copy(), eposContra_CueL.copy()], add_offset=False)
     epos_dict["RoiContraLoadLow"] = epos_dict["RoiContra"][event_dict['LoadLow']]
     epos_dict["RoiContraLoadHigh"] = epos_dict["RoiContra"][event_dict['LoadHigh']]
 
     eposIpsiL = epos_dict["CueL"].copy().pick_channels(chans_CDA[0])
     eposIpsiR = epos_dict["CueR"].copy().pick_channels(chans_CDA[1])
-    eposIpsiL.rename_channels(rename_dict).reorder_channels(eposIpsiR.ch_names)
+    eposIpsiL.rename_channels(rename_dict)
     epos_dict["RoiIpsi"] = mne.concatenate_epochs([eposIpsiL.copy(), eposIpsiR], add_offset=False)
     epos_dict["RoiIpsiLoadLow"] = epos_dict["RoiIpsi"][event_dict['LoadLow']]
     epos_dict["RoiIpsiLoadHigh"] = epos_dict["RoiIpsi"][event_dict['LoadHigh']]
@@ -104,7 +141,6 @@ for subID in sub_list:
 
 
     epos_dict["CDA"] = epos_dict["RoiContra"].copy()
-    assert epos_dict['RoiContra'].ch_names == epos_dict['RoiIpsi'].ch_names, 'Channels are not in the identical order.'
     epos_dict["CDA"]._data = epos_dict["RoiContra"]._data - epos_dict["RoiIpsi"]._data
 
     epos_dict["LoadHigh"] = epos_dict["CDA"][event_dict['LoadHigh']]
@@ -124,7 +160,7 @@ for subID in sub_list:
 
     # Save Epos:
     for key in epos_dict:
-        helpers.save_data(epos_dict[key], subsub, 
+        helpers.save_data(epos_dict[key], subID, 
                         config.path_epos_sorted + '/' + key, append='-epo')
 
 
@@ -148,7 +184,7 @@ for subID in sub_list:
 
 
 
-    write_mean_amp_to_file(subsub)
+    write_mean_amp_to_file(subID)
 
 
     #TODO: Check if we're safe and delete following:
@@ -167,7 +203,7 @@ for subID in sub_list:
     # evoLoM = LoadLowEccM.average()
     # evoLoL = LoadLowEccL.average()
 
-    ff = op.join(config.path_evokeds, subsub + '-ave.fif')
+    ff = op.join(config.path_evokeds, subID + '-ave.fif')
     mne.write_evokeds(ff, [evoked_dict[coo] for coo in config.factor_levels])
 
     #TODO: replace with sequence in config.fac_levs 

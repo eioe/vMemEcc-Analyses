@@ -9,7 +9,7 @@ import mne
 from pathlib import Path
 from library import helpers, config
 
-subsub = 'VME_S01'
+subsub = 'VME_S03'
 
 def get_lateralized_tfr(ID, condition_=''):
     eposIpsi = helpers.load_data(ID, config.path_epos_sorted + '/RoiIpsi' + condition_, '-epo')
@@ -57,7 +57,7 @@ def write_mean_alphapwr_to_file(ID):
 write_mean_alphapwr_to_file(subsub)
 
 pD = get_lateralized_tfr(subsub, '')
-img = pD.plot(baseline=None, 
+img = pD.plot(baseline=(-0.4,0), 
               picks='all', 
               mode='mean', 
               tmin=-1.3, 
@@ -67,7 +67,9 @@ img = pD.plot(baseline=None,
 ff = 'tfr_' + subsub + '.png'
 # img.savefig(op.join(config.path_tfrs, 'Plots', ff))
 
-sub_list = [1,2,3,5, 6, 7, 8, 9, 10, 13, 16, 17, 18, 20, 22, 23, 24, 26, 27]
+#sub_list = [1,2,3,5, 6, 7, 8, 9, 10, 13, 16, 17, 18, 20, 22, 23, 24, 26, 27]
+
+sub_list = np.setdiff1d(np.arange(1,28), config.ids_missing_subjects)
 
 for sub in sub_list:
     subsub = 'VME_S%02d' % sub
