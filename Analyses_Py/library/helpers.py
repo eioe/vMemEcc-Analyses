@@ -66,3 +66,29 @@ def get_event_dict(event_ids):
             event_dict['EccM'].append(str(ev))
         
     return event_dict
+
+
+def make_epos_dicts(epos, target_dicts, event_dict): 
+    if isinstance(epos, mne.BaseEpochs):
+        epos = [epos]
+    if isinstance(target_dicts, dict):
+        target_dicts = [target_dicts]
+    if len(epos) != len(target_dicts): 
+        raise ValueError("Epos and target_dicts must be of same length")
+    for d in target_dicts: 
+        if len(d) > 0:
+            raise ValueError("You handed in a non-empty target_dict.")
+        d = dict()   
+    # epos_CDA_dict = dict() 
+    # epos_collapsed_dict = dict() 
+    for _dict, epos in zip(target_dicts, epos):
+        _dict['All'] = epos
+        for load in ['LoadHigh', 'LoadLow']:
+            _dict[load] = epos[event_dict[load]]
+
+            for ecc in ['EccS', 'EccM', 'EccL']:
+                if not ecc in _dict:
+                    _dict[ecc] = epos[event_dict[ecc]]
+                _dict[load + ecc] = epos[event_dict[load]][event_dict[ecc]]
+
+
