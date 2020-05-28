@@ -53,32 +53,8 @@ for subNr in sub_list:
     rename_dict_mirror = {k: v for k,v in zip(region_dict_chnames['Right'] + region_dict_chnames['Left'], 
                                               region_dict_chnames['Left'] + region_dict_chnames['Right'])}
 
-
     # Define relevant events:
-    #TODO: Put this to helpers:
-    targ_evs = [i for i in data.event_id.keys()]
-    epo_keys = ['CueL', 'CueR', 'LoadLow', 'LoadHigh', 'EccS', 'EccM', 'EccL']
-
-    event_dict = {key: [] for key in epo_keys}
-    for ev in targ_evs:
-        ev_int = int(ev[-3:]) #int(ev.split('/S')[1])
-        ev0 = ev_int - 150
-        if (ev0 % 2) == 0:
-            event_dict['CueL'].append(str(ev))
-        else:
-            event_dict['CueR'].append(str(ev))
-
-        if (ev0 % 8) < 4:
-            event_dict['LoadLow'].append(str(ev))
-        else:
-            event_dict['LoadHigh'].append(str(ev))
-        
-        if (ev0 % 24) < 8:
-            event_dict['EccS'].append(str(ev))
-        elif (ev0 % 24) > 15:
-            event_dict['EccL'].append(str(ev))
-        else:
-            event_dict['EccM'].append(str(ev))
+    event_dict = helpers.get_event_dict(data.event_id.keys())
 
     epos_dict = dict()
     evoked_dict = dict()
