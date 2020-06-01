@@ -89,9 +89,10 @@ def clean_with_ar_local(data_):
     picks = mne.pick_types(data_.info, meg=False, eeg=True, stim=False,
                        eog=False)
     ar = autoreject.AutoReject(n_interpolate=np.array([2,8,16]), 
-                               consensus= np.linspace(0.1, 1.0, 11),
+                               consensus= np.linspace(0.3, 1.0, 8),
                                picks=picks, 
-                               n_jobs=config.n_jobs, 
+                               n_jobs=config.n_jobs,
+                               random_state = 42,
                                verbose='tqdm')
     epo_clean, reject_log = ar.fit_transform(data_, return_log=True)
     return epo_clean, ar, reject_log
@@ -241,6 +242,16 @@ for subsub in sub_list:
     data_cue_c, ar_cue, rejlog_cue = clean_with_ar_local(data_cue)
     data_fulllength_c, ar_fulllength, rejlog_fulllength = clean_with_ar_local(data_fulllength)
 
+    # write n of rejected epos to file: 
+    rej_epos = []
+    for ds in [data_stimon_c, data_cue_c, data_fulllength_c]: 
+        n_rej_epo = np.sum([1 for e in ds.drop_log if e == ['AUTOREJECT']])
+        rej_epos.append(str(n_rej_epo))
+    fname_ar_rejsummary = op.join(config.path_autoreject_logs, 'ar_reject_summary.csv')
+    with open(fname_ar_rejsummary, 'a+') as f:
+        f.write(subsub + ';' + ';'.join(rej_epos))
+
+
     # Save results: 
     helpers.save_data(data_forica_c, 
                       subsub + '-forica-postar', 
@@ -269,12 +280,12 @@ for subsub in sub_list:
                       subsub + '-fulllength-arlocal', 
                       config.path_autoreject)
     # save autoreject logs: 
-    fname = os.path.join(config.path_autoreject_logs, 'stimon-rejlog.csv')
+    fname = os.path.join(config.path_autoreject_logs, subsub + 'stimon-rejlog.csv')
     save_rejlog(rejlog_stimon, fname)
-    fname = os.path.join(config.path_autoreject_logs, 'cue-rejlog.csv')
+    fname = os.path.join(config.path_autoreject_logs, subsub + 'cue-rejlog.csv')
     save_rejlog(rejlog_cue, fname)
-    fname = os.path.join(config.path_autoreject_logs, 'fulllength-rejlog.csv')
-    save_rejlog(rejlog_cue, fname)
+    fname = os.path.join(config.path_autoreject_logs, subsub + 'fulllength-rejlog.csv')
+    save_rejlog(rejlog_fulllength, fname)
     
 
     # get BP [0.01; 40Hz] filtered data to apply ICA weights:

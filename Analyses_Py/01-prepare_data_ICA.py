@@ -332,7 +332,7 @@ def extract_epochs_fulllength(raw_data, events, event_id_, tmin_, tmax_, bad_epo
 ######################################################################################################
 
 ## Full procedure:
-sub_list = np.setdiff1d(np.arange(23,config.n_subjects_total+1), config.ids_missing_subjects)
+sub_list = np.setdiff1d(np.arange(1,config.n_subjects_total+1), config.ids_missing_subjects)
 
 ##
 #sub_list = sub_list[10:11]
@@ -368,6 +368,6 @@ for idx, sub in enumerate(sub_list):
     epos_cue = extract_epochs_cue(raw.copy(), events_cue, event_id_cue, tmin_ = -0.6, tmax_ = 1, bad_epos_ = bad_epos.get('cue', []), n_jobs = config.n_jobs)
     save_data(epos_cue, subID + '-cue', path_outp_epo, '-epo')
     
-    epos_fullength = extract_epochs_cue(raw.copy(), events_cue, event_id_cue, tmin_ = -0.6, tmax_ = 3.3, bad_epos_ = bad_epos.get('cue', []), n_jobs = config.n_jobs)
-    save_data(epos_cue, subID + '-fulllength', path_outp_epo, '-epo')
+    epos_fulllength = extract_epochs_fulllength(raw.copy(), events_cue, event_id_cue, tmin_ = -0.6, tmax_ = 3.3, bad_epos_ = np.unique([v for k in bad_epos.keys() for v in bad_epos.get(k, [])]), n_jobs = config.n_jobs)
+    save_data(epos_fulllength, subID + '-fulllength', path_outp_epo, '-epo')
     

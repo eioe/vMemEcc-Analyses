@@ -37,17 +37,13 @@ def get_laterized_power_difference(pwr_, picks_contra, picks_ipsi):
             return pwr_diff
 
 # Write alpha time series to txt-file: 
-def write_trialwise_alpha_ts_to_csv(pwr_obj, subID, part_epo, condition, calc_induc=False):
+def write_trialwise_alpha_ts_to_csv(pwr_obj, subID, part_epo, condition, pwr_style='evoked'):
     # average over channels: 
     wr_out = pwr_obj.data.mean(axis=1)
     # pick out alpha freqs and average over these: 
     a_freqs = [list(pwr_obj.freqs).index(f) for f in pwr_obj.freqs if f>=config.alpha_freqs[0] and f<=config.alpha_freqs[1]]
     wr_out = wr_out[:,a_freqs,:].mean(axis=1)
-    if calc_induc:
-        fpath = op.join(config.path_tfrs_summaries, 'induc', 'timeseries', part_epo, condition)
-    else: 
-        fpath = op.join(config.path_tfrs_summaries, 'timeseries', part_epo, condition)
-    
+    fpath = op.join(config.path_tfrs, pwr_style, 'timeseries', part_epo, condition)
     helpers.chkmk_dir(fpath)
     fname = op.join(fpath, subID + '_alpha_latdiff_ts.csv')
     df = pd.DataFrame(wr_out.swapaxes(1,0), index=pwr_obj.times)
@@ -55,7 +51,7 @@ def write_trialwise_alpha_ts_to_csv(pwr_obj, subID, part_epo, condition, calc_in
     #np.savetxt(fname, wr_out, fmt='%.18f', delimiter=';',header=';'.join(hdr))
 
 def get_avg_timecourse(pwr_obj):
-    wr_out = pwr_obj.data.mean(axis=1)
+    wr_out = pwr_obj.copy().data.mean(axis=1)
     # pick out alpha freqs and average over these: 
     a_freqs = [list(pwr_obj.freqs).index(f) for f in pwr_obj.freqs if f>=config.alpha_freqs[0] and f<=config.alpha_freqs[1]]
     wr_out = wr_out[:,a_freqs,:].mean(axis=1).mean(axis=0)
@@ -82,74 +78,122 @@ def write_mean_alphapwr_to_file(ID):
 
 #TODO: Fix path
 sub_list = np.setdiff1d(np.arange(1,28), config.ids_missing_subjects)
-sub_list = [4]
 
 for sub_nr in sub_list:
     subID = 'VME_S%02d' % sub_nr
 
-    # calculate induced o rinduced+evoked power:
-    calc_induc = False
+    # calculate induced or induced+evoked power:
+    for pwr_style in ['evoked', 'induced']:
 
-    for part_epo in ['stimon', 'cue']:
+        for part_epo in ['stimon', 'cue']: #, 'fulllength']:
 
-        epos_ = helpers.load_data(subID, config.path_epos_sorted + '/' + part_epo + '/collapsed', '-epo')
-        
-        if calc_induc: 
-            epos_.subtract_evoked()
+            epos_ = helpers.load_data(subID, config.path_epos_sorted + '/' + part_epo + '/collapsed', '-epo')
+            
+            if pwr_style == 'induced': 
+                epos_.subtract_evoked()
 
-        event_dict = helpers.get_event_dict(epos_.event_id)
+            event_dict = helpers.get_event_dict(epos_.event_id)
 
-        picks = config.chans_CDA_all
+            picks = config.chans_CDA_all
 
-        pwr_ = get_tfr(epos_, picks=picks, average=False)
-        #pwr_cue = get_tfr(epos_cue, average=False)
+            pwr_ = get_tfr(epos_, picks=picks, average=False)
+            #pwr_cue = get_tfr(epos_cue, average=False)
 
-        pwr_diff = get_laterized_power_difference(pwr_, config.chans_CDA_dict['Contra'], config.chans_CDA_dict['Ipsi'])
+            pwr_diff = get_laterized_power_difference(pwr_, config.chans_CDA_dict['Contra'], config.chans_CDA_dict['Ipsi'])
 
-        condition_averages_df = pd.DataFrame(pwr_diff.times, columns=['time'], index=None)
+            condition_averages_df = pd.DataFrame(pwr_diff.times, columns=['time'], index=None)
 
-        ## Let's look at the different conditions: 
+            ## Let's look at the different conditions: 
 
-        # Main effect load: 
-        for load in ['LoadLow', 'LoadHigh']:
-            pD = pwr_diff[event_dict[load]]
-            write_trialwise_alpha_ts_to_csv(pD, subID, part_epo, load, calc_induc)
-            if calc_induc:
-                helpers.save_data(pD.average(), subID + '-PowDiff-' + load, config.path_tfrs + '\\induc' + '\\'+ part_epo, append='-tfr')
-            else: 
-                helpers.save_data(pD.average(), subID + '-PowDiff-' + load, config.path_tfrs + '\\'+ part_epo, append='-tfr')
-            # Add column with average timecourse to condition_averages_df:
+            list_tfr = []
+
+            # Main effect load: 
+            for load in ['LoadLow', 'LoadHigh']:
+                # Main eff load:
+                pD = pwr_diff[event_dict[load]]
+                avg_tc = get_avg_timecourse(pD)
+                condition_averages_df[load] = avg_tc
+                # write average to list: 
+                pD = pD.average()
+                pD.comment = load
+                list_tfr.append(pD) 
+                for ecc in ['EccS', 'EccM', 'EccL']:
+                    # Main eff ecc:
+                    pD = pwr_diff[event_dict[ecc]]
+                    avg_tc = get_avg_timecourse(pD)
+                    condition_averages_df[ecc] = avg_tc
+                    # write to list:
+                    pD = pD.average()
+                    pD.comment = ecc
+                    list_tfr.append(pD) 
+
+                    # Interaction:
+                    pD = pwr_diff[event_dict[load]][event_dict[ecc]]
+                    write_trialwise_alpha_ts_to_csv(pD, subID, part_epo, load+ecc, pwr_style)
+                    # Add column with average timecourse to condition_averages_df:
+                    avg_tc = get_avg_timecourse(pD)
+                    condition_averages_df[load+ecc] = avg_tc
+                    # write to list: 
+                    pD = pD.average()
+                    pD.comment = load+ecc
+                    list_tfr.append(pD) 
+            
+            # All:
+            pD = pwr_diff[:]
             avg_tc = get_avg_timecourse(pD)
-            condition_averages_df[load] = avg_tc
+            condition_averages_df['all'] = avg_tc
+            # write to list: 
+            pD = pD.average()
+            pD.comment = 'all'
+            list_tfr.append(pD) 
+            
+            # Write condition_averages_df to file: 
+            fpath = op.join(config.path_tfrs, pwr_style, 'timeseries', part_epo, 'averages')
+            helpers.chkmk_dir(fpath)
+            fname = op.join(fpath, subID + '_condition_averages_ts.csv')
+            condition_averages_df.to_csv(fname, sep=';', header=True, float_format='%.18f', encoding='UTF-8-sig')
 
-        # Main effect ecc: 
-        for ecc in ['EccS', 'EccM', 'EccL']:
-            pD = pwr_diff[event_dict[ecc]]
-            write_trialwise_alpha_ts_to_csv(pD, subID, part_epo, ecc, calc_induc)
-            if calc_induc:
-                helpers.save_data(pD.average(), subID + '-PowDiff-' + ecc, config.path_tfrs + '\\induc' + '\\'+ part_epo, append='-tfr')
-            else:
-                helpers.save_data(pD.average(), subID + '-PowDiff-' + ecc, config.path_tfrs + '\\' + part_epo, append='-tfr')
-            avg_tc = get_avg_timecourse(pD)
-            condition_averages_df[ecc] = avg_tc
-        # All:
-        pD = pwr_diff[:]
-        write_trialwise_alpha_ts_to_csv(pD, subID, part_epo, 'all', calc_induc)
-        if calc_induc:
-            helpers.save_data(pD.average(), subID + '-PowDiff-' + 'all', config.path_tfrs + '\\induc' + '\\'+ part_epo, append='-tfr')
-        else:
-            helpers.save_data(pD.average(), subID + '-PowDiff-' + 'all', config.path_tfrs + '\\' + part_epo, append='-tfr')
-        avg_tc = get_avg_timecourse(pD)
-        condition_averages_df['all'] = avg_tc
+            # save list of tfrs: 
+            fpath = op.join(config.path_tfrs, pwr_style, 'tfr_lists', part_epo)
+            helpers.chkmk_dir(fpath)
+            fname = op.join(fpath, subID + '-PowDiff-avgTFRs-tfr.h5')
+            mne.time_frequency.write_tfrs(fname, list_tfr, overwrite=True)
+
+                # # save average tfr:
+                # if calc_induc:
+                #     helpers.save_data(pD.average(), subID + '-PowDiff-' + load + ecc, config.path_tfrs + '\\induc' + '\\'+ part_epo, append='-tfr')
+                # else: 
+                #     helpers.save_data(pD.average(), subID + '-PowDiff-' + load + ecc, config.path_tfrs + '\\'+ part_epo, append='-tfr')
+
+
+        # # Main effect ecc: 
+        # for ecc in ['EccS', 'EccM', 'EccL']:
+        #     pD = pwr_diff[event_dict[ecc]]
+        #     write_trialwise_alpha_ts_to_csv(pD, subID, part_epo, ecc, calc_induc)
+        #     if calc_induc:
+        #         helpers.save_data(pD.average(), subID + '-PowDiff-' + ecc, config.path_tfrs + '\\induc' + '\\'+ part_epo, append='-tfr')
+        #     else:
+        #         helpers.save_data(pD.average(), subID + '-PowDiff-' + ecc, config.path_tfrs + '\\' + part_epo, append='-tfr')
+        #     avg_tc = get_avg_timecourse(pD)
+        #     condition_averages_df[ecc] = avg_tc
+        # # All:
+        # pD = pwr_diff[:]
+        # write_trialwise_alpha_ts_to_csv(pD, subID, part_epo, 'all', calc_induc)
+        # if calc_induc:
+        #     helpers.save_data(pD.average(), subID + '-PowDiff-' + 'all', config.path_tfrs + '\\induc' + '\\'+ part_epo, append='-tfr')
+        # else:
+        #     helpers.save_data(pD.average(), subID + '-PowDiff-' + 'all', config.path_tfrs + '\\' + part_epo, append='-tfr')
+        # avg_tc = get_avg_timecourse(pD)
+        # condition_averages_df['all'] = avg_tc
 
         # Write condition_averages_df to file: 
-        if calc_induc:
-            fpath = op.join(config.path_tfrs_summaries, 'induc', 'timeseries', part_epo, 'averages')
-        else:
-            fpath = op.join(config.path_tfrs_summaries, 'timeseries', part_epo, 'averages')
-        helpers.chkmk_dir(fpath)
-        fname = op.join(fpath, subID + '_condition_averages_ts.csv')
-        condition_averages_df.to_csv(fname, sep=';', header=True, float_format='%.18f', encoding='UTF-8-sig')
+        # if calc_induc:
+        #     fpath = op.join(config.path_tfrs_summaries, 'induc', 'timeseries', part_epo, 'averages')
+        # else:
+        #     fpath = op.join(config.path_tfrs_summaries, 'timeseries', part_epo, 'averages')
+        # helpers.chkmk_dir(fpath)
+        # fname = op.join(fpath, subID + '_condition_averages_ts.csv')
+        # condition_averages_df.to_csv(fname, sep=';', header=True, float_format='%.18f', encoding='UTF-8-sig')
 
 # Interaction: 
 

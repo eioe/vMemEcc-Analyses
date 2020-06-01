@@ -28,7 +28,7 @@ else:
 #path_study = os.path.join(path_study, 'Experiments', 'vMemEcc')
 path_data = os.path.join(path_study, 'Data')
 path_postICA = op.join(path_data, 'DataMNE', 'EEG', '05.3_rejICA')
-path_autoreject_logs = op.join(path_data, 'DataMNE', 'EEG', '05.4_autorej')
+path_autoreject_logs = op.join(path_data, 'DataMNE', 'EEG', '05.4_autorej', 'logs')
 path_autoreject = op.join(path_data, 'DataMNE', 'EEG', '05.4_autorej')
 path_evokeds = op.join(path_data, 'DataMNE', 'EEG', '07_evokeds')
 path_evokeds_cue = op.join(path_data, 'DataMNE', 'EEG', '07_evokeds', 'cue')
