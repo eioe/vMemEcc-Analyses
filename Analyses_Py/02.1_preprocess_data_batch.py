@@ -184,7 +184,7 @@ def interpolate_bad_chans(data_):
 
 def save_rejlog(rejlog, fname):
     np.savetxt(fname, rejlog.labels, header=','.join(rejlog_stimon.ch_names), 
-                                     delimiter='',
+                                     delimiter=',',
                                      comments='',
                                      fmt='%1.0f')
                                     
