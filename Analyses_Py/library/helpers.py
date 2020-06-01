@@ -23,11 +23,18 @@ def save_data(data, filename, path, append='', overwrite=True):
     if not op.exists(path):
         os.makedirs(path)
         print('creating dir: ' + path) 
+    if 'tfr' in append:
+        fmt = '.h5'
+    else: 
+        fmt = '.fif'
     ff = op.join(path, filename + append + '.fif')
     #print("Saving %s ..." % ff)
     data.save(fname=ff, overwrite=overwrite)
 
-
+def chkmk_dir(path): 
+    if not op.exists(path):
+        os.makedirs(path)
+        print('creating dir: ' + path) 
 
 def print_msg(msg):
     n_line_marks = min([len(msg)+20, 100])
@@ -69,6 +76,7 @@ def get_event_dict(event_ids):
 
 
 def make_epos_dicts(epos, target_dicts, event_dict): 
+    # Modifies (non-empty) target_dicts in place!
     if isinstance(epos, mne.BaseEpochs):
         epos = [epos]
     if isinstance(target_dicts, dict):

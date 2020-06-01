@@ -284,7 +284,7 @@ def extract_epochs_ICA(raw_data, events, event_id_, n_jobs = 1):
                         event_id=event_id_, 
                         tmin=-0.6, 
                         tmax=2.3, 
-                        baseline=(-0.4,0),
+                        baseline=(None,None),
                         preload=False)
     return epos_ica_
 
@@ -297,7 +297,7 @@ def extract_epochs_stimon(raw_data, events, event_id_, bad_epos_, n_jobs = 1):
                         event_id=event_id_, 
                         tmin=-0.6, 
                         tmax=2.3, 
-                        baseline=(-0.4,0),
+                        baseline=None,
                         preload=False)
     epos_stimon_.drop(bad_epos_, 'BADRECORDING')
     return epos_stimon_
@@ -310,20 +310,31 @@ def extract_epochs_cue(raw_data, events, event_id_, tmin_, tmax_, bad_epos_, n_j
                         event_id=event_id_, 
                         tmin=tmin_, 
                         tmax=tmax_, 
-                        baseline=(-0.4,0),
+                        baseline=None,
+                        preload=False)
+    epos_cue_.drop(bad_epos_, 'BADRECORDING')
+    return epos_cue_
+
+def extract_epochs_fulllength(raw_data, events, event_id_, tmin_, tmax_, bad_epos_, n_jobs = 1):
+    # filter the data:
+    filtered = raw_data.load_data().filter(l_freq=0.01, h_freq=40, n_jobs = n_jobs)
+    epos_cue_ = mne.Epochs(filtered, 
+                        events, 
+                        event_id=event_id_, 
+                        tmin=tmin_, 
+                        tmax=tmax_, 
+                        baseline=None,
                         preload=False)
     epos_cue_.drop(bad_epos_, 'BADRECORDING')
     return epos_cue_
 
 
-
 ######################################################################################################
 
 ## Full procedure:
-#sub_list = np.setdiff1d(np.arange(10,config.n_subjects_total+1), config.ids_missing_subjects)
+sub_list = np.setdiff1d(np.arange(23,config.n_subjects_total+1), config.ids_missing_subjects)
 
-## Running only a subset:
-sub_list = np.setdiff1d(np.arange(1,config.n_subjects_total+1), config.ids_missing_subjects)
+##
 #sub_list = sub_list[10:11]
 
 # sub_list = np.setdiff1d(np.arange(15,28), config.ids_missing_subjects)
@@ -357,4 +368,6 @@ for idx, sub in enumerate(sub_list):
     epos_cue = extract_epochs_cue(raw.copy(), events_cue, event_id_cue, tmin_ = -0.6, tmax_ = 1, bad_epos_ = bad_epos.get('cue', []), n_jobs = config.n_jobs)
     save_data(epos_cue, subID + '-cue', path_outp_epo, '-epo')
     
-
+    epos_fullength = extract_epochs_cue(raw.copy(), events_cue, event_id_cue, tmin_ = -0.6, tmax_ = 3.3, bad_epos_ = bad_epos.get('cue', []), n_jobs = config.n_jobs)
+    save_data(epos_cue, subID + '-fulllength', path_outp_epo, '-epo')
+    

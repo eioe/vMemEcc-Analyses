@@ -14,11 +14,17 @@ import os
 import os.path as op
 import numpy as np
 from pathlib import Path
+import __main__ as main
 
 study_path = '../../'
 
 # Paths:
-path_study = Path(os.getcwd()).parents[1]
+if hasattr(main, '__file__'): 
+    # running from shell
+    path_study = Path(os.path.abspath(__file__)).parents[3]
+else: 
+    # running interactively:
+    path_study = Path(os.getcwd()).parents[1]
 #path_study = os.path.join(path_study, 'Experiments', 'vMemEcc')
 path_data = os.path.join(path_study, 'Data')
 path_postICA = op.join(path_data, 'DataMNE', 'EEG', '05.3_rejICA')
@@ -52,6 +58,16 @@ factor_levels = [load + ecc for load in ['LoadLow', 'LoadHigh','']
 
 factor_dict = {name: factor_levels.index(name) for name in factor_levels}
 
+# ROIs: 
+chans_CDA_dict = {'Left': ['P3', 'P5', 'PO3', 'PO7', 'O1'], 
+                  'Right': ['P4', 'P6', 'PO4', 'PO8', 'O2'], 
+                  'Contra': ['P3', 'P5', 'PO3', 'PO7', 'O1'], 
+                  'Ipsi': ['P4', 'P6', 'PO4', 'PO8', 'O2']}
+chans_CDA_all = [ch for v in list(chans_CDA_dict.values())[0:2] for ch in v]
+
+# Freqs: 
+alpha_freqs = [9, 12]
+
 # times:
 times_dict = dict(CDA_start = 0.450, 
                   CDA_end = 1.450, 
@@ -62,7 +78,7 @@ times_dict = dict(CDA_start = 0.450,
                   retention_dur = 2.0)
 
 # parallelization: 
-n_jobs = -2 # let's leave the CPU some air to breath
+n_jobs = 4 # let's leave the CPU some air to breath
 
 # subjects: 
 n_subjects_total = 27

@@ -89,7 +89,7 @@ def clean_with_ar_local(data_):
     picks = mne.pick_types(data_.info, meg=False, eeg=True, stim=False,
                        eog=False)
     ar = autoreject.AutoReject(n_interpolate=np.array([2,8,16]), 
-                               consensus= np.linspace(0.5, 1.0, 6),
+                               consensus= np.linspace(0.1, 1.0, 11),
                                picks=picks, 
                                n_jobs=config.n_jobs, 
                                verbose='tqdm')
@@ -211,24 +211,35 @@ for subsub in sub_list:
     data_forica = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-forica-epo.fif'))
     data_stimon = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-stimon-epo.fif'))
     data_cue = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-cue-epo.fif'))
+    data_fulllength = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-fulllength-epo.fif'))
     
     # crop them and apply baseline:
-    data_forica.crop(tmin=-0.6, tmax=2.3).apply_baseline((-0.4,0))
-    data_stimon.crop(tmin=-0.6, tmax=2.3).apply_baseline((-0.4,0))
-    data_cue.crop(tmin=-0.6, tmax=2.3).apply_baseline((-0.4,0))
+    # data_forica.crop(tmin=-0.6, tmax=2.3)#.apply_baseline((-0.4,0))
+    # data_stimon.crop(tmin=-0.6, tmax=2.3)#.apply_baseline((-0.4,0))
+    # data_cue.crop(tmin=-0.6, tmax=1.2)#.apply_baseline((-0.4,0))
+    # data_fullength.crop(tmin=-0.6, tmax=2.3)
 
     # clean it with autoreject local:
     data_forica_c, _, _ = clean_with_ar_local(data_forica)
     
     # fit ICA to cleaned data:
     data_ica = get_ica_weights(subsub, data_forica_c, ica_from_disc=False)
+
+    # Apply baseline:
+    # data_forica.crop(tmin=-0.6, tmax=2.3)#.apply_baseline((-0.4,0))
+    data_stimon.apply_baseline((-0.2,0))
+    data_cue.apply_baseline((-0.2,0))
+    data_fulllength.apply_baseline((-0.2,0))
+
     # remove eog components and project to actual data:
     data_stimon = rej_ica_eog(subsub, data_ica, data_forica_c, data_stimon)
     data_cue = rej_ica_eog(subsub, data_ica, data_forica_c, data_cue)
+    data_fulllength = rej_ica_eog(subsub, data_ica, data_forica_c, data_fulllength)
 
     # clean actual data with autoreject local:
     data_stimon_c, ar_stimon, rejlog_stimon = clean_with_ar_local(data_stimon)
     data_cue_c, ar_cue, rejlog_cue = clean_with_ar_local(data_cue)
+    data_fulllength_c, ar_fulllength, rejlog_fulllength = clean_with_ar_local(data_fulllength)
 
     # Save results: 
     helpers.save_data(data_forica_c, 
@@ -250,10 +261,19 @@ for subsub in sub_list:
     helpers.save_data(ar_cue, 
                       subsub + '-cue-arlocal', 
                       config.path_autoreject)
+    helpers.save_data(data_fulllength_c, 
+                      subsub + '-fulllength-postica', 
+                      config.path_postICA, 
+                      append = '-epo')
+    helpers.save_data(ar_fulllength, 
+                      subsub + '-fulllength-arlocal', 
+                      config.path_autoreject)
     # save autoreject logs: 
     fname = os.path.join(config.path_autoreject_logs, 'stimon-rejlog.csv')
     save_rejlog(rejlog_stimon, fname)
     fname = os.path.join(config.path_autoreject_logs, 'cue-rejlog.csv')
+    save_rejlog(rejlog_cue, fname)
+    fname = os.path.join(config.path_autoreject_logs, 'fulllength-rejlog.csv')
     save_rejlog(rejlog_cue, fname)
     
 
