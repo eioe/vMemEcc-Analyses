@@ -26,7 +26,7 @@ def write_mean_amp_to_file(ID):
                 data_txt = ";".join([ID, load, ecc, format(mean_amplitues_dict[load+ecc], '.8f')])
                 ffile.write(data_txt + "\n")
 
-sub_list = np.setdiff1d(np.arange(1,28), config.ids_missing_subjects)
+sub_list = np.setdiff1d(np.arange(1,28), config.ids_missing_subjects + config.ids_excluded_subjects)
 #sub_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27]
 
 chans_CDA_dict = {'Left': ['P3', 'P5', 'PO3', 'PO7', 'O1'], 
@@ -37,10 +37,10 @@ for sub_nr in sub_list:
     subID = 'VME_S%02d' % sub_nr
     # subID = 'VME_S02'
 
-    for epo_part in ['cue']: #['stimon', 'fulllength']
+    for epo_part in ['cue', 'stimon', 'fulllength']:
 
         # Load data:
-        data = helpers.load_data(subID + '-' + epo_part + '-postica', config.path_postICA, '-epo')
+        data = helpers.load_data(subID + '-' + epo_part + '-postica-rejepo', config.path_rejepo, '-epo')
 
         # Make dict summarizing chans in regions 'Left', 'Midline', 'Right'
         region_dict = mne.channels.make_1020_channel_selections(data.info)

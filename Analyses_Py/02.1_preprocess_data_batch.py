@@ -127,7 +127,7 @@ def rej_ica_eog(subID, data_ica_, data_forica_, data_to_clean_):
     ## Plot marked components:
     # data_ica_.plot_components(inst=data_forica_, picks=EOGexclude)
     
-    data_ica_.exclude = eog_indices
+    data_ica_.exclude = eog_indices[:2]
     # overwrite on disk with updated version:
     data_ica_.save(fname=op.join(path_outp_ICA, subID + '-ica.fif.'))
     # and kick out components:
@@ -215,6 +215,7 @@ for subsub in sub_list:
     data_fulllength = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-fulllength-epo.fif'))
     
     # clean it with autoreject local:
+    data_forica.apply_baseline((-0.4,0))
     data_forica_c, _, _ = clean_with_ar_local(data_forica)
     
     # fit ICA to cleaned data:
@@ -222,9 +223,9 @@ for subsub in sub_list:
 
     # Apply baseline:
     # data_forica.crop(tmin=-0.6, tmax=2.3)#.apply_baseline((-0.4,0))
-    data_stimon.apply_baseline((-0.2,0))
-    data_cue.apply_baseline((-0.2,0))
-    data_fulllength.apply_baseline((-0.2,0))
+    data_stimon.apply_baseline((-0.4,0))
+    data_cue.apply_baseline((-0.4,0))
+    data_fulllength.apply_baseline((-0.4,0))
 
     # remove eog components and project to actual data:
     data_stimon = rej_ica_eog(subsub, data_ica, data_forica_c, data_stimon)

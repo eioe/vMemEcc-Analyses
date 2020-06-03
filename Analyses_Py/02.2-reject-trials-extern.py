@@ -31,15 +31,17 @@ for sub_nr in sub_list:
     for epo_part in ['cue', 'stimon', 'fulllength']:
 
         # Load data:
-        data = helpers.load_data(subID + '-' + epo_part + '-postica', config.path_postICA, '-epo')
+        data = helpers.load_data(subID + '-' + epo_part + '-postica', config.path_postICA, '-epo', 
+                                 verbose=False)
 
         # kick epos:
         rej_idx = np.isin(data.selection, rej_epos_ext)
-        data.drop(rej_idx)
+        data.drop(rej_idx, verbose=False)
 
         rem_epos_dict[epo_part] = len(data)
 
-        helpers.save_data(data, subID + '-' + epo_part + '-postica-rejepo', config.path_rejepo)
+        helpers.save_data(data, subID + '-' + epo_part + '-postica-rejepo', config.path_rejepo, 
+                          append='-epo', verbose=False)
     
     remaining_epos = remaining_epos.append(rem_epos_dict, verify_integrity=True, ignore_index=True)
 
