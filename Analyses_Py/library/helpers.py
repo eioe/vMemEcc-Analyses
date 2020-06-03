@@ -29,7 +29,7 @@ def save_data(data, filename, path, append='', overwrite=True, verbose=None):
         fmt = '.fif'
     ff = op.join(path, filename + append + '.fif')
     #print("Saving %s ..." % ff)
-    data.save(fname=ff, overwrite=overwrite, verbose=verbose)
+    data.save(fname=ff, overwrite=overwrite)
 
 def chkmk_dir(path): 
     if not op.exists(path):
