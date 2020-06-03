@@ -28,6 +28,9 @@ else:
 #path_study = os.path.join(path_study, 'Experiments', 'vMemEcc')
 path_data = os.path.join(path_study, 'Data')
 path_postICA = op.join(path_data, 'DataMNE', 'EEG', '05.3_rejICA')
+path_rejepo = op.join(path_data, 'DataMNE', 'EEG', '05.1_rejepo')
+path_reject_epos_extern = op.join(path_rejepo, 'CSV_rejEpos_ET')
+path_rejepo_summaries = op.join(path_rejepo, 'summaries')
 path_autoreject_logs = op.join(path_data, 'DataMNE', 'EEG', '05.4_autorej', 'logs')
 path_autoreject = op.join(path_data, 'DataMNE', 'EEG', '05.4_autorej')
 path_evokeds = op.join(path_data, 'DataMNE', 'EEG', '07_evokeds')
@@ -40,6 +43,8 @@ path_epos_sorted_cue = op.join(path_data, 'DataMNE', 'EEG', '07_epos_sorted', 'c
 
 #TODO: make more elegant (dict?)
 for pp in [path_postICA, 
+           path_rejepo,
+           path_rejepo_summaries,
            path_evokeds, 
            path_evokeds_cue,
            path_evokeds_summaries, 
@@ -83,3 +88,11 @@ n_jobs = 4 # let's leave the CPU some air to breath
 # subjects: 
 n_subjects_total = 27
 ids_missing_subjects = [11, 14, 19]
+ids_excluded_subjects = [7, 12, 22]
+
+# colors: 
+#"#66C2A5" "#3288BD"
+
+colors = dict()
+colors['LoadHigh'] = "#66C2A5"
+colors['LoadLow'] = "#3288BD"

@@ -13,6 +13,8 @@ source("EyeTracking/MS_Toolbox_R/microsacc.R")
 source("EyeTracking/MS_Toolbox_R/binsacc.R")
 source("Utils/et_utils.R")
 
+interpolate_low_conf_samples <- TRUE
+
 data_from_hdd <- TRUE
 overwrite_existing_dataoutput <- TRUE
 suppress_plotting <- FALSE
@@ -24,7 +26,8 @@ timings <- list(
   'retention' = 2, 
   'buffer_prefix' = 0.4, 
   'buffer_postretention' = 0.4, 
-  'buffer_blink' = 0.1) 
+  'buffer_blink' = 0.1, 
+  'eeg_bl' = 0.2) 
 
 sacc_params <- list(
   #  VFAC			  relative velocity threshold
@@ -38,18 +41,21 @@ sacc_params <- list(
   # Use both eyes:
   binoc = FALSE, 
   # Amplitude threshold (dva) to decide which trials to reject:
-  rej_threshold = 2)
+  rej_threshold = 2, 
+  # Confidence threshold: 
+  conf_threshold = 0.6)
 
 
 # Set paths: 
 if (data_from_hdd) {
-  path_data <- file.path('D:', 'vMemEcc', 'SubjectData_extern', 'SubjectData')
+  path_data <- file.path('E:', 'vMemEcc', 'SubjectData_extern', 'SubjectData')
 } else {
   path_data <- here('..', '..', 'Data', 'SubjectData')
 }
 
 
-sub_ids <- str_c('VME_S', str_pad(c(25,26,27), 2, 'left', 0))
+sub_ids <- str_c('VME_S', str_pad(setdiff(c(20), c(11,14,19)), 
+                                  2, 'left', 0))
 
 for (sub_id in sub_ids) {
   
@@ -57,22 +63,13 @@ for (sub_id in sub_ids) {
   sacc_list <- NULL 
   sacc_list_idx <- 0
   
-  # dir helper:
-  checkmake_dirs <- function(paths) {
-    for (path in paths) {
-      if (!dir.exists(path)) {
-        dir.create(path)
-        ui_info(str_c("Created dir: {path}"))
-      }
-    }
-  }
-  
   # Input dir:
   path_data_sub     <- file.path(path_data, sub_id, 'EyeTracking')
   # Output dir: 
   path_plots        <- file.path(path_data_sub, 'R_plots')
   path_data_sub_out <- file.path(path_data_sub, 'R_data')
-  checkmake_dirs(c(path_plots, path_data_sub_out))
+  path_data_rejepo_out <- file.path(path_data, 'CSV_rejEpos_ET')
+  checkmake_dirs(c(path_plots, path_data_sub_out, path_data_rejepo_out))
   
   blocks <- list.files(path_data_sub)
   # skip trainings blocks & output dirs:
@@ -245,7 +242,8 @@ for (sub_id in sub_ids) {
         # add saccade info:
         # get separate cols for eye samples: 
         data_fix <- data_fix %>% 
-          separate(base_data, c('timestamp0', 'timestamp1'), ' ') %>% 
+          separate(base_data, c('timestamp0', 'timestamp1'), 
+                   ' ', fill = 'right') %>% 
           mutate(timestamp_eye_0 = substr(timestamp0, 1, nchar(timestamp0)-2), 
                  eye0 = substr(timestamp0, nchar(timestamp0), nchar(timestamp0)),
                  timestamp_eye_1 = substr(timestamp1, 1, nchar(timestamp1)-2), 
@@ -254,7 +252,7 @@ for (sub_id in sub_ids) {
                  timestamp_eye_1 = as.numeric(timestamp_eye_1), 
                  timestamp_eye_1 = if_else(eye0 == 1, timestamp_eye_0, timestamp_eye_1), 
                  timestamp_eye_0 = if_else(eye0 == 1, NA_real_ , timestamp_eye_0)) %>% 
-          select(-c(eye0, eye1)) %>% 
+          select(-c(eye0, eye1, timestamp0, timestamp1)) %>% 
           # calc time relative to stimulus onset:
           mutate(gaze_timestamp = gaze_timestamp - t_stimonset, 
                  timestamp_eye_0 = timestamp_eye_0 - t_stimonset, 
@@ -269,7 +267,8 @@ for (sub_id in sub_ids) {
                  gaze_normal0_x, 
                  gaze_normal0_y, 
                  gaze_dev0_hor, 
-                 gaze_dev0_vert) %>% 
+                 gaze_dev0_vert, 
+                 confidence) %>% 
           # drop duplictaes
           # (these are rows with updates from the other eye)
           distinct_at(vars(timestamp_eye_0, gaze_normal0_x, gaze_normal0_y), 
@@ -283,31 +282,67 @@ for (sub_id in sub_ids) {
                  gaze_normal1_x, 
                  gaze_normal1_y, 
                  gaze_dev1_hor, 
-                 gaze_dev1_vert) %>% 
+                 gaze_dev1_vert, 
+                 confidence) %>% 
           # drop duplictaes
           # (these are rows with updates from the other eye)
-          distinct_at(vars(timestamp_eye_1, gaze_normal1_x, gaze_normal1_y), 
+          distinct_at(vars(timestamp_eye_1, 
+                           gaze_normal1_x, 
+                           gaze_normal1_y, 
+                           gaze_dev1_hor, 
+                           gaze_dev1_vert), 
                       .keep_all = TRUE) %>% 
           drop_na(timestamp_eye_1, gaze_normal1_x, gaze_normal1_y)  
+        
+        if (interpolate_low_conf_samples) {
+          if (!nrow(timings_eye0) == 0) {
+            timings_eye0 <- timings_eye0 %>% 
+              mutate(
+                gaze_dev0_hor = spline_interpolate_low_conf_samples(gaze_dev0_hor, 
+                                                                    confidence, 
+                                                                    0.6), 
+                gaze_dev0_vert = spline_interpolate_low_conf_samples(gaze_dev0_vert, 
+                                                                 confidence, 
+                                                                  0.6))
+          }
           
+          if (!nrow(timings_eye1) == 0) {
+            timings_eye1 <- timings_eye1 %>% 
+              mutate(
+                gaze_dev1_hor = spline_interpolate_low_conf_samples(gaze_dev1_hor, 
+                                                                    confidence, 
+                                                                    0.6), 
+                gaze_dev1_vert = spline_interpolate_low_conf_samples(gaze_dev1_vert,
+                                                                     confidence,
+                                                                     0.6))
+          }
+        }
         
         # Calculate (micro)saccaes per eye:
         # msr: micro-saccades right eye
         # msl: -------------- left ----
         
-        msr <- timings_eye0 %>% 
-          select(gaze_dev0_hor, gaze_dev0_vert) %>% 
-          as.matrix() %>% 
-          microsacc(sacc_params$vfac,
-                    sacc_params$mindur,
-                    sacc_params$srate)
+        if (!nrow(timings_eye0) == 0) {
+          msr <- timings_eye0 %>% 
+            select(gaze_dev0_hor, gaze_dev0_vert) %>% 
+            as.matrix() %>% 
+            microsacc(sacc_params$vfac,
+                      sacc_params$mindur,
+                      sacc_params$srate)
+        } else {
+          msr <- NULL
+        }
         
-        msl <- timings_eye1 %>% 
-          select(gaze_dev1_hor, gaze_dev1_vert) %>% 
-          as.matrix() %>%  
-          microsacc(sacc_params$vfac,
-                    sacc_params$mindur,
-                    sacc_params$srate)
+        if (!nrow(timings_eye1) == 0) {
+          msl <- timings_eye1 %>% 
+            select(gaze_dev1_hor, gaze_dev1_vert) %>% 
+            as.matrix() %>%  
+            microsacc(sacc_params$vfac,
+                      sacc_params$mindur,
+                      sacc_params$srate)
+        } else {
+          msl <- NULL
+        }
         
         # translate to global indices used in gaze_data:
         if (!is.null(msl)) {
@@ -337,6 +372,12 @@ for (sub_id in sub_ids) {
           pivot_wider(names_from = eye_id, 
                       names_prefix = 'eye_',
                       values_from = mean_conf)
+        
+        for (eye in c('eye_0', 'eye_1')) {
+          if (!eye %in% colnames(eye_confidence)) {
+            eye_confidence[eye] <- 0
+          }
+        }
         
         chosen_eye <- ifelse(eye_confidence$eye_0 > eye_confidence$eye_1, 
                              0, 
@@ -452,12 +493,25 @@ for (sub_id in sub_ids) {
                  sacc_peakvel, 
                  blink, 
                  c_Ecc,
-                 c_StimN, 
-                 gaze_timestamp) %>% 
+                 c_StimN,
+                 CueDir,
+                 gaze_timestamp, 
+                 confidence) %>% 
           filter(!blink) %>% 
+          mutate(sacc_idx = sacc_idx - min(sacc_idx, na.rm=T) + 1) %>% 
           group_by(sacc_idx) %>% 
+          mutate(confidence_mean = mean(confidence, na.rm=T)) %>% 
           drop_na() %>% 
           slice(1)
+        
+        sacc_summary <- sacc_summary %>%  
+          mutate(reject_eeg = 
+                   ifelse(sacc_amp > sacc_params$rej_threshold & 
+                          gaze_timestamp > (-timings$eeg_bl) & 
+                          gaze_timestamp < (timings$stim + timings$retention) &
+                          confidence_mean > sacc_params$conf_threshold, 
+                          TRUE, 
+                          FALSE))    
         
         sacc_list_idx <- sacc_list_idx + 1
         sacc_list[[sacc_list_idx]] <- sacc_summary  
@@ -531,18 +585,18 @@ for (sub_id in sub_ids) {
                                ifelse(block_nr == 'Block2', '', 'end retention')), 
                      angle = 90) + 
             
-            # red trial rejection label:
-            annotate(geom = 'label',
-                     x = as.numeric(ifelse(any(data_fix$sacc_amp > sacc_params$rej_threshold & 
-                                                 (!data_fix$blink) & 
-                                             data_fix$gaze_timestamp > (-timings$fix) & 
-                                             data_fix$gaze_timestamp < (timings$stim + timings$retention)),
-                                           0, NA)),
-                     y = Inf,
-                     vjust = 1,
-                     color = 'red',
-                     label = "reject") +
-            
+            # # red trial rejection label:
+            # annotate(geom = 'label',
+            #          x = as.numeric(ifelse(any(data_fix$sacc_amp > sacc_params$rej_threshold & 
+            #                                      (!data_fix$blink) & 
+            #                                  data_fix$gaze_timestamp > (-timings$eeg_bl) & 
+            #                                  data_fix$gaze_timestamp < (timings$stim + timings$retention)),
+            #                                0, NA)),
+            #          y = Inf,
+            #          vjust = 1,
+            #          color = 'red',
+            #          label = "reject") +
+            # 
             # zero line:
             geom_hline(yintercept = 0, 
                        alpha = 0.2) +
@@ -567,6 +621,24 @@ for (sub_id in sub_ids) {
                                           'blink & saccade'), 
                                drop = FALSE) 
         
+          # Decide if rejection label shall be added:
+          if (any(sacc_summary$reject_eeg)) {
+          # (any(any(
+          #   sacc_summary$sacc_amp > sacc_params$rej_threshold & 
+          #   sacc_summary$gaze_timestamp > (-timings$eeg_bl) & 
+          #   sacc_summary$gaze_timestamp < (timings$stim + timings$retention) &
+          #   sacc_summary$confidence_mean > sacc_params$conf_threshold))) {
+          
+            plt <- plt + 
+              # red trial rejection label:
+              annotate(geom = 'label',
+                       x = 0,
+                       y = Inf,
+                       vjust = 1,
+                       color = 'red',
+                       label = "reject") 
+          }
+              
           plt_list[[trial]] <- plt 
         }
                    
@@ -622,17 +694,19 @@ for (sub_id in sub_ids) {
   # Plot main sequence: 
   if(!suppress_plotting) {
     fig_mseq_x <- sacc_info %>% 
-      ggplot(aes(x = abs(sacc_amp_x), y = sacc_peakvel, 
+      ggplot(aes(x = abs(sacc_amp_x), 
+                 y = sacc_peakvel, 
                  col = c_Ecc)) + 
       facet_grid(block~trial_phase) +
-      geom_point() +
+      geom_point(aes(shape = reject_eeg)) +
       theme_bw() +
       theme(aspect.ratio = 1) +
       xlim(0,15) +
       ylim(0, 1000) + 
       labs(x = "Abs. horiz. amplitude (dva)", 
            y = "Peak velocity (dva/s)", 
-           color = "Stimulus Eccentricity")  
+           color = "Stimulus Eccentricity", 
+           shape = "Reject Epoch?")  
     
     ggsave(file = file.path(path_plots, str_c(sub_id, '_MainSequenceHoriz', '.pdf')),
            plot = fig_mseq_x, 
@@ -661,4 +735,20 @@ for (sub_id in sub_ids) {
            width = unit(20, 'cm'), 
            height = unit(7.5, 'cm'))
   }
+  
+  # write out info which trials to reject: 
+  rej_trials <- sacc_info %>% 
+    ungroup() %>% 
+    filter(block != "Block2", 
+           reject_eeg == TRUE) %>% 
+    mutate(block_int = parse_integer(str_remove(as.character(block),
+                                                'Block')) - 4, 
+           tot_trial = block_int * 72 + trial) %>% 
+    select(tot_trial) 
+  
+  rej_trials <- unique(rej_trials)
+  fname <- file.path(path_data_rejepo_out, 
+                     str_c(sub_id, '-rejTrials-ET.csv'))
+  write_csv2(rej_trials, fname, col_names = F)
+  
 }

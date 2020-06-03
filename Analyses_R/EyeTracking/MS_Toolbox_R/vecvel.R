@@ -18,8 +18,12 @@ vecvel <- function(x,SAMPLING=500,TYPE=2) {
     v[3:(N-2),] <- SAMPLING/6*(x[5:N,] + x[4:(N-1),] - x[2:(N-3),] - x[1:(N-4),])
     v[2,] = SAMPLING/2*(x[3,] - x[1,])
     v[(N-1),] = SAMPLING/2*(x[N,] - x[(N-2),])   
-  }  else  {
+  }  else if (TYPE==1){
     v[2:(N-1),] <- SAMPLING/2*(x[3:N,] - x[1:(N-2),])
+  } else if (TYPE==0) {
+    # no smoothing:
+    v[2:N,] <- SAMPLING*diff(v)
+    v[1, ] <- 1
   }
   return(v)
 }

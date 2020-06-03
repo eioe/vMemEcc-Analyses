@@ -1,5 +1,13 @@
+import os
+import os.path as op
+from pathlib import Path
+import numpy as np
 from collections import defaultdict
+import matplotlib
 from matplotlib import pyplot as plt
+import mne
+from library import helpers, config
+
 
 # following code taken from:
 # https://github.com/mne-tools/mne-biomag-group-demo/blob/master/scripts/processing/11-group_average_sensors.py

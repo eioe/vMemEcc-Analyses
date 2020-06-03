@@ -33,11 +33,11 @@ chans_CDA_dict = {'Left': ['P3', 'P5', 'PO3', 'PO7', 'O1'],
                   'Right': ['P4', 'P6', 'PO4', 'PO8', 'O2']}
 chans_CDA_all = [ch for v in list(chans_CDA_dict.values()) for ch in v]
 
-for subNr in sub_list:
-    subID = 'VME_S%02d' % subNr
+for sub_nr in sub_list:
+    subID = 'VME_S%02d' % sub_nr
     # subID = 'VME_S02'
 
-    for epo_part in ['cue']:
+    for epo_part in ['cue']: #['stimon', 'fulllength']
 
         # Load data:
         data = helpers.load_data(subID + '-' + epo_part + '-postica', config.path_postICA, '-epo')
@@ -50,7 +50,7 @@ for subNr in sub_list:
         for k in region_dict.keys(): 
             region_dict_chnames[k] = [chnames_eeg[i] for i in region_dict[k]]
         
-        # Defina a dict that translates all lateralized channels to their 
+        # Define a dict that translates all lateralized channels to their 
         # counterpart on the other hemisphere:
         rename_dict_mirror = {k: v for k,v in zip(region_dict_chnames['Right'] + region_dict_chnames['Left'], 
                                                 region_dict_chnames['Left'] + region_dict_chnames['Right'])}

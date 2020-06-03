@@ -35,12 +35,12 @@ func_analysis_05 <- function() {
   print_header(str_c('Summary ANOVA \ntask: ', condition))
   print(summary(aov.srt))
   
-  ## rstatix alternative (identical results:)
-  # aov.res <- anova_test(data = c1.aov, 
-  #                       dv = meanAcc, 
-  #                       wid = ppid, 
-  #                       within = c(c_StimN, c_Ecc))
-  # get_anova_table(aov.res)
+  # rstatix alternative (identical results:)
+  aov.res <- anova_test(data = c1.aov,
+                        dv = meanCDA,
+                        wid = ppid,
+                        within = c(c_StimN, c_Ecc))
+  get_anova_table(aov.res)
   
   #--------------------------------------------------------------------------
   ## Run post-hoc t tests:

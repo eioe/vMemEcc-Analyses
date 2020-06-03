@@ -214,12 +214,6 @@ for subsub in sub_list:
     data_cue = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-cue-epo.fif'))
     data_fulllength = mne.read_epochs(fname=op.join(path_prep_epo, subsub + '-fulllength-epo.fif'))
     
-    # crop them and apply baseline:
-    # data_forica.crop(tmin=-0.6, tmax=2.3)#.apply_baseline((-0.4,0))
-    # data_stimon.crop(tmin=-0.6, tmax=2.3)#.apply_baseline((-0.4,0))
-    # data_cue.crop(tmin=-0.6, tmax=1.2)#.apply_baseline((-0.4,0))
-    # data_fullength.crop(tmin=-0.6, tmax=2.3)
-
     # clean it with autoreject local:
     data_forica_c, _, _ = clean_with_ar_local(data_forica)
     

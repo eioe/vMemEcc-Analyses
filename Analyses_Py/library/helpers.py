@@ -6,20 +6,20 @@ from pathlib import Path
 import mne
 
 
-def load_data(filename, path, append):
+def load_data(filename, path, append, verbose=None):
     if append == '-raw':
         ff = op.join(path, filename + append + '.fif')
-        return mne.io.Raw(ff)
+        return mne.io.Raw(ff, verbose=verbose)
     elif append == '-epo':
         ff = op.join(path, filename + append + '.fif')
-        return mne.read_epochs(ff) 
+        return mne.read_epochs(ff, verbose=verbose) 
     else :
         print('This append (%s) is not yet implemented.' % append)
 
 
     
 
-def save_data(data, filename, path, append='', overwrite=True):
+def save_data(data, filename, path, append='', overwrite=True, verbose=None):
     if not op.exists(path):
         os.makedirs(path)
         print('creating dir: ' + path) 
@@ -29,7 +29,7 @@ def save_data(data, filename, path, append='', overwrite=True):
         fmt = '.fif'
     ff = op.join(path, filename + append + '.fif')
     #print("Saving %s ..." % ff)
-    data.save(fname=ff, overwrite=overwrite)
+    data.save(fname=ff, overwrite=overwrite, verbose=verbose)
 
 def chkmk_dir(path): 
     if not op.exists(path):

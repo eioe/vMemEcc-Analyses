@@ -18,7 +18,7 @@
 #---------------------------------------------------------------------
 microsacc <- function(x,VFAC=5,MINDUR=3,SAMPLING=500) {
   # Compute velocity
-  v <- vecvel(x,SAMPLING=SAMPLING)
+  v <- vecvel(x,SAMPLING=SAMPLING,TYPE=2)
   
   # Compute threshold
   medx <- median(v[,1])

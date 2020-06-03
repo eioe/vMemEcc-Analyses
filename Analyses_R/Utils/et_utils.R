@@ -5,7 +5,10 @@
 # Helper functions for the eye tracking analyses
 #--------------------------------------------------------------------------
 
+require(tidyverse)
+require(usethis)
 require(pracma)
+require(zoo)
 
 get_blink_frames <- function(df_blink) {
   dd <- df_blink %>% 
@@ -65,6 +68,47 @@ translate_xyz2spherical <- function(df, x_col, y_col, z_col, prefix_output) {
     add_column(!!str_c(prefix_output, '_phi')   := rad2deg(cart2sph_custom(as.matrix(select(., !! x_col, !! y_col, !! z_col)))[, 2])) %>% 
     add_column(!!str_c(prefix_output, '_r')     :=         cart2sph_custom(as.matrix(select(., !! x_col, !! y_col, !! z_col)))[, 3])
   return(res)
+}
+
+
+spline_interpolate_low_conf_samples <- function(vec, 
+                                                conf_vec, 
+                                                conf_threshold, 
+                                                margin = 20,
+                                                maxgap = 100) {
+  if (!typeof(vec) == 'double') {
+    warning(paste('Expected type "double" but got type: ', 
+                  typeof(vec)))
+  }
+  margin_start <- vec[1:margin]
+  margin_end <- vec[(length(vec)-margin+1):length(vec)]
+  vec_trimmed <- vec[(margin+1):(length(vec)-margin)]
+  conf_vec_trimmed <- conf_vec[(margin+1):(length(vec)-margin)]
+  vec_trimmed[conf_vec_trimmed < conf_threshold] <- NA_real_
+  vec_concat <- c(margin_start, vec_trimmed, margin_end)
+  vec_spline <- na.approx(vec_concat, 
+                          maxgap = maxgap, 
+                          na.rm = FALSE)
+  if (sum(is.na(vec_spline)) > 2*margin) {
+    na_idx <- which(is.na(vec_spline))
+    vec_spline[na_idx] <- vec[na_idx]
+    warning('There were stretches of low confidence longer 
+             than the max gap allowed. Leaving original values 
+            for these.')
+  }
+    
+  #vec_out <- c(margin_start, vec_spline, margin_end)
+  return(vec_spline)                
+}
+
+# dir helper:
+checkmake_dirs <- function(paths) {
+  for (path in paths) {
+    if (!dir.exists(path)) {
+      dir.create(path)
+      ui_info(str_c("Created dir: {path}"))
+    }
+  }
 }
 
 ################### old:
