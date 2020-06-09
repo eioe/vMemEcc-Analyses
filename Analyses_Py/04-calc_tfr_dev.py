@@ -77,7 +77,7 @@ def write_mean_alphapwr_to_file(ID):
 #write_mean_alphapwr_to_file(subsub)
 
 #TODO: Fix path
-sub_list = np.setdiff1d(np.arange(1,28), config.ids_missing_subjects)
+sub_list = np.setdiff1d(np.arange(1,8), config.ids_missing_subjects + config.ids_excluded_subjects)
 
 for sub_nr in sub_list:
     subID = 'VME_S%02d' % sub_nr
@@ -85,7 +85,7 @@ for sub_nr in sub_list:
     # calculate induced or induced+evoked power:
     for pwr_style in ['evoked', 'induced']:
 
-        for part_epo in ['stimon', 'cue']: #, 'fulllength']:
+        for part_epo in ['fulllength']: #['stimon', 'cue']: #, 
 
             epos_ = helpers.load_data(subID, config.path_epos_sorted + '/' + part_epo + '/collapsed', '-epo')
             

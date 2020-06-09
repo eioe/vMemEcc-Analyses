@@ -40,6 +40,7 @@ path_tfrs = op.join(path_data, 'DataMNE', 'EEG', '08_tfr')
 path_tfrs_summaries = op.join(path_tfrs, 'summaries')
 path_epos_sorted = op.join(path_data, 'DataMNE', 'EEG', '07_epos_sorted')
 path_epos_sorted_cue = op.join(path_data, 'DataMNE', 'EEG', '07_epos_sorted', 'cue')
+path_plots = op.join(path_study, 'Plots')
 
 #TODO: make more elegant (dict?)
 for pp in [path_postICA, 
@@ -52,7 +53,8 @@ for pp in [path_postICA,
            path_tfrs_summaries, 
            path_epos_sorted_cue, 
            path_autoreject_logs, 
-           path_autoreject]:
+           path_autoreject, 
+           path_plots]:
     if not op.exists(pp):
         os.makedirs(pp)
         print('creating dir: ' + pp) 
@@ -94,5 +96,14 @@ ids_excluded_subjects = [7, 12, 22]
 #"#66C2A5" "#3288BD"
 
 colors = dict()
-colors['LoadHigh'] = "#66C2A5"
-colors['LoadLow'] = "#3288BD"
+colors['LoadHigh'] = "#F1942E"
+colors['LoadLow'] = "#32628A"
+colors['Load High'] = "#F1942E"
+colors['Load Low'] = "#32628A"
+colors['4'] = "#F1942E"
+colors['2'] = "#32628A"
+
+colors['4°'] = "#00A878"
+colors['9°'] = "#FCEC52"
+colors['14°'] = "#FE5E41"
+

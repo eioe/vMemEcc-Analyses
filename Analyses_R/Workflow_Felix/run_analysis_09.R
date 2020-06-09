@@ -1,13 +1,13 @@
 #--------------------------------------------------------------------------
 # Analysis 05:
-# Is there an effect of workload or eccentricity on mean CDA amplitude?
+# Is there an effect of workload or eccentricity on mean PNP amplitude?
 #
 #--------------------------------------------------------------------------
 #TODO: make function and return: summaries (aov, ttest), plot (figa)
 #--------------------------------------------------------------------------
 # ... confidence interval for repeated measures design - based on Coussineau Morey
 
-func_analysis_05 <- function() {
+func_analysis_09 <- function() {
   
   condition <- "experiment"  #Only EEG data for VSTM task. 
   
@@ -15,13 +15,13 @@ func_analysis_05 <- function() {
     mutate(c_Ecc = as_factor(c_Ecc)) %>% 
     filter(BlockStyle == condition) %>% 
     group_by(ppid, c_StimN, c_Ecc) %>%   
-    summarise(meanCDA = mean(CDA_amp, na.rm = T)) %>% 
+    summarise(meanPNP = mean(PNP_amp, na.rm = T)) %>% 
     ungroup() %>% 
-    select("meanCDA", "c_StimN", "c_Ecc", "ppid") 
+    select("meanPNP", "c_StimN", "c_Ecc", "ppid") 
   
   c1.reduced <- c1.aov %>% 
     pivot_wider(names_from = c(c_StimN, c_Ecc), 
-                values_from = meanCDA, 
+                values_from = meanPNP, 
                 names_prefix = 'cond_') %>% 
     select(., contains('cond_')) %>% 
     drop_na()
@@ -32,7 +32,7 @@ func_analysis_05 <- function() {
   
   #--------------------------------------------------------------------------
   ## Run ANOVA
-  aov.srt <- aov(meanCDA ~ c_StimN*c_Ecc + Error(ppid/(c_StimN* c_Ecc)),data=c1.aov)
+  aov.srt <- aov(meanPNP ~ c_StimN*c_Ecc + Error(ppid/(c_StimN* c_Ecc)),data=c1.aov)
   
   print_header(str_c('Summary ANOVA \ntask: ', condition))
   print(summary(aov.srt))
@@ -50,7 +50,7 @@ func_analysis_05 <- function() {
   # main effect Eccentricity:
   res_ttest <- c1.aov %>% 
     pairwise_t_test(
-      meanCDA ~ c_Ecc, paired = TRUE, 
+      meanPNP ~ c_Ecc, paired = TRUE, 
       p.adjust.method = "bonferroni"
     )
   
@@ -61,7 +61,7 @@ func_analysis_05 <- function() {
   
   c1.plt <- c1.aov %>% 
     group_by(c_StimN, c_Ecc) %>% 
-    summarise(meanCDA = mean(meanCDA, na.rm = T)) %>% 
+    summarise(meanPNP = mean(meanPNP, na.rm = T)) %>% 
     mutate(cond = str_c('cond', c_StimN, c_Ecc, sep = '_'), 
            c_Ecc = as.numeric(as.character(c_Ecc))) %>% 
     left_join(as_tibble(ci_cm) %>% 
@@ -72,7 +72,7 @@ func_analysis_05 <- function() {
   
   figa <- ggplot(c1.plt, 
                  aes(x = c_Ecc, 
-                     y = meanCDA,
+                     y = meanPNP,
                      ymin = lower,
                      ymax = upper, 
                      colour = as_factor(c_StimN))) #+ facet_wrap(~cond)
@@ -82,9 +82,9 @@ func_analysis_05 <- function() {
   figa <- figa + scale_fill_manual(values=c(defblue,deforange,defgrey))
   figa <- figa + geom_linerange(size=0.2358491)
   figa <- figa + scale_x_continuous(breaks=c(4,9,14))
-  figa <- figa + scale_y_continuous(limits=c(-1.0, 0))
+  #figa <- figa + scale_y_continuous(limits=c(0.0, 1))
   figa <- figa + mytheme
-  figa <- figa + ylab("mean CDA amplitude (uV)") + xlab("Eccentricity")
+  figa <- figa + ylab("mean PNP amplitude (uV)") + xlab("Eccentricity")
   figa <- figa + labs(title = txt_title, color = "Size Memory Array")
   figa <- figa + theme(legend.position = c(0.85, 0.15))
   

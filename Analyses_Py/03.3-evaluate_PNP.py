@@ -6,6 +6,7 @@ from collections import defaultdict
 import matplotlib
 from matplotlib import pyplot as plt
 from matplotlib.offsetbox import AnchoredText
+import pandas as pd
 import mne
 
 from scipy import stats
@@ -55,15 +56,12 @@ def plot_main_cda(ax, evokeds):
 
     res = mne.viz.plot_compare_evokeds(label_dict, 
                                 combine='mean', 
-                                #colors = {k: config.colors[k] for k in plt_dict.keys()},
-                                vlines=[0, 0.2, 2.2],
-                                ci=True,
-                                ylim=dict(eeg=[-1.5,1.5]),
-                                title=None, 
-                                axes = ax, 
-                                show = False, 
-                                truncate_yaxis=False, 
-                                truncate_xaxis=False
+                                legend=1, 
+                                vlines=[0, 0.2, 2.2], 
+                                truncate_xaxis=False, 
+                                truncate_yaxis=False,
+                                axes=ax, 
+                                show=False
                                 )
 
     ax.legend(loc=1, prop={'size': 9})
@@ -134,7 +132,7 @@ def plot_cbp_result_cda(ax, T_obs, clusters, cluster_p_values, p_thresh, times_f
     ax.yaxis.label.set_size(9)
 
 
-def write_mean_cda_amplitude_per_trial(epo_part, sub_list, cluster_times):
+def write_mean_pnp_amplitude_per_trial(epo_part, sub_list, cluster_times):
     df_all_sub = pd.DataFrame()
     for sub_nr in sub_list: 
         subID = 'VME_S%02d' % sub_nr
@@ -148,7 +146,7 @@ def write_mean_cda_amplitude_per_trial(epo_part, sub_list, cluster_times):
         cda_data = epos.copy()._data
         mean_amp_cda = cda_data.mean(axis=2).mean(axis=1)
         # Put to DF:
-        data_total = pd.DataFrame(columns=['subID', 'c_StimN', 'c_Ecc', 'cda_mean_amp', 'trial_num'])
+        data_total = pd.DataFrame(columns=['subID', 'c_StimN', 'c_Ecc', 'pnp_mean_amp', 'trial_num'])
         for load in ['LoadLow', 'LoadHigh']: 
                 for ecc in ['EccS', 'EccM', 'EccL']:
                     epos_cond = epos[event_dict[load]][event_dict[ecc]]
@@ -164,20 +162,20 @@ def write_mean_cda_amplitude_per_trial(epo_part, sub_list, cluster_times):
                     data_cond = pd.DataFrame({'subID': np.repeat(subID, len(mean_amp_cda)), 
                            'c_StimN': np.repeat(load, len(mean_amp_cda)),
                            'c_Ecc': np.repeat(ecc, len(mean_amp_cda)),
-                           'cda_mean_amp':  mean_amp_cda, 
+                           'pnp_mean_amp':  mean_amp_cda, 
                            'trial_num': trial_nums})
                     # Bind it to global df:
                     data_total = data_total.append(data_cond)
         # Write subject data to disk:
-        fpath = op.join(config.path_evokeds_summaries, 'CDA', epo_part)
+        fpath = op.join(config.path_evokeds_summaries, 'PNP', epo_part)
         helpers.chkmk_dir(fpath)
-        fname = op.join(fpath, subID + '-mean_amp_CDA.csv')
+        fname = op.join(fpath, subID + '-mean_amp_PNP.csv')
         data_total.to_csv(fname, index=False)
         df_all_sub = df_all_sub.append(data_total)
     # Write subject data to disk:
-    fpath = op.join(config.path_evokeds_summaries, 'CDA', epo_part, 'global_summary')
+    fpath = op.join(config.path_evokeds_summaries, 'PNP', epo_part, 'global_summary')
     helpers.chkmk_dir(fpath)
-    fname = op.join(fpath, 'allsubjects-mean_amp_CDA.csv')
+    fname = op.join(fpath, 'allsubjects-mean_amp_PNP.csv')
     df_all_sub.to_csv(fname, index=False)
                  
 
@@ -210,8 +208,12 @@ times = c_list[0].times
 p_thresh = 0.05
 # run cbp test:
 T_obs, clusters, cluster_p_values = run_cbp_test(data)
-# get times of strongest cluster:
-cluster_times, _ = find_largest_cluster_times(clusters, times)
+# get times of PNP cluster:
+cluster_times, idx = find_largest_cluster_times(clusters, times)
+clusters.pop(idx)  
+# Now PNP cluster is strongest: 
+cluster_times, idx = find_largest_cluster_times(clusters, times)
+
 
 # Plot the result:
 fig, axes = plt.subplots(2,figsize=(24,4), sharex=True)
@@ -229,7 +231,10 @@ fig.savefig(fname, bbox_inches="tight")
 
 
 ###################################################################################################
-## Write out CDA data: 
+## Write out PNP data: 
+write_mean_pnp_amplitude_per_trial(epo_part, sub_list, cluster_times)
+
+
 
 # relevant times: cluster_times
 # get index into full time vector: 
@@ -271,7 +276,7 @@ def plot_main_effect_load(ax):
     res = mne.viz.plot_compare_evokeds(plt_dict, 
                                 combine='mean', 
                                 colors = {k: config.colors[k] for k in plt_dict.keys()},
-                                vlines=[0, 0.2, 2.2],
+                                vlines=[0, 0.2],
                                 ci=True,
                                 ylim=dict(eeg=[-1.5,1.5]),
                                 title=None, 
@@ -280,9 +285,9 @@ def plot_main_effect_load(ax):
                                 truncate_yaxis=False, 
                                 truncate_xaxis=False
                                 )
-    ax.legend(loc=1, prop={'size': 9}, title='Size Memory Array')
+    ax.legend(loc=3, prop={'size': 9}, title='Size Memory Array')
     ax.axvspan(0, 0.2, color='grey', alpha=0.3)
-    ax.axvspan(2.2, 2.3, color='grey', alpha=0.3)
+    #ax.axvspan(2.2, 2.3, color='grey', alpha=0.3)
     # ax.vlines([0,0.2,2.2], *[-1.5,1.5], linestyles='--', colors='k',
     #             linewidth=1., zorder=1)
     ax.set_aspect(0.25)
@@ -292,15 +297,22 @@ def plot_main_effect_load(ax):
     plt.xticks(fontsize=9)
 
 
+# Crop it: 
+
+for k in evokeds.keys():
+    for e in evokeds[k]: 
+        e.crop(-0.2, 0.5)
+
+
 # Plot main eefect load:
 plt.subplots(1,1,figsize=(12,4))
 ax = plt.axes()
 
 plot_main_effect_load(ax)
-#plt.show()
+plt.show()
 
 # Save it: 
-fpath = op.join(config.path_plots, 'CDA', part_epo)
+fpath = op.join(config.path_plots, 'PNP', part_epo)
 helpers.chkmk_dir(fpath)
 fname = op.join(fpath, 'mainEff_load.png')
 plt.savefig(fname, bbox_inches="tight")
@@ -315,7 +327,7 @@ def plot_main_effect_ecc(ax):
     res = mne.viz.plot_compare_evokeds(plt_dict, 
                                 combine='mean', 
                                 colors = {k: config.colors[k] for k in plt_dict.keys()},
-                                vlines=[0, 0.2, 2.2],
+                                vlines=[0, 0.2],
                                 ci=True,
                                 ylim=dict(eeg=[-1.5,1.5]),
                                 title=None, 
@@ -324,9 +336,9 @@ def plot_main_effect_ecc(ax):
                                 truncate_yaxis=False, 
                                 truncate_xaxis=False
                                 )
-    ax.legend(loc=1, prop={'size': 9}, title='Eccentricity', ncol=3)
+    ax.legend(loc=3, prop={'size': 9}, title='Eccentricity', ncol=3)
     ax.axvspan(0, 0.2, color='grey', alpha=0.3)
-    ax.axvspan(2.2, 2.3, color='grey', alpha=0.3)
+    #ax.axvspan(2.2, 2.3, color='grey', alpha=0.3)
     # ax.vlines([0,0.2,2.2], *[-1.5,1.5], linestyles='--', colors='k',
     #             linewidth=1., zorder=1)
     ax.set_aspect(0.25)
@@ -343,7 +355,7 @@ plot_main_effect_ecc(ax)
 plt.show()
 
 # Save it: 
-fpath = op.join(config.path_plots, 'CDA', part_epo)
+fpath = op.join(config.path_plots, 'PNP', part_epo)
 helpers.chkmk_dir(fpath)
 fname = op.join(fpath, 'mainEff_ecc.png')
 plt.savefig(fname, bbox_inches="tight")

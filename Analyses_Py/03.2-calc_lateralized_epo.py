@@ -118,7 +118,7 @@ for sub_nr in sub_list:
                         
     
 
-#TODO: Write out mean amplitudes (per trial) and evokeds
+#TODO: Write out mean CDA amplitudes (per trial) and evokeds
 
     # for load in ['LoadHigh', 'LoadLow']:
     #     evoked_dict[load] = epos_dict[load].average()

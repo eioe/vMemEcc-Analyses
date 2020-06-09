@@ -8,7 +8,7 @@ import mne
 from library import helpers, config
 
 
-sub_list = np.setdiff1d(np.arange(1,27), config.ids_missing_subjects)
+sub_list = np.setdiff1d(np.arange(27,28), config.ids_missing_subjects)
 #sub_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27]
 
 # Initialize summary DF: 
@@ -28,7 +28,7 @@ for sub_nr in sub_list:
     # Init dict to collect ns of remaining epos: 
     rem_epos_dict = dict(subID = subID)
 
-    for epo_part in ['cue', 'stimon', 'fulllength']:
+    for epo_part in ['stimon', 'cue', 'fulllength']:
 
         # Load data:
         data = helpers.load_data(subID + '-' + epo_part + '-postica', config.path_postICA, '-epo', 

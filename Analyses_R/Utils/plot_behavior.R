@@ -44,14 +44,16 @@ plot_performance <- function(df, style) {
                labeller = labeller(c_StimN = c_StimN.labs)) +
     #ylim(c(0.5,1.05)) + 
     labs(x = "mean Eccentricity (dva)",
-         y = "% correct (+/-1SD)",
+         y = "proportion correct (+/-1SD)",
          title = ifelse(style == "experiment",
                         "Visual memory task",
                         "Change detection task"),
-         col = "Memory Items",
+         col = "Array Size",
          linetype = "memory load",
          shape = "memory load") +
-    theme_light() #+ 
+    theme_classic() + 
+    scale_color_manual(values = c(col_LoadLow, col_LoadHigh)) + 
+    theme(legend.position = c(0.1, 0.15))#+ 
     #coord_fixed(ratio = 3.5)  #+
   #scale_color_jco() 
   
