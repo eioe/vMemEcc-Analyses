@@ -7,20 +7,22 @@ import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 import mne
-from pathlib import Path
 from library import helpers, config
 
 
 def get_tfr(epos, picks='all', average=True):
-    freqs = np.concatenate([np.arange(6, 26, 1)])#, np.arange(16,30,2)])
+    freqs = np.concatenate([np.arange(6, 26, 1)])  # , np.arange(16,30,2)])
     n_cycles = freqs / 2.  # different number of cycle per frequency
-    power = mne.time_frequency.tfr_morlet(epos, picks=picks, freqs=freqs, n_cycles=n_cycles, use_fft=True,
-                                          return_itc=False, average=average, decim=1, n_jobs=-2)
+    power = mne.time_frequency.tfr_morlet(epos, picks=picks, freqs=freqs,
+                                          n_cycles=n_cycles, use_fft=True,
+                                          return_itc=False, average=average, 
+                                          decim=1, n_jobs=-2)
     return power
 
 
 def extract_alpha_pow(data_diff_):
-    tms_idx = [(config.times_dict['CDA_start'] < data_diff_.times) & (data_diff_.times < config.times_dict['CDA_end'])]
+    tms_idx = [(config.times_dict['CDA_start'] < data_diff_.times) &
+               (data_diff_.times < config.times_dict['CDA_end'])]
     frqs_idx = [(8 < data_diff_.freqs) & (data_diff_.freqs < 12)]
     alpha_dat = data_diff_._data[:,frqs_idx[0]][:,:,tms_idx[0]]
     alpha_pow = np.mean(alpha_dat)
@@ -28,40 +30,43 @@ def extract_alpha_pow(data_diff_):
 
 
 def get_laterized_power_difference(pwr_, picks_contra, picks_ipsi): 
-            if not len(picks_contra) == len(picks_ipsi): 
-                raise ValueError('Picks must be of same length.')
-            pwr_diff = pwr_.copy().pick_channels(picks_contra, ordered = True)
-            d_contra = pwr_.copy().reorder_channels(picks_contra + picks_ipsi)._data[:,:len(picks_contra),:,:]
-            d_ipsi = pwr_.copy().reorder_channels(picks_contra + picks_ipsi)._data[:,len(picks_contra):,:,:]
-            pwr_diff._data = d_contra - d_ipsi
-            return pwr_diff
+    if not len(picks_contra) == len(picks_ipsi): 
+        raise ValueError('Picks must be of same length.')
+    pwr_diff = pwr_.copy().pick_channels(picks_contra, ordered=True)
+    d_contra = pwr_.copy().reorder_channels(picks_contra + picks_ipsi)._data[:, :len(picks_contra), :, :]
+    d_ipsi = pwr_.copy().reorder_channels(picks_contra + picks_ipsi)._data[:,len(picks_contra):,:,:]
+    pwr_diff._data = d_contra - d_ipsi
+    return pwr_diff
 
-# Write alpha time series to txt-file: 
-def write_trialwise_alpha_ts_to_csv(pwr_obj, subID, part_epo, condition, pwr_style='evoked'):
-    # average over channels: 
+
+# Write alpha time series to txt-file:
+def write_trialwise_alpha_ts_to_csv(pwr_obj, subID, part_epo, condition,
+                                    pwr_style='evoked'):
+    # average over channels:
     wr_out = pwr_obj.data.mean(axis=1)
     # pick out alpha freqs and average over these: 
-    a_freqs = [list(pwr_obj.freqs).index(f) for f in pwr_obj.freqs if f>=config.alpha_freqs[0] and f<=config.alpha_freqs[1]]
-    wr_out = wr_out[:,a_freqs,:].mean(axis=1)
+    a_freqs = [list(pwr_obj.freqs).index(f) for f in pwr_obj.freqs if f >= config.alpha_freqs[0] and f<=config.alpha_freqs[1]]
+    wr_out = wr_out[:, a_freqs, :].mean(axis=1)
     fpath = op.join(config.path_tfrs, pwr_style, 'timeseries', part_epo, condition)
     helpers.chkmk_dir(fpath)
     fname = op.join(fpath, subID + '_alpha_latdiff_ts.csv')
-    df = pd.DataFrame(wr_out.swapaxes(1,0), index=pwr_obj.times)
+    df = pd.DataFrame(wr_out.swapaxes(1, 0), index=pwr_obj.times)
     df.to_csv(fname, sep=';', header=False, float_format='%.18f')
-    #np.savetxt(fname, wr_out, fmt='%.18f', delimiter=';',header=';'.join(hdr))
+
 
 def get_avg_timecourse(pwr_obj):
     wr_out = pwr_obj.copy().data.mean(axis=1)
-    # pick out alpha freqs and average over these: 
-    a_freqs = [list(pwr_obj.freqs).index(f) for f in pwr_obj.freqs if f>=config.alpha_freqs[0] and f<=config.alpha_freqs[1]]
-    wr_out = wr_out[:,a_freqs,:].mean(axis=1).mean(axis=0)
+    # pick out alpha freqs and average over these:
+    a_freqs = [list(pwr_obj.freqs).index(f) for f in pwr_obj.freqs
+               if f >= config.alpha_freqs[0] and f <= config.alpha_freqs[1]]
+    wr_out = wr_out[:, a_freqs, :].mean(axis=1).mean(axis=0)
     return(wr_out)
 
 # powNorm = powerC.copy()
 # powNorm._data = powDiff._data / powSum._data
 
-# store mean tfrs:
 
+# store mean tfrs:
 def write_mean_alphapwr_to_file(ID):
     #conds = ['LoadHighEccS', 'LoadHighEccM', 'LoadHighEccL', 'LoadLowEccS', 'LoadLowEccM', 'LoadLowEccL']
     #data = [str(mean_amplitues_dict[key] * 1000) for key in conds]
