@@ -1,0 +1,194 @@
+---
+title: "Descriptive Statistics"
+author: "FK & Sean Larpoon"
+date: "7/30/2020"
+output: html_document
+---
+
+```{r setup, include=TRUE, message=FALSE}
+knitr::opts_chunk$set(
+	warning = FALSE
+)
+library(tidyverse)
+library(here)
+library(cowplot)
+library(rstatix)
+
+# load color regime:
+source(here('Utils', 'load_colors.R'))
+# load rainclouds plot ingredients:
+source(here('Utils', 'R_rainclouds.R'))
+
+# get data from virtual drive (set FALSE if you're not Felix)
+data_from_seafile <- TRUE
+
+if (data_from_seafile) {
+  path_data <- file.path('S:', 
+                         'Meine Bibliotheken', 
+                         'Experiments', 
+                         'vMemEcc', 
+                         'Data',  
+                         'Demographics')
+  path_plots <- file.path('S:', 
+                         'Meine Bibliotheken', 
+                         'Experiments', 
+                         'vMemEcc',
+                         'Analyses',
+                         'Pics')
+  
+} else {
+  path_data <- here('..', 
+                    '..', 
+                    'Data', 
+                    'Demographics')
+  path_plots <- here('..',
+                     'Pics')
+}
+
+```
+
+```{r data loading and sample info, echo=TRUE, message=FALSE, warning=FALSE}
+
+data_demog <- read_csv(file.path(path_data, "data_demographic_report.csv"))
+n_tot <- nrow(data_demog)
+
+excl_subs <- c('VME_S11', 'VME_S14', 'VME_S19',  # incomplete data
+               'VME_S22', 'VME_S07', 'VME_S12')  # bad EEG
+
+
+
+# Calculate SSQ sum scores :
+data_demog <- data_demog %>%  
+  mutate(ssq_sum_pre = rowSums(.[grep('_pre$', names(.))])) %>% 
+  mutate(ssq_sum_post = rowSums(.[grep('_post$', names(.))])) %>% 
+  dplyr::filter(! sub_id %in% excl_subs)
+  
+print(str_glue("Sample info:\n
+               N total: {n_tot}
+               N analyzed: {nrow(data_demog)}
+               N female: {sum(data_demog$gender == 'female')}
+               Mean age (sd): {format(mean(data_demog$age), digits = 2, nsmall = 2)} ({format(sd(data_demog$age), nsmall = 2, digits = 2)})"))
+
+
+
+```
+
+## SSQ Results 
+
+```{r ssq subscales, echo=TRUE, message=FALSE}
+
+# Plot raincloud plot for SSQ sum scores (pre vs post):
+
+data_demog %>%  select(sub_id, ssq_sum_pre, ssq_sum_post) %>% 
+  pivot_longer(cols = c(ssq_sum_pre, ssq_sum_post), 
+               names_to = c('time', 'cond'), 
+               names_sep = '_sum_') %>%
+  ggplot(aes(x = cond, 
+             y = value, 
+             fill = cond, 
+             color = cond)) + 
+  geom_flat_violin(position = position_nudge(x = .1, y = 0), 
+                   adjust = 2, 
+                   trim = TRUE, 
+                   alpha = 0.3, 
+                   color = NA) + 
+  geom_point(position = position_jitter(width = .05, 
+                                        height = 0.15), 
+             size = 1, 
+             aes(color = sub_id)) + 
+  # geom_boxplot(aes(x = as.numeric(as.factor(cond)) + 0.01, y = value), 
+  #              alpha = 0.3, width = 0.1, 
+  #              outlier.shape = NA, 
+  #              color = 'BLACK') + 
+  ylab("SSQ sum score") +
+  xlab("Time of questionnaire") + 
+  guides(fill = FALSE, color = FALSE) +
+  coord_flip() + 
+  theme_cowplot() + 
+  scale_colour_manual(values = cols_discrete_25) + 
+  scale_fill_brewer(palette = "Accent", direction = -1) -> plt_sum
+ 
+# save png: 
+fname <- 'SSQ_sumscore.png'
+ggsave(file.path(path_plots, 'SSQ', fname), plt_sum)
+
+ 
+# function to remove first and last part from '_' separated strings in 
+# a vector:
+
+rm_stuff <- function(v) {
+  out_v <- vector(length = length(v))
+  for (i in 1:length(v)) {
+    tmp <- str_split(v[i], '_')[[1]]
+    tmp <- str_c(tmp[-c(1, length(tmp))], collapse = '_')
+    out_v[i] <- tmp
+  }
+  return(out_v)
+}
+
+
+# Plot raincloud plot for SSQ subscales (pre vs post):
+
+data_demog %>% select(sub_id, matches('^ssq_')) %>% 
+  select(-matches('_sum_'), sub_id) %>% 
+  pivot_longer(cols = starts_with('ssq'), 
+               names_to = 'quest') %>% 
+  mutate(subscale = rm_stuff(quest)) %>% 
+  mutate(subscale = gsub('_', ' ', subscale)) %>% 
+  mutate(time = ifelse(str_detect(quest, '_pre'), 'pre', 'post')) %>% 
+  group_by(subscale, time) %>% 
+  ggplot(aes(x = time, 
+             y = value, 
+             fill = time, 
+             color = time)) + 
+  geom_flat_violin(position = position_nudge(x = .1, y = 0), 
+                   adjust = 2, 
+                   trim = TRUE, 
+                   alpha = 0.3, 
+                   color = NA) + 
+  geom_point(position = position_jitter(width = .05, 
+                                        height = 0.15), 
+             size = 0.2, 
+             aes(color = sub_id)) + 
+  facet_wrap(~subscale) + 
+  ylim(0.5,5) +
+  ylab("SSQ subscale score") +
+  xlab("Time of questionnaire") + 
+  guides(fill = FALSE, color = FALSE) +
+  coord_flip() + 
+  theme_cowplot() + 
+  scale_colour_manual(values = cols_discrete_25) + 
+  scale_fill_brewer(palette = "Accent", direction = -1) -> plt_subscales
+  
+# save png: 
+fname <- 'SSQ_subscales.png'
+ggsave(file.path(path_plots, fname), plt_subscales)
+
+# print to output:
+plt_sum
+plt_subscales
+
+```
+
+
+### Wilcoxon signed-rank test: Pre vs. Post SSQ 
+
+```{r ssq t-test, echo=TRUE, results='asis'}
+
+data_demog %>% select(sub_id, matches('^ssq_')) %>% 
+  pivot_longer(cols = starts_with('ssq'), 
+               names_to = 'quest') %>% 
+  mutate(subscale = rm_stuff(quest)) %>% 
+  mutate(subscale = gsub('_', ' ', subscale)) %>% 
+  mutate(time = ifelse(str_detect(quest, '_pre'), 'pre', 'post')) %>% 
+  group_by(subscale) %>% 
+  wilcox_test(value ~ time, 
+              paired = TRUE, 
+              exact = FALSE) %>%
+  select(subscale, n1, statistic, p) -> wilcox_results
+
+knitr::kable(wilcox_results)
+
+```
+
+
