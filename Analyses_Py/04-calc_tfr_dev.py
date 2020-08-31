@@ -1,10 +1,7 @@
 
 
-import os
 import os.path as op
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
 import pandas as pd
 import mne
 from library import helpers, config
@@ -15,7 +12,7 @@ def get_tfr(epos, picks='all', average=True):
     n_cycles = freqs / 2.  # different number of cycle per frequency
     power = mne.time_frequency.tfr_morlet(epos, picks=picks, freqs=freqs,
                                           n_cycles=n_cycles, use_fft=True,
-                                          return_itc=False, average=average, 
+                                          return_itc=False, average=average,
                                           decim=1, n_jobs=-2)
     return power
 
@@ -24,17 +21,18 @@ def extract_alpha_pow(data_diff_):
     tms_idx = [(config.times_dict['CDA_start'] < data_diff_.times) &
                (data_diff_.times < config.times_dict['CDA_end'])]
     frqs_idx = [(8 < data_diff_.freqs) & (data_diff_.freqs < 12)]
-    alpha_dat = data_diff_._data[:,frqs_idx[0]][:,:,tms_idx[0]]
+    alpha_dat = data_diff_._data[:, frqs_idx[0]][:, :, tms_idx[0]]
     alpha_pow = np.mean(alpha_dat)
     return alpha_pow
 
 
-def get_laterized_power_difference(pwr_, picks_contra, picks_ipsi): 
-    if not len(picks_contra) == len(picks_ipsi): 
+def get_laterized_power_difference(pwr_, picks_contra, picks_ipsi):
+    if not len(picks_contra) == len(picks_ipsi):
         raise ValueError('Picks must be of same length.')
     pwr_diff = pwr_.copy().pick_channels(picks_contra, ordered=True)
-    d_contra = pwr_.copy().reorder_channels(picks_contra + picks_ipsi)._data[:, :len(picks_contra), :, :]
-    d_ipsi = pwr_.copy().reorder_channels(picks_contra + picks_ipsi)._data[:,len(picks_contra):,:,:]
+    pwr_ordered_chans = pwr_.copy().reorder_channels(picks_contra + picks_ipsi)
+    d_contra = pwr_ordered_chans._data[:, :len(picks_contra), :, :]
+    d_ipsi = pwr_ordered_chans._data[:, len(picks_contra):, :, :]
     pwr_diff._data = d_contra - d_ipsi
     return pwr_diff
 
@@ -44,10 +42,12 @@ def write_trialwise_alpha_ts_to_csv(pwr_obj, subID, part_epo, condition,
                                     pwr_style='evoked'):
     # average over channels:
     wr_out = pwr_obj.data.mean(axis=1)
-    # pick out alpha freqs and average over these: 
-    a_freqs = [list(pwr_obj.freqs).index(f) for f in pwr_obj.freqs if f >= config.alpha_freqs[0] and f<=config.alpha_freqs[1]]
+    # pick out alpha freqs and average over these:
+    a_freqs = [list(pwr_obj.freqs).index(f) for f in pwr_obj.freqs
+               if f >= config.alpha_freqs[0] and f <= config.alpha_freqs[1]]
     wr_out = wr_out[:, a_freqs, :].mean(axis=1)
-    fpath = op.join(config.path_tfrs, pwr_style, 'timeseries', part_epo, condition)
+    fpath = op.join(config.path_tfrs, pwr_style, 'timeseries', part_epo,
+                    condition)
     helpers.chkmk_dir(fpath)
     fname = op.join(fpath, subID + '_alpha_latdiff_ts.csv')
     df = pd.DataFrame(wr_out.swapaxes(1, 0), index=pwr_obj.times)
@@ -79,10 +79,10 @@ def write_mean_alphapwr_to_file(ID):
                 data_txt = ";".join([ID, load, ecc, str(apwr)])
                 ffile.write(data_txt + "\n")
 
-#write_mean_alphapwr_to_file(subsub)
 
-#TODO: Fix path
-sub_list = np.setdiff1d(np.arange(1,8), config.ids_missing_subjects + config.ids_excluded_subjects)
+# TODO: Fix path
+sub_list = np.setdiff1d(np.arange(1, 8), config.ids_missing_subjects +
+                        config.ids_excluded_subjects)
 
 for sub_nr in sub_list:
     subID = 'VME_S%02d' % sub_nr
@@ -90,11 +90,12 @@ for sub_nr in sub_list:
     # calculate induced or induced+evoked power:
     for pwr_style in ['evoked', 'induced']:
 
-        for part_epo in ['fulllength']: #['stimon', 'cue']: #, 
+        for part_epo in ['fulllength']:  # ['stimon', 'cue']: #,
 
-            epos_ = helpers.load_data(subID, config.path_epos_sorted + '/' + part_epo + '/collapsed', '-epo')
+            epos_ = helpers.load_data(subID, config.path_epos_sorted + '/' +
+                                      part_epo + '/collapsed', '-epo')
             
-            if pwr_style == 'induced': 
+            if pwr_style == 'induced':
                 epos_.subtract_evoked()
 
             event_dict = helpers.get_event_dict(epos_.event_id)
@@ -104,11 +105,37 @@ for sub_nr in sub_list:
             pwr_ = get_tfr(epos_, picks=picks, average=False)
             #pwr_cue = get_tfr(epos_cue, average=False)
 
-            pwr_diff = get_laterized_power_difference(pwr_, config.chans_CDA_dict['Contra'], config.chans_CDA_dict['Ipsi'])
+            pwr_diff = get_laterized_power_difference(pwr_,
+                                                      config.chans_CDA_dict['Contra'],
+                                                      config.chans_CDA_dict['Ipsi'])
 
-            condition_averages_df = pd.DataFrame(pwr_diff.times, columns=['time'], index=None)
+            ## DF based approach:
+            pwr_diff_df = pwr_diff.to_data_frame()
+            
+            # add column coding for conditions:
+            # Load manipulation:
+            fac_levels = ['LoadLow', 'LoadHigh']
+            conds_load = [pwr_diff_df['condition'].isin(event_dict[fac]) for
+                          fac in fac_levels]
+            pwr_diff_df['load'] = np.select(conds_load, fac_levels, 'NA')
 
-            ## Let's look at the different conditions: 
+            # Ecc manipulation:
+            fac_levels = ['EccS', 'EccM', 'EccL']
+            conds_ecc = [pwr_diff_df['condition'].isin(event_dict[fac]) for
+                         fac in fac_levels]
+            pwr_diff_df['ecc'] = np.select(conds_ecc, fac_levels, 'NA')
+
+            mask_alpha = ((pwr_diff_df['frequency'] >= config.alpha_freqs[0]) &
+                          (pwr_diff_df['frequency'] <= config.alpha_freqs[1]))
+            
+            # filter out alpha freqs:
+            alpha_df = pwr_diff_df[mask_alpha]
+
+            condition_averages_df = pd.DataFrame(pwr_diff.times,
+                                                 columns=['time'],
+                                                 index=None)
+
+            # Let's look at the different conditions: 
 
             list_tfr = []
 
