@@ -14,14 +14,14 @@
 
 #--------------------------------------------------------------------------
 
-func_analysis_08 <- function(condition, dep_variable) {
+func_analysis_10 <- function(condition, dep_variable) {
   
   condition <- 'experiment' # VSTM block only
   
   ## Select relevant data:
   data_filtered <- data_behav %>% 
     filter(BlockStyle == condition) %>% 
-    select(ppid, c_StimN, c_Ecc, PNP_amp) %>% 
+    select(ppid, c_StimN, c_Ecc, alphapwr_diff_retent) %>% 
     mutate(c_Ecc = as_factor(c_Ecc))
   
   # Define contrast - baseline is Eccentricity = 9° and MemLoad = 2
@@ -35,7 +35,7 @@ func_analysis_08 <- function(condition, dep_variable) {
                         'binomial', 
                         'gaussian')
   
-  m1 <- lmer(PNP_amp ~ load_contrast*c_Ecc + (1|ppid), 
+  m1 <- lmer(alphapwr_diff_retent ~ load_contrast*c_Ecc + (1|ppid), 
              data = data_filtered)
   
   print_header(str_c('Summary glmer\n', 

@@ -106,7 +106,7 @@ def find_largest_cluster_times(clusters, times):
     return (times[clusters[idx_max_length]], idx_max_length)
 
 
-
+#TODO: times should go in as an argument here
 def plot_cbp_result_cda(ax, T_obs, clusters, cluster_p_values, p_thresh, times_full):
     y_max = np.max(np.abs(T_obs)) * np.array([-1.1, 1.1])
     for i_c, c in enumerate(clusters):

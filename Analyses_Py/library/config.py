@@ -82,7 +82,9 @@ times_dict = dict(CDA_start = 0.450,
                   fix_dur = 0.8, 
                   cue_dur = 0.8, 
                   stim_dur = 0.2, 
-                  retention_dur = 2.0)
+                  retention_dur = 2.0, 
+                  bl_dur_erp = 0.4, 
+                  bl_dur_tfr = 0.2)
 
 # parallelization: 
 n_jobs = 4 # let's leave the CPU some air to breath
@@ -106,4 +108,7 @@ colors['2'] = "#32628A"
 colors['4°'] = "#00A878"
 colors['9°'] = "#FCEC52"
 colors['14°'] = "#FE5E41"
+colors['EccS'] = "#00A878"
+colors['EccM'] = "#FCEC52"
+colors['EccL'] = "#FE5E41"
 

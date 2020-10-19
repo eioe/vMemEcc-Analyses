@@ -13,7 +13,7 @@ def load_data(filename, path, append, verbose=None):
     elif append == '-epo':
         ff = op.join(path, filename + append + '.fif')
         return mne.read_epochs(ff, verbose=verbose) 
-    else :
+    else:
         print('This append (%s) is not yet implemented.' % append)
 
 

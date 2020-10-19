@@ -35,7 +35,7 @@ for subsub in subsub_list:
     data = helpers.load_data(subsub + '-cue-postica', config.path_postICA, '-epo')
 
     # remove baseline:
-    data.apply_baseline((-0.3,0))
+    # data.apply_baseline((-0.3,0))
 
     # Keep only CDA channels:
     ch_cda = [ch for sublist in chans_CDA for ch in sublist]

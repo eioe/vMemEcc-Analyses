@@ -48,7 +48,7 @@ data_behav <- left_join(data_behav,
                            'c_Ecc'))
 
 
-
+##-----------------------------------------------------------------------
 # Read in PNP mean amplitudes:
 
 fname <- file.path(path_r_data, 'data_PNP.rds')
@@ -67,6 +67,26 @@ data_behav <- left_join(data_behav,
                                'c_StimN', 
                                'c_Ecc'))
 
+##-----------------------------------------------------------------------
+# Read in mean alpha power differences:
+
+# retention intervall (CDA ROI):
+
+fname <- file.path(path_r_data, 'data_alphapwr_diff_retent_CDAroi.rds')
+data_apwr_retent <- readRDS(fname)
+rm(fname)
+
+# Bind to behavioral data: 
+data_behav <- left_join(data_behav, 
+                        data_apwr_retent[, c('ppid', 
+                                             'trial_num', 
+                                             'c_StimN', 
+                                             'c_Ecc', 
+                                             'alphapwr_diff_retent')], 
+                        by = c('ppid', 
+                               'trial_num', 
+                               'c_StimN', 
+                               'c_Ecc'))
 
 
 

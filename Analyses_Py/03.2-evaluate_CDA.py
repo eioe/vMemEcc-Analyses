@@ -22,30 +22,31 @@ pp = {'t_stimon':  0,
 plt_dict['stimon'] = pp
 
 
-
 def get_evokeds_dict(epo_part, sub_list):
-    evokeds =  defaultdict(list)
-    for sub in sub_list: #[3, 7, 22]:
+    evokeds = defaultdict(list)
+    for sub in sub_list:  # [3, 7, 22]:
         subID = 'VME_S%02d' % sub
-        fname = op.join(config.path_epos_sorted, epo_part, 'difference', subID + '-epo.fif')
+        fname = op.join(config.path_epos_sorted, epo_part,
+                        'difference', subID + '-epo.fif')
         epos = mne.read_epochs(fname, verbose=False)
         epos.pick_channels(config.chans_CDA_dict['Left'])
         epos.crop(plt_dict[epo_part]['xmin'], plt_dict[epo_part]['xmax'])
         event_dict = helpers.get_event_dict(epos.event_id)
-        #epos.apply_baseline((-0.4, 0))
-        for load in ['LoadLow', 'LoadHigh']: 
-                evoked_load = epos[event_dict[load]].copy().average()   
-                evokeds[load].append(evoked_load)
-                for ecc in ['EccS', 'EccM', 'EccL']:
-                    if load == 'LoadLow': # we don't want to do this twice
-                        evoked_ecc = epos[event_dict[ecc]].copy().average()   
-                        evokeds[ecc].append(evoked_ecc)
-                    # Interaction: 
-                    evoked_interac = epos[event_dict[load]][event_dict[ecc]].copy().average()
-                    evokeds[load+ecc].append(evoked_interac)
+        # epos.apply_baseline((-0.4, 0))
+        for load in ['LoadLow', 'LoadHigh']:
+            evoked_load = epos[event_dict[load]].copy().average()   
+            evokeds[load].append(evoked_load)
+            for ecc in ['EccS', 'EccM', 'EccL']:
+                if load == 'LoadLow':  # we don't want to do this twice
+                    evoked_ecc = epos[event_dict[ecc]].copy().average()  
+                    evokeds[ecc].append(evoked_ecc)
+                # Interaction:
+                evoked_interac = epos[event_dict[load]][event_dict[ecc]].copy()
+                evoked_interac = evoked_interac.average()
+                evokeds[load+ecc].append(evoked_interac)
         evokeds['all'].append(epos.copy().average())
     return(evokeds)
-        #cda_evokeds.append(evokeds.crop(-0.3, 2.3))  # Insert to the container
+    # cda_evokeds.append(evokeds.crop(-0.3, 2.3))  # Insert to the container
 
 
 def plot_main_cda(ax, evokeds):
@@ -156,7 +157,7 @@ def write_mean_cda_amplitude_per_trial(epo_part, sub_list, cluster_times):
                     trial_nums = [tn-720 if tn>=720 else tn for tn in epos_cond.selection]
                     # correct for zero indexing:
                     trial_nums = [t+1 for t in trial_nums]
-                    # Grad CDA data:
+                    # Grab CDA data:
                     cda_data = epos_cond.copy()._data
                     # Average over channels and timepoints:
                     mean_amp_cda = cda_data.mean(axis=2).mean(axis=1)
@@ -204,7 +205,7 @@ plt.savefig(fname)
 
 # get data - cropped to retention interval:
 times_full = evokeds['all'][0].times
-c_list = [evo.copy().crop(0.2,2.2) for evo in evokeds['all']]
+c_list = [evo.copy().crop(0.2, 2.2) for evo in evokeds['all']]
 data = np.array([np.mean(c.data, axis=0) for c in c_list])
 times = c_list[0].times
 p_thresh = 0.05

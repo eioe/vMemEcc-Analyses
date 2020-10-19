@@ -79,7 +79,9 @@ for sub_nr in sub_list:
         epos_mirrored._data[:,idx_heog,:] *= -1
 
         # Combine the two conditions:
-        epos_collapsed = mne.concatenate_epochs([epos_dict['CueR'].copy(), epos_mirrored.copy()], add_offset=False)
+        epos_collapsed = mne.concatenate_epochs([epos_dict['CueR'].copy(),
+                                                 epos_mirrored.copy()],
+                                                add_offset=False)
         # Notice that: 
         #   (A) .drop_log and .selection of this object now have double the length.
         #   (B) Channels on the "right" are now "Ipsi-", chans on the left are "Contralateral" to 
