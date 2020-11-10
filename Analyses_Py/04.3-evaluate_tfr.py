@@ -1,15 +1,19 @@
+#%%
 import os
 import os.path as op
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import seaborn as sns
 from collections import defaultdict
 from scipy import stats
+from scipy.ndimage import measurements
 import mne
-from mne.stats import permutation_cluster_1samp_test
+from mne.stats import permutation_cluster_1samp_test, f_mway_rm, f_threshold_mway_rm
 from library import helpers, config
 
+#%%
 
 def load_avgtfr(subID, condition, pwr_style='induced', 
                 part_epo='fulllength', baseline=None, mode=None): 
@@ -112,7 +116,7 @@ def plot_cbp_result_cda(ax, T_obs, clusters, cluster_p_values, p_thresh,
 
 def plot_main_eff(cond, cond_dict, data, ax, n_boot=1000):
     sns.lineplot(x='time', y='pwr', hue=cond, data=data, n_boot=n_boot, 
-    palette=[config.colors[l] for l in cond_dict[cond]], ax=ax)
+                 palette=[config.colors[l] for l in cond_dict[cond]], ax=ax)
     ytick_range = ax.get_ylim()
     ax.set(xlim=(-1.1, 2.3), ylim=ytick_range)
     ax.set_ylabel('V$^2$')
@@ -136,8 +140,9 @@ def get_tfr(epos, picks='all', average=True, freqs=None):
     return power
 
 
-def get_mean_pwrdiff_per_trial(subID, freqs_to_avg = np.arange(8,13), 
-                               t_start=None, t_stop=None, pwr_style='induced', part_epo='fulllength', 
+def get_mean_pwrdiff_per_trial(subID, freqs_to_avg=np.arange(8,13),
+                               t_start=None, t_stop=None, pwr_style='induced',
+                               part_epo='fulllength', 
                                picks=config.chans_CDA_all):
     epos_ = helpers.load_data(subID, config.path_epos_sorted + '/' +
                               part_epo + '/collapsed', '-epo')
@@ -189,29 +194,68 @@ def get_mean_pwrdiff_per_trial(subID, freqs_to_avg = np.arange(8,13),
     return(sub_df)
 
 
+def get_condition_pwrdiff_df(factor, cond_dict, sub_list_str):
+    df_list = list()
+    for cond in cond_dict[factor]:
+        tfr_list = [load_avgtfr(subID, cond, pwr_style, part_epo, 
+                    baseline=(-(config.times_dict['cue_dur']+0.3), 
+                            -(config.times_dict['cue_dur']+0.1)), 
+                    mode='mean') for subID in sub_list_str]
+
+        diffs_ = [get_lateralized_power_difference(tfr, 
+                                                config.chans_CDA_dict['Contra'], 
+                                                config.chans_CDA_dict['Ipsi']) for 
+                tfr in tfr_list]
+
+        frqs_idx = [(8 <= diffs_[0].freqs) & (diffs_[0].freqs <= 12)]
+        diffs_mean = [d.data[:, frqs_idx[0], :].mean(axis=(0, 1)) for d in diffs_]
+        plt_df = pd.DataFrame(np.array(diffs_mean).swapaxes(1, 0),
+                              columns=sub_list_str)
+        plt_df['time'] = times
+        plt_df[factor] = cond
+        df_list.append(plt_df)
+
+    df_load_concat = pd.concat(df_list)
+    df_load_long = df_load_concat.melt(id_vars=['time', factor], 
+                                       var_name='subID', 
+                                       value_name='pwr')
+    return(df_load_long)
 
 
+#%%
 sub_list = np.setdiff1d(np.arange(1, 28), config.ids_missing_subjects +
                         config.ids_excluded_subjects)               
 sub_list_str = ['VME_S%02d' % sub for sub in sub_list]
 
 part_epo = 'fulllength'
 pwr_style = 'induced'  # 'evoked' # 
+cond_dict = {'Load': ['LoadLow', 'LoadHigh'], 
+             'Ecc': ['EccS', 'EccM', 'EccL']}
 
 
-# get list with avg TFRs for all trials:
+#%% get list with avg TFRs for all trials and conditions:
 tfr_list = [load_avgtfr(subID, 'all', pwr_style, part_epo, 
                         baseline=(-(config.times_dict['cue_dur']+0.3), 
                                   -(config.times_dict['cue_dur']+0.1)), 
                         mode='mean') 
             for subID in sub_list_str]
 
+all_conds = [c for fac in cond_dict for c in cond_dict[fac]]
+tfr_by_cond = {cond: [load_avgtfr(subID, cond, pwr_style, part_epo, 
+                    baseline=(-(config.times_dict['cue_dur']+0.3), 
+                                -(config.times_dict['cue_dur']+0.1)), 
+                    mode='mean') 
+                    for subID in sub_list_str]
+               for cond in all_conds}
+
 grand_avgtfr_all = mne.grand_average(tfr_list)
+
+#%% Set up params:
 times = grand_avgtfr_all.times
 freqs = grand_avgtfr_all.freqs
 
 
-##############################################################################################
+#%%###########################################################################################
 # Plot TF diag per hemisphere across all conditions:
 for side in ['Contra', 'Ipsi']:
     fig, ax = plt.subplots(1, figsize=(6,4))
@@ -228,7 +272,7 @@ for side in ['Contra', 'Ipsi']:
 ##############################################################################################
 
 
-# Calculate the difference between the hemispheres:
+#%% Calculate the difference between the hemispheres:
 diff_avgtfr_all = get_lateralized_power_difference(grand_avgtfr_all, 
                                                  config.chans_CDA_dict['Contra'], 
                                                  config.chans_CDA_dict['Ipsi'])
@@ -258,7 +302,7 @@ fig.savefig(fname, bbox_inches="tight")
 ##############################################################################################
 
 
-# Get the difference per subject: 
+#%% Get the difference per subject: 
 
 diffs_avgtfr_all = [get_lateralized_power_difference(tfr, 
                                                    config.chans_CDA_dict['Contra'], 
@@ -267,7 +311,7 @@ diffs_avgtfr_all = [get_lateralized_power_difference(tfr,
 
 
 ##############################################################################################
-# Make single subject plots:
+#%% Make single subject plots:
 fig, ax = plt.subplots(7,3)
 for tfr_, ax_ in zip(diffs_avgtfr_all, ax.reshape(-1)):
     plot_tfr_side(ax_, tfr_, picks='all', 
@@ -289,7 +333,7 @@ fig.savefig(fname, bbox_inches="tight")
 ##############################################################################################
 
 
-# Extract standard alpha (8-12Hz):
+#%% Extract standard alpha (8-12Hz):
 frqs_idx = [(8 <= diffs_avgtfr_all[0].freqs) & (diffs_avgtfr_all[0].freqs <= 12)]
 diffs_stdalpha_mean = [d.data[:, :, :].mean(axis=(0,1)) for d in diffs_avgtfr_all]
 
@@ -322,7 +366,7 @@ ax.xaxis.label.set_visible(False)
 ##############################################################################################
 
 
-# run CBP test on classical alpha data (sub x times):
+#%% run CBP test on classical alpha data (sub x times):
 # crop to time of interest: 
 mask_time = [(times >= -0.8) & (times <= 2.2)]
 data = np.array(diffs_stdalpha_mean)[:, mask_time[0]]
@@ -345,7 +389,7 @@ fig.savefig(fname, bbox_inches="tight")
 ##############################################################################################
 ##############################################################################################
 
-# Export single trial data about lateral. difference in alpha power 
+#%% Export single trial data about lateral. difference in alpha power 
 # for the CDA ROI during the sign cluster:
 
 # For the retention intervall, we look at the 2nd cluster.
@@ -375,45 +419,15 @@ fname = op.join(fpath, f'allsubjects-mean_pwrdiff_{cluster_dict["name"]}.csv')
 mean_pwrdiff_all_df.to_csv(fname, index=False)
 
 
+##############################################################################################
+#%% compare the conditions: 
 
-# compare the conditions: 
 
-cond_dict = {'Load': ['LoadLow', 'LoadHigh'], 
-             'Ecc': ['EccS', 'EccM', 'EccL']}
-unit_dict = {'Load': ['LoadLow', 'LoadHigh'], 
-             'Ecc': ['EccS', 'EccM', 'EccL']}
+
             
 
-
-def get_condition_pwrdiff_df(factor, cond_dict):
-    df_list = list()
-    for cond in cond_dict[factor]:
-        tfr_list = [load_avgtfr(subID, cond, pwr_style, part_epo, 
-                    baseline=(-(config.times_dict['cue_dur']+0.3), 
-                            -(config.times_dict['cue_dur']+0.1)), 
-                    mode='mean') for subID in sub_list_str]
-
-        diffs_ = [get_lateralized_power_difference(tfr, 
-                                                config.chans_CDA_dict['Contra'], 
-                                                config.chans_CDA_dict['Ipsi']) for 
-                tfr in tfr_list]
-
-        frqs_idx = [(8 <= diffs_[0].freqs) & (diffs_[0].freqs <= 12)]
-        diffs_mean = [d.data[:, :, :].mean(axis=(0,1)) for d in diffs_]
-        plt_df = pd.DataFrame(np.array(diffs_mean).swapaxes(1,0), 
-                            columns=sub_list_str)
-        plt_df['time'] = times
-        plt_df[factor] = cond
-        df_list.append(plt_df)
-
-    df_load_concat = pd.concat(df_list)
-    df_load_long = df_load_concat.melt(id_vars=['time', factor], 
-                                    var_name='subID', 
-                                    value_name='pwr')
-    return(df_load_long)
-
-load_df_long = get_condition_pwrdiff_df('Load', cond_dict)
-ecc_df_long = get_condition_pwrdiff_df('Ecc', cond_dict)
+load_df_long = get_condition_pwrdiff_df('Load', cond_dict, sub_list_str)
+ecc_df_long = get_condition_pwrdiff_df('Ecc', cond_dict, sub_list_str)
 
 
 #Plot main effect Load:
@@ -439,47 +453,65 @@ helpers.chkmk_dir(fpath)
 fname = op.join(fpath, 'mainEff_ecc.png')
 fig.savefig(fname, bbox_inches="tight")
 
+##############################################################################################
+##############################################################################################
 
 
-decim = 2
-factor_levels = [2, 3]
-effects = 'A*B'
-n_freqs = len(freqs)
-times = 
+##############################################################################################
+#%% run rep-meas ANOVA on power: 
+
+# building on code from: 
+# https://mne.tools/dev/auto_tutorials/stats-source-space/plot_stats_cluster_time_frequency_repeated_measures_anova.html#sphx-glr-auto-tutorials-stats-source-space-plot-stats-cluster-time-frequency-repeated-measures-anova-py
 
 
+#%%
 df_list = list()
 for load in cond_dict['Load']:
     for ecc in cond_dict['Ecc']:
         tfr_list = [load_avgtfr(subID, load+ecc, pwr_style, part_epo, 
                     baseline=(-(config.times_dict['cue_dur']+0.3), 
                             -(config.times_dict['cue_dur']+0.1)), 
-                    mode='mean') for subID in sub_list_str]
+                    mode='percent') for subID in sub_list_str]
+
 
         diffs_ = [get_lateralized_power_difference(tfr, 
                                                 config.chans_CDA_dict['Contra'], 
                                                 config.chans_CDA_dict['Ipsi']) for 
                 tfr in tfr_list]
         for d in diffs_:
-            df_list.append(d.data.mean(axis=0))
+            dat_ = d.crop(0.2, 2.2)
+            df_list.append(dat_.data.mean(axis=0))
+    times = dat_.times
+    freqs = dat_.freqs
+#%%
 
+# Setup parameters:
+decim = 2
+factor_levels = [2, 3]
+effects = 'A*B'
+n_levels = np.multiply(*factor_levels)
+n_freqs = df_list[0].shape[-2]
+n_times = df_list[0].shape[-1]
+n_subs = int(len(df_list) / n_levels)
 
-aa = np.asarray(df_list)
-bb = aa.reshape(21, 6, 20*1951)
-bb = bb.reshape(21, 6, 20*1951)
+# Shape data matrix: subjects x effects x n_freqs*n_times
+subtfr_array = np.asarray(df_list)
+subtfr_mway_data = subtfr_array.reshape(n_levels, n_subs, n_freqs*n_times)
+subtfr_mway_data = subtfr_mway_data.swapaxes(0, 1)
 
-fvals, pvals = f_mway_rm(bb, factor_levels, effects=effects)
+fvals, pvals = f_mway_rm(subtfr_mway_data, factor_levels, effects=effects)
 effect_labels = ['Load', 'Ecc', 'Load x Ecc']
 
+# Plot result:
 for effect, sig, effect_label in zip(fvals, pvals, effect_labels):
     f = plt.figure()
     # show naive F-values in gray
-    plt.imshow(effect.reshape(20, 1951), cmap=plt.cm.gray, extent=[times[0],
+    plt.imshow(effect.reshape(n_freqs, n_times), cmap=plt.cm.gray, extent=[times[0],
                times[-1], freqs[0], freqs[-1]], aspect='auto',
                origin='lower')
     # create mask for significant Time-frequency locations
     effect[sig >= 0.05] = np.nan
-    plt.imshow(effect.reshape(20, 1951), cmap='RdBu_r', extent=[times[0],
+    plt.imshow(effect.reshape(n_freqs, n_times), cmap='RdBu_r', extent=[times[0],
                times[-1], freqs[0], freqs[-1]], aspect='auto',
                origin='lower')
     cb = plt.colorbar()
@@ -493,35 +525,36 @@ for effect, sig, effect_label in zip(fvals, pvals, effect_labels):
     plt.show()
 
 
-effects='B'
+# Use CBP test to correct for multiple-comparisons correction:
+
+# We need to do this separately for each effect:
+effects='A:B'
 
 def stat_fun(*args):
-    return f_mway_rm(np.reshape(args, (21, 6, 20, 1951)), factor_levels=factor_levels,
+    return f_mway_rm(np.reshape(args, (len(sub_list), n_levels, n_freqs, len(times))), 
+                     factor_levels=factor_levels,
                      effects=effects, return_pvals=False)[0]
 
 
 # The ANOVA returns a tuple f-values and p-values, we will pick the former.
-pthresh = 0.0005  # set threshold rather high to save some time
-f_thresh = f_threshold_mway_rm(21, factor_levels, effects,
+pthresh = 0.05  # set threshold rather high to save some time
+f_thresh = f_threshold_mway_rm(len(sub_list), factor_levels, effects,
                                pthresh)
 tail = 1  # f-test, so tail > 0
 n_permutations = 1000  # Save some time (the test won't be too sensitive ...)
 T_obs, clusters, cluster_p_values, h0 = mne.stats.permutation_cluster_test(
-    dd, stat_fun=stat_fun, threshold=f_thresh, tail=tail, n_jobs=-2,
+    subtfr_mway_data, stat_fun=stat_fun, threshold=f_thresh, tail=tail, n_jobs=-2,
     n_permutations=n_permutations, buffer_size=None, out_type='mask')
 
-
-good_clusters = np.where(cluster_p_values < .05)[0]
+# Plot it:
 T_obs_plot = np.ones_like(T_obs) *np.nan
 for c, p in zip(clusters, cluster_p_values):
     if p < .05: 
         T_obs_plot[c] = T_obs[c]
-        print('ahah')
-#T_obs_plot[np.array(clusters[2:])] = np.nan
 
 f = plt.figure()
 for f_image, cmap in zip([T_obs, T_obs_plot], [plt.cm.gray, 'RdBu_r']):
-    plt.imshow(f_image, cmap=cmap, extent=[times[0], times[-1],
+    plt.imshow(f_image.reshape(20, 1951), cmap=cmap, extent=[times[0], times[-1],
                freqs[0], freqs[-1]], aspect='auto',
                origin='lower')
 cb = plt.colorbar()
@@ -537,11 +570,64 @@ plt.title("Induced lateralized power for 'Eccentricity' (%s)\n"
 plt.show()
 
 
-plt.figure()
-plt.imshow(T_obs_plot, cmap='RdBu_r', extent=[times[0], times[-1],
-               freqs[0], freqs[-1]], aspect='auto',
-               origin='lower')
+#%% To look into the direction(s) of the effect, we extract the relevant data per condition:
 
+obs_sign_dict = {cond: [] for cond in cond_dict['Ecc']}
+
+for ecc in cond_dict['Ecc']:
+    # tfr_list = [load_avgtfr(subID, ecc, pwr_style, part_epo, 
+    #             baseline=(-(config.times_dict['cue_dur']+0.3), 
+    #                     -(config.times_dict['cue_dur']+0.1)), 
+    #             mode='mean') for subID in sub_list_str]
+
+    diffs_ = [get_lateralized_power_difference(tfr, 
+                                            config.chans_CDA_dict['Contra'], 
+                                            config.chans_CDA_dict['Ipsi']) 
+              for tfr in tfr_by_cond[ecc]]
+
+
+    for d in diffs_:
+        dat = d.data.mean(axis=0)
+        dat = dat.reshape(len(d.freqs) * len(d.times))
+        obs_sign = np.zeros_like(dat) 
+        for c, p in zip(clusters, cluster_p_values):
+            if p < .05: 
+                obs_sign[c] = dat[c]
+        obs_sign = obs_sign.reshape(n_freqs, len(times))
+
+        obs_sign_dict[ecc].append(obs_sign)
+#%%
+
+# identify the clusters:
+
+template = measurements.label(np.nan_to_num(obs_sign_dict['EccS'][0], nan=0))
+# find largest cluster:
+cluster_counts = np.bincount(template[0].flatten())[1:] #ignore first value (zeroes = background)
+index_largest_cluster = cluster_counts.argmax() + 1  # add 1 to skip the zero in the template
+
+haa = (template[0] == index_largest_cluster)
+
+avgs = list()
+dd = pd.DataFrame()
+for ecc in cond_dict['Ecc']:
+    avg = np.stack(obs_sign_dict[ecc], axis=-1)
+    avg = avg[5, 1400, :]
+    #avg = np.nanmean(avg, axis=0)
+    #avg = np.nanmean(avg, axis = (0,1))
+    avgs.append(avg)
+    dd[ecc] = avg
+#    abs_avg = np.nanmean(avg)
+
+stata = [dd[x] for x in dd]
+F, p = stats.f_oneway(*stata)
+
+dd.melt().boxplot(by='variable')
+ee = dd.melt()
+
+len(obs_sign_dict['EccS'])
+
+
+#%%
 
 
 # run CBP test on TF data of the CDA ROI (sub x freq x times)
@@ -563,10 +649,10 @@ for c, p_val in zip(clusters, c_pvals):
 
 fig, ax = plt.subplots(1, figsize=(6,4))
 plt.imshow(T_obs, cmap=plt.cm.gray,
-           extent=[-1.1, 2.3, freqs[0], freqs[-1]],
+           extent=[times[0], times[-1], freqs[0], freqs[-1]],
            aspect='auto', origin='lower', vmin=vmin, vmax=vmax)
 plt.imshow(T_obs_plot, cmap=plt.cm.RdBu_r,
-           extent=[-1.1, 2.3, freqs[0], freqs[-1]],
+           extent=[times[0], times[-1], freqs[0], freqs[-1]],
            aspect='auto', origin='lower', vmin=vmin, vmax=vmax)
 ytick_range = ax.get_ylim()
 ytick_vals = np.arange(*np.round(ytick_range), 2)
@@ -588,3 +674,5 @@ fname = op.join(fpath, 'CBP_avgTFR_Diff_classAlpha_p001.png')
 fig.savefig(fname, bbox_inches="tight")
 
 
+
+# %%
