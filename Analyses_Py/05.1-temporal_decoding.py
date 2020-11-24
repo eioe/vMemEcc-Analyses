@@ -22,9 +22,15 @@ from library import config, helpers
 
 #%% Functions:
 
-def get_epos(subID, epo_part cond, event_dict):
-    fname = op.join(config.path_rejepo, subID + '-' + epo_part + '-postica-rejepo' + '-epo.fif')
-                    #'difference', subID + '-epo.fif')
+def get_epos(subID, epo_part, signaltype, cond, event_dict):
+    if signaltype == 'uncollapsed':
+        fname = op.join(config.path_rejepo, subID + '-' + epo_part +
+                        '-postica-rejepo' + '-epo.fif')
+    elif signaltype in ['collapsed', 'difference']:
+        fname = op.join(config.path_epos_sorted, epo_part, signaltype, 
+                        subID + '-epo.fif')
+    else:
+        raise ValueError(f'Invalid value for "signaltype": {signaltype}')
     epos = mne.read_epochs(fname, verbose=False)
     epos = epos.pick_types(eeg=True)
     uppers = [l.isupper() for l in cond]
@@ -129,10 +135,13 @@ epo_part = 'stimon'
 conditions = ['LoadLowEccS', 'LoadHighEccS']
 contrast_str = '_vs_'.join(conditions)
 batch_size = 10
-smooth_winsize = 10
+smooth_winsize = 5
 n_rep_sub = 1
 save_single_rep = False
 save_patterns = False
+
+
+
 
 clf = make_pipeline(StandardScaler(),
                     LinearModel(LogisticRegression(solver='liblinear',
