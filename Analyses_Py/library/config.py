@@ -41,6 +41,7 @@ path_tfrs_summaries = op.join(path_tfrs, 'summaries')
 path_epos_sorted = op.join(path_data, 'DataMNE', 'EEG', '07_epos_sorted')
 path_epos_sorted_cue = op.join(path_data, 'DataMNE', 'EEG', '07_epos_sorted', 'cue')
 path_decod_temp = op.join(path_data, 'DataMNE', 'EEG', '09_temporal_decoding')
+path_decod_tfr = op.join(path_data, 'DataMNE', 'EEG', '10_tfr_decoding')
 path_plots = op.join(path_study, 'Plots')
 
 #TODO: make more elegant (dict?)
@@ -113,7 +114,21 @@ colors['14°'] = "#FE5E41"
 colors['EccS'] = "#00A878"
 colors['EccM'] = "#FCEC52"
 colors['EccL'] = "#FE5E41"
+colors['Chance'] = "#B5B4B3"
+colors['Random'] = "#B5B4B3"
+colors['Load'] = "#72DDED"
 
+# labels
+labels = dict()
+labels['EccS'] = '4°'
+labels['EccM'] = '9°'
+labels['EccL'] = '14°'
+labels['LoadLow'] = '2'
+labels['LoadHigh'] = '4'
+labels['Ecc'] = 'Eccentricity'
+labels['Load'] = 'Size Memory Array'
+labels['Chance'] = 'Random'
+labels['Random'] = 'Random'
 
 event_dict = {'CueL': ['Stimulus/S150',
                        'Stimulus/S152',

@@ -1,6 +1,7 @@
 #%%
 import os
 import os.path as op
+import json
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
@@ -9,11 +10,62 @@ import seaborn as sns
 from collections import defaultdict
 from scipy import stats
 from scipy.ndimage import measurements
+
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import LabelEncoder
+
 import mne
 from mne.stats import permutation_cluster_1samp_test, f_mway_rm, f_threshold_mway_rm
+from mne.decoding import CSP
 from library import helpers, config
 
+
 #%%
+def get_epos(subID, epo_part, signaltype, condition, event_dict):
+    if signaltype == 'uncollapsed':
+        fname = op.join(config.path_rejepo, subID + '-' + epo_part +
+                        '-postica-rejepo' + '-epo.fif')
+    elif signaltype in ['collapsed']:
+        fname = op.join(config.path_epos_sorted, epo_part, signaltype,
+                        subID + '-epo.fif')
+    else:
+        raise ValueError(f'Invalid value for "signaltype": {signaltype}')
+    epos = mne.read_epochs(fname, verbose=False)
+    epos = epos.pick_types(eeg=True)
+    uppers = [letter.isupper() for letter in condition]
+    if (np.sum(uppers) > 2):
+        cond_1 = condition[:np.where(uppers)[0][2]]
+        cond_2 = condition[np.where(uppers)[0][2]:]
+        selection = epos[event_dict[cond_1]][event_dict[cond_2]]
+    else:
+        selection = epos[event_dict[condition]]
+    return(selection)
+
+def get_sensordata(subID, epo_part, signaltype, conditions, event_dict):
+    epos_dict = defaultdict(dict)
+    for cond in conditions:
+        epos_dict[cond] = get_epos(subID,
+                                   epo_part=epo_part,
+                                   signaltype=signaltype,
+                                   condition=cond,
+                                   event_dict=event_dict)
+
+    times = epos_dict[conditions[0]][0].copy().times
+
+    # Setup data:
+    X_epos = mne.concatenate_epochs([epos_dict[cond] for cond in conditions])
+    n_ = {cond: len(epos_dict[cond]) for cond in conditions}
+
+    times_n = times
+
+    y = np.r_[np.zeros(n_[conditions[0]]),
+              np.concatenate([(np.ones(n_[conditions[i]]) * i)
+                              for i in np.arange(1, len(conditions))])]
+
+    return X_epos, y, times_n
+
 
 def load_avgtfr(subID, condition, pwr_style='induced', 
                 part_epo='fulllength', baseline=None, mode=None): 
@@ -254,6 +306,200 @@ grand_avgtfr_all = mne.grand_average(tfr_list)
 times = grand_avgtfr_all.times
 freqs = grand_avgtfr_all.freqs
 
+# %%
+# Calc overall difference between high and low load:
+load = 'LoadLow'
+side = 'Ipsi'
+ga = defaultdict(mne.EvokedArray)
+for load in ['LoadLow', 'LoadHigh']:
+    tmp = tfr_by_cond[load]
+    ga[load] = mne.grand_average(tmp)
+
+diff_ga_data = ga['LoadHigh'].data - ga['LoadLow'].data
+
+info = ga['LoadHigh'].info
+diff_ga = mne.time_frequency.AverageTFR(info, diff_ga_data, times, freqs, nave=21)
+
+diff_diff = get_lateralized_power_difference(diff_ga, config.chans_CDA_dict['Contra'], 
+                                                      config.chans_CDA_dict['Ipsi'])
+
+fig, ax = plt.subplots(1, figsize=(6,4))
+tf_contra = plot_tfr_side(ax, diff_diff, picks=config.chans_CDA_dict['Contra'], 
+            tmin=-1.1, tmax=2.3, title=side, cbar=True, 
+            vmin=-6e-10, vmax=6e-10)
+
+
+# %% CSP decoding pipe
+
+def decode(sub_list_str, conditions, event_dict, save_scores = True, part_epo = 'stimon', 
+           signaltype='collapsed'):
+    # Code from: 
+    # https://mne.tools/stable/auto_examples/decoding/plot_decoding_csp_timefreq.html#sphx-glr-auto-examples-decoding-plot-decoding-csp-timefreq-py
+
+    contrast_str = '_vs_'.join(conditions)
+    scoring = 'accuracy'
+    cv_folds = 5
+
+    clf = make_pipeline(CSP(n_components=6, reg=None, log=True, norm_trace=False),
+                        LinearDiscriminantAnalysis())
+    cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=42)
+
+    # Classification & time-frequency parameters
+    tmin = -0.5 # -config.times_dict['cue_dur']
+    tmax =  2.3  # config.times_dict['stim_dur'] + config.times_dict['retention_dur']
+    n_cycles = None  # how many complete cycles: used to define window size
+    w_size = 0.5
+    w_overlap = 0.5 # how much shall the windows overlap [value in [0,1]; 0: no overlap, 1: full overlap]
+    min_freq = 8
+    max_freq = 14
+    n_freqs = 3  # how many frequency bins to use
+
+
+    # Assemble list of frequency range tuples
+    freqs = np.linspace(min_freq, max_freq, n_freqs + 1)  # assemble frequencies
+    freq_ranges = list(zip(freqs[:-1], freqs[1:]))  # make freqs list of tuples
+
+
+    if ((n_cycles is not None) and (w_size is None)): 
+        # Infer window spacing from the max freq and number of cycles to avoid gaps
+        window_spacing = (n_cycles / np.max(freqs) / 2.)
+        centered_w_times = np.arange(tmin, tmax, window_spacing)[1:]
+    elif (((w_size is not None)) and (n_cycles is None)): 
+        assert 0 <= float(w_overlap or -1) < 1, f'Invalid value for w_overlap: {w_overlap}'
+        step_size = w_size * (1 - w_overlap)
+        centered_w_times = np.arange(tmin + (w_size / 2.), tmax - (w_size / 2), step_size)
+    else: 
+        raise ValueError(f'Invalid combination of values for w_size and n_cylces. Exactly one must be None.')
+
+    n_windows = len(centered_w_times)
+
+    tf_scores_list = list()
+    for subID in sub_list_str:
+        part_epo = part_epo
+
+        print(f'Running {subID}')
+
+        X_epos, y, t = get_sensordata(subID, part_epo, signaltype, conditions, event_dict)
+        # init scores
+        tf_scores = np.zeros((n_freqs, n_windows))
+
+        # Loop through each frequency range of interest
+        for freq, (fmin, fmax) in enumerate(freq_ranges):
+
+            print(f'Freq. {freq} of {len(freq_ranges)}')
+
+            if (w_size is None):
+                # Infer window size based on the frequency being used
+                w_size = n_cycles / ((fmax + fmin) / 2.)  # in seconds
+
+            # Apply band-pass filter to isolate the specified frequencies
+            X_epos_filter = X_epos.copy().filter(fmin, fmax, n_jobs=-2, fir_design='firwin')
+
+            # Roll covariance, csp and lda over time
+            for t, w_time in enumerate(centered_w_times):
+
+                # Center the min and max of the window
+                w_tmin = w_time - w_size / 2.
+                w_tmax = w_time + w_size / 2.
+
+                # Crop data into time-window of interest
+                X = X_epos_filter.copy().crop(w_tmin, w_tmax).get_data()
+
+                # Save mean scores over folds for each frequency and time window
+                tf_scores[freq, t] = np.mean(cross_val_score(estimator=clf, X=X, y=y,
+                                                            scoring='accuracy', cv=cv,
+                                                            n_jobs=-2), axis=0)
+        tf_scores_list.append(tf_scores)
+
+        if save_scores:
+            sub_scores_ = np.asarray(tf_scores_list)
+            fpath = op.join(config.path_decod_tfr, part_epo, signaltype, contrast_str, 'scores')
+            helpers.chkmk_dir(fpath)
+            fname = op.join(fpath, 'scores_per_sub.npy')
+            np.save(fname, sub_scores_)
+            np.save(fname[:-4] + '__times' + '.npy', centered_w_times)
+            np.save(fname[:-4] + '__freqs' + '.npy', freq_ranges)
+            del(fpath, fname)
+
+
+        # save info:
+        if save_scores:
+            info_dict = {'tmin': tmin, 
+                         'tmax': tmax, 
+                         'n_cycles': n_cycles, 
+                         'w_size': w_size,
+                         'w_overlap': w_overlap,
+                         'min_freq': min_freq, 
+                         'max_freq': max_freq,
+                         'n_freqs': n_freqs,
+                         'cv_folds': cv_folds, 
+                         'scoring': scoring}
+            fpath = op.join(config.path_decod_tfr, part_epo, signaltype, contrast_str)
+            fname = op.join(fpath, 'info.json')
+            with open(fname, 'w+') as outfile:  
+                json.dump(info_dict, outfile)
+
+    return tf_scores_list, centered_w_times
+
+
+# %%
+a, b = decode(sub_list_str, ['EccS', 'EccL'], config.event_dict)
+
+# %%
+res_load = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict)
+res_load_eccL = decode(sub_list_str, ['LoadLowEccL', 'LoadHighEccL'], config.event_dict)
+res_load_eccS = decode(sub_list_str, ['LoadLowEccS', 'LoadHighEccS'], config.event_dict)
+res_load_eccM = decode(sub_list_str, ['LoadLowEccM', 'LoadHighEccM'], config.event_dict)
+res_ecc = decode(sub_list_str, ['EccM', 'EccL'], config.event_dict) 
+
+# %% Plot decoding results
+
+def load_res_dectfr(conditions, part_epo='stimon', signaltype='collapsed'):
+    contrast_str = '_vs_'.join(conditions)
+    fpath = op.join(config.path_decod_tfr, part_epo, signaltype, contrast_str, 'scores')
+    fname = op.join(fpath, 'scores_per_sub.npy')
+    res = np.load(fname)
+    times = np.load(fname[:-4] + '__times.npy')
+    freqs = np.load(fname[:-4] + '__freqs.npy')
+    return(res, times, freqs)
+
+
+def plot_im_dectfr(scores_avg, conditions, times, freqs):
+    fig, ax = plt.subplots(1,1)
+    im = plt.imshow(scores_avg, origin='lower', cmap='Greens')
+    ax.set_yticks(range(len(freqs)))
+    ax.set_yticklabels([int(np.mean(f)) for f in freqs])
+    ax.set_xticks(range(len(times)))
+    ax.set_xticklabels(times)
+    cbar = ax.figure.colorbar(im, ax=ax)
+    plt.title('_vs_'.join(conditions))
+    return(fig)
+
+
+def plot_line_dectfr(scores_avg, conditions, times):
+    fig, ax = plt.subplots(1,1)
+    im = plt.plot(scores_avg[1,:])
+    ax.set_xticks(range(len(times)))
+    ax.set_xticklabels(times)
+
+
+conditions = ['LoadLow', 'LoadHigh']
+
+a, times, freqs = load_res_dectfr(conditions)
+scores_avg = np.mean(a, axis=0)
+
+plot_im_dectfr(scores_avg, conditions, times, freqs)
+plot_line_dectfr(scores_avg, conditions, times)
+
+
+
+conditions = ['EccS', 'EccL']
+
+a, times, freqs = load_res_dectfr(conditions)
+scores_avg = np.mean(a, axis=0)
+
+plot_im_dectfr(scores_avg, conditions, times, freqs)
+plot_line_dectfr(scores_avg, conditions, times)
 
 #%%###########################################################################################
 # Plot TF diag per hemisphere across all conditions:
