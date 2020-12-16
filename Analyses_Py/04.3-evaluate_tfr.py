@@ -22,7 +22,7 @@ from mne.decoding import CSP
 from library import helpers, config
 
 
-#%%
+# %%
 def get_epos(subID, epo_part, signaltype, condition, event_dict):
     if signaltype == 'uncollapsed':
         fname = op.join(config.path_rejepo, subID + '-' + epo_part +
