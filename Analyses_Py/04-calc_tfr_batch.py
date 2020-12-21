@@ -41,20 +41,24 @@ def get_tfrs_list(sub, part_epo, pwr_style, picks='eeg'):
         avgtfrs_load = get_tfr(epos_[event_dict[load]], picks=picks, 
                                average=False)
         avgtfrs_load.comment = load
+        save_tfr(subID, avgtfrs_load, load, pwr_style, part_epo)
         sub_tfrs.append(avgtfrs_load)
         for ecc in ['EccS', 'EccM', 'EccL']:
             if load == 'LoadLow':  # we don't want to do this twice
                 avgtfrs_ecc = get_tfr(epos_[event_dict[ecc]], picks=picks, 
                                       average=False)#tfrs_[event_dict[ecc]].copy().average()
                 avgtfrs_ecc.comment = ecc
+                save_tfr(subID, avgtfrs_ecc, ecc, pwr_style, part_epo)
                 sub_tfrs.append(avgtfrs_ecc)
             # Interaction:
             avgtfrs_interac = get_tfr(epos_[event_dict[load]][event_dict[ecc]],
                                       picks=picks, average=False)
             avgtfrs_interac.comment = load+ecc
+            save_tfr(subID, avgtfrs_interac, load+ecc, pwr_style, part_epo)
             sub_tfrs.append(avgtfrs_interac)
     avgtfrs_all = get_tfr(epos_, picks=picks, average=False)
     avgtfrs_all.comment = 'all'
+    save_tfr(subID, avgtfrs_all, 'all', pwr_style, part_epo)
     sub_tfrs.append(avgtfrs_all)
 
     fpath = op.join(config.path_tfrs, pwr_style, 'tfr_lists', part_epo)
@@ -63,6 +67,12 @@ def get_tfrs_list(sub, part_epo, pwr_style, picks='eeg'):
     mne.time_frequency.write_tfrs(fname, sub_tfrs, overwrite=True)
     return(sub_tfrs)
 
+
+def save_tfr(subID, sub_tfrs, condition, pwr_style=pwr_style, part_epo=part_epo):
+    fpath = op.join(config.path_tfrs, pwr_style, 'tfr_lists', part_epo, condition)
+    helpers.chkmk_dir(fpath)
+    fname = op.join(fpath, subID + '-collapsed-singletrialTFRs-tfr.h5')
+    mne.time_frequency.write_tfrs(fname, sub_tfrs, overwrite=True)
 
 
 def get_tfr(epos, picks='all', average=True, freqs=None):
