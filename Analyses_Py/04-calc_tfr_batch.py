@@ -7,6 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from collections import defaultdict
 import mne
+from mne.parallel import parallel_func
 from library import helpers, config
 
 
@@ -22,14 +23,15 @@ def get_tfrs_list(sub, part_epo, pwr_style, picks='eeg'):
     epos_ = helpers.load_data(subID, config.path_epos_sorted + '/' +
                               part_epo + '/collapsed', '-epo')
     
-    # Shift time, so that 0 == Stimulus Onset:
-    epos_ = epos_.shift_time(-config.times_dict['cue_dur'])
-    
+    if (part_epo in ['cue', 'fulllength']):
+        # Shift time, so that 0 == Stimulus Onset:
+        epos_ = epos_.shift_time(-config.times_dict['cue_dur'])
+        
     if pwr_style == 'induced':
         epos_ = epos_.subtract_evoked()
 
     #  picks = config.chans_CDA_all
-    tfrs_ = get_tfr(epos_, picks=picks, average=False)
+    #tfrs_ = get_tfr(epos_, picks=picks, average=False)
 
     event_dict = helpers.get_event_dict(epos_.event_id)
 
@@ -37,27 +39,27 @@ def get_tfrs_list(sub, part_epo, pwr_style, picks='eeg'):
 
     for load in ['LoadLow', 'LoadHigh']:
         avgtfrs_load = get_tfr(epos_[event_dict[load]], picks=picks, 
-                               average=True)
+                               average=False)
         avgtfrs_load.comment = load
         sub_tfrs.append(avgtfrs_load)
         for ecc in ['EccS', 'EccM', 'EccL']:
             if load == 'LoadLow':  # we don't want to do this twice
                 avgtfrs_ecc = get_tfr(epos_[event_dict[ecc]], picks=picks, 
-                                      average=True)#tfrs_[event_dict[ecc]].copy().average()
+                                      average=False)#tfrs_[event_dict[ecc]].copy().average()
                 avgtfrs_ecc.comment = ecc
                 sub_tfrs.append(avgtfrs_ecc)
             # Interaction:
             avgtfrs_interac = get_tfr(epos_[event_dict[load]][event_dict[ecc]],
-                                      picks=picks, average=True)
+                                      picks=picks, average=False)
             avgtfrs_interac.comment = load+ecc
             sub_tfrs.append(avgtfrs_interac)
-    avgtfrs_all = get_tfr(epos_, picks=picks, average=True)
+    avgtfrs_all = get_tfr(epos_, picks=picks, average=False)
     avgtfrs_all.comment = 'all'
     sub_tfrs.append(avgtfrs_all)
 
     fpath = op.join(config.path_tfrs, pwr_style, 'tfr_lists', part_epo)
     helpers.chkmk_dir(fpath)
-    fname = op.join(fpath, subID + '-collapsed-avgTFRs-tfr.h5')
+    fname = op.join(fpath, subID + '-collapsed-singletrialTFRs-tfr.h5')
     mne.time_frequency.write_tfrs(fname, sub_tfrs, overwrite=True)
     return(sub_tfrs)
 
@@ -91,8 +93,9 @@ sub_list = np.setdiff1d(np.arange(1, 28), config.ids_missing_subjects +
 part_epo = 'fulllength'
 pwr_style = 'induced'  # 'evoked' # 
 
-parallel, run_func, _ = parallel_func(get_tfrs_list,
-                                      n_jobs=config.10)
-parallel(run_func(subject) for subject in sub_list)
+# parallel, run_func, _ = parallel_func(get_tfrs_list,
+#                                       n_jobs=-2)
+# parallel(run_func(subject) for subject in sub_list)
 
+sub = sub_list[job_nr]
 _ = get_tfrs_list(sub, part_epo, pwr_style)
