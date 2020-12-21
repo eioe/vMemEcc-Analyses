@@ -87,10 +87,10 @@ def get_tfr(epos, picks='all', average=True, freqs=None):
 
 
 
-    fpath = op.join(config.path_tfrs, pwr_style, 'tfr_lists', part_epo)
-    helpers.chkmk_dir(fpath)
-    fname = op.join(fpath, subID + '-collapsed-avgTFRs-tfr.h5')
-    mne.time_frequency.write_tfrs(fname, sub_tfrs, overwrite=True)
+    # fpath = op.join(config.path_tfrs, pwr_style, 'tfr_lists', part_epo)
+    # helpers.chkmk_dir(fpath)
+    # fname = op.join(fpath, subID + '-collapsed-avgTFRs-tfr.h5')
+    # mne.time_frequency.write_tfrs(fname, sub_tfrs, overwrite=True)
 
 
 # TODO: Fix path
