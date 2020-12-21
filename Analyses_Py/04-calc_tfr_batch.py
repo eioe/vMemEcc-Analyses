@@ -68,7 +68,7 @@ def get_tfrs_list(sub, part_epo, pwr_style, picks='eeg'):
     return(sub_tfrs)
 
 
-def save_tfr(subID, sub_tfrs, condition, pwr_style=pwr_style, part_epo=part_epo):
+def save_tfr(subID, sub_tfrs, condition, pwr_style='induced', part_epo='fulllength'):
     fpath = op.join(config.path_tfrs, pwr_style, 'tfr_lists', part_epo, condition)
     helpers.chkmk_dir(fpath)
     fname = op.join(fpath, subID + '-collapsed-singletrialTFRs-tfr.h5')
