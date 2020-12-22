@@ -1,6 +1,6 @@
 #!/bin/bash -l 
 # specify the indexes of the job array elements
-#SBATCH --array=0-21 
+#SBATCH --array=0-27 
 # Standard output and error: 
 #SBATCH -o ./job.out.%j        # Standard output, %A = job ID, %a = job array index 
 #SBATCH -e ./job.err.%j        # Standard error, %A = job ID, %a = job array index 
@@ -13,7 +13,7 @@
 # Number of nodes and MPI tasks per node: 
 #SBATCH --nodes=1 
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=16 
+#SBATCH --cpus-per-task=32 
 # 
 #SBATCH --mail-type=all 
 #SBATCH --mail-user=klotzsche@cbs.mpg.de 
@@ -24,4 +24,4 @@ module load anaconda/3
 conda activate mne
  
 # Run the program: 
-srun python ./vme_analysis/Analyses_Py/05.2-tfr_decoding_wavelet_batch.py $SLURM_ARRAY_TASK_ID
+srun python ./vme_analysis/Analyses_Py/05.2-tfr_decoding_wavelet_batch_2.py $SLURM_ARRAY_TASK_ID
