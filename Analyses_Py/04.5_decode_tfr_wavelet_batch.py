@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[133]:
 
 
 import os
 import os.path as op
-import sys
 import json
 import numpy as np
 import pandas as pd
@@ -31,19 +30,19 @@ from mne.decoding import (SlidingEstimator,  # GeneralizingEstimator,
 from library import helpers, config
 
 
-# In[2]:
-job_nr = int(float(sys.argv[1]))
+# In[134]:
+
 
 # %%
 
 def load_singletrialtfr(subID, condition, pwr_style='induced', 
                         part_epo='fulllength', baseline=None, mode=None): 
-    fpath = op.join(config.path_tfrs, pwr_style, 'tfr_lists', part_epo, condition)
+    fpath = op.join(config.path_tfrs, pwr_style, 'tfr_lists', part_epo)
     fname = op.join(fpath, subID + '-collapsed-singletrialTFRs-tfr.h5')
     tfr_ = mne.time_frequency.read_tfrs(fname)
-    for idx in range(len(tfr_)):
-        if tfr_[idx].comment == condition:
-            tfr_selection = tfr_[idx]
+    for cond_tfr in range(len(tfr_)):
+        if cond_tfr.comment == condition:
+            tfr_selection = cond_tfr
     
     if baseline is not None:
         tfr_selection.apply_baseline(baseline=baseline, mode=mode)
@@ -80,7 +79,7 @@ def avg_time(data, step=25, times=None):
         return data_res
 
 
-# In[21]:
+# In[135]:
 
 
 def get_data(subID, part_epo, signaltype, conditions, event_dict,
@@ -108,9 +107,8 @@ def get_data(subID, part_epo, signaltype, conditions, event_dict,
         n_ = {cond: batches[cond].shape[0] for cond in conditions}
 
     else:
-        #X = mne.concatenate_epochs([tfr_dict[cond] for cond in conditions])
-        X_list = [tfr_dict[cond].data for cond in conditions]
-        X = np.concatenate(X_list, axis=0)
+        X = mne.concatenate_epochs([tfr_dict[cond] for cond in conditions])
+        X = X.data
         n_ = {cond: len(tfr_dict[cond]) for cond in conditions}
 
     if smooth_winsize > 1:
@@ -125,7 +123,7 @@ def get_data(subID, part_epo, signaltype, conditions, event_dict,
     return X, y, times_n, freqs
 
 
-# In[22]:
+# In[136]:
 
 
 
@@ -153,14 +151,14 @@ def decode(sub_list_str, conditions, part_epo='fulllength', signaltype='collapse
     sub_scores = list()
     sub_scores_per_rep = list()
     sub_coef = list()
-    completed_subs = list()
+    times_n = list()
 
-    for subID in sub_list_str:
-        print(f'### RUNING SUBJECT {subID}')
+    for sub in sub_list_str:
+        print(f'### RUNING SUBJECT {sub}')
         all_scores = list()
         all_coef = list()
         for i in np.arange(n_rep_sub):
-            X_allfreqs, y, times_n, freqs = get_data(subID,
+            X_allfreqs, y, times_n, freqs = get_data(sub,
                                                     part_epo=part_epo,
                                                     signaltype=signaltype,
                                                     conditions=conditions,
@@ -181,7 +179,7 @@ def decode(sub_list_str, conditions, part_epo='fulllength', signaltype='collapse
                 print(f'Size of class {i}: {np.sum(y == i)}\n')
             
             scores_per_freq = np.zeros((len(freqs_select), len(times_n)))
-            coefs_per_freq = np.zeros((len(freqs_select), X_allfreqs.shape[-3], X_allfreqs.shape[-1]))
+            coefs_per_freq = np.zeros((len(freqs_select), *X_allfreqs.shape[-2:]))
             for idx, freq in enumerate(freqs_select):
                  print(f'#### Frequency {idx+1} from {len(freqs_select)}')
                  freq_idx = list(freqs).index(freq)
@@ -222,7 +220,7 @@ def decode(sub_list_str, conditions, part_epo='fulllength', signaltype='collapse
         if (save_scores or save_patterns):
             completed_subs.append(subID)
             info_dict = {'subs': completed_subs,
-                         'freqs': list(freqs),
+                         'freqs': freqs,
                          'cv_folds': cv_folds, 
                          'reps': n_rep_sub,
                          'batch_size': batch_size, 
@@ -271,23 +269,22 @@ def decode(sub_list_str, conditions, part_epo='fulllength', signaltype='collapse
     return sub_scores, sub_coef, times_n, freqs
 
 
-# In[36]:
+# In[ ]:
 
 
 sub_list = np.setdiff1d(np.arange(1, 28), config.ids_missing_subjects +
                         config.ids_excluded_subjects)               
 sub_list_str = ['VME_S%02d' % sub for sub in sub_list]
-subID = sub_list_str[job_nr]
-for ecc in ['EccS', 'EccM', 'EccL']:	
-    res_load = decode([subID], ['LoadLow'+ecc, 'LoadHigh'+ecc], 
-                    event_dict=config.event_dict, 
-                    freqs_decod='all', 
-                    n_rep_sub=10, 
-                    batch_size=1, 
-                    smooth_winsize=250,
-                    overwrite=True, 
-                    save_scores=True,
-                    save_patterns=True)
+
+res_load = decode(sub_list_str[:1], ['LoadLowEccL', 'LoadHighEccL'], 
+                  event_dict=config.event_dict, 
+                  freqs_decod=[10, 12], 
+                  n_rep_sub=1, 
+                  batch_size=10, 
+                  smooth_winsize=50,
+                  overwrite=True, 
+                  save_scores=True,
+                  save_patterns=True)
 
 
 # In[ ]:

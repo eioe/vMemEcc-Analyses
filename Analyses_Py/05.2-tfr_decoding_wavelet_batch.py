@@ -284,7 +284,7 @@ for ecc_cont in [['EccS', 'EccM'], ['EccS', 'EccL'], ['EccM', 'EccL']]:
                 	freqs_decod='all', 
                   	n_rep_sub=10, 
                   	batch_size=1, 
-                  	smooth_winsize=50,
+                  	smooth_winsize=250,
                   	overwrite=True, 
                   	save_scores=True,
                   	save_patterns=True)
