@@ -278,12 +278,14 @@ sub_list = np.setdiff1d(np.arange(1, 28), config.ids_missing_subjects +
                         config.ids_excluded_subjects)               
 sub_list_str = ['VME_S%02d' % sub for sub in sub_list]
 subID = sub_list_str[job_nr]
-	res_load = decode([subID], ecc_cont, 
+for ecc in ['S', 'M', 'L']:
+	res_load = decode([subID], 
+                    conditions=['LoadLowEcc'+ecc, 'LoadHighEcc'+ecc], 
         	        event_dict=config.event_dict, 
                 	freqs_decod='all', 
                   	n_rep_sub=10, 
                   	batch_size=1, 
-                  	smooth_winsize=50,
+                  	smooth_winsize=250,
                   	overwrite=True, 
                   	save_scores=True,
                   	save_patterns=True)
