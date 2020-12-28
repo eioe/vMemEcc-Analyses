@@ -50,6 +50,17 @@ def load_singletrialtfr(subID, condition, pwr_style='induced',
     
     return tfr_selection
 
+def get_lateralized_power_difference(pwr_, picks_contra, picks_ipsi):
+    if not len(picks_contra) == len(picks_ipsi):
+        raise ValueError('Picks must be of same length.')
+    pwr_diff = pwr_.copy().pick_channels(picks_contra, ordered=True)
+    pwr_ordered_chans = pwr_.copy().reorder_channels(picks_contra + picks_ipsi)
+    # keep flexible to use for data with 3 (AvgTFR) and 4 (EpoTFR) dimensions: 
+    d_contra = pwr_ordered_chans._data[..., :len(picks_contra), :, :]
+    d_ipsi = pwr_ordered_chans._data[..., len(picks_contra):, :, :]
+    pwr_diff._data = d_contra - d_ipsi
+    return pwr_diff
+
 
 def batch_trials(epos, batch_size):
     n_trials = len(epos)
@@ -93,6 +104,11 @@ def get_data(subID, part_epo, signaltype, conditions, event_dict,
                                              part_epo=part_epo,
                                              baseline=None,
                                              mode=None)
+
+        if signaltype is 'difference':
+            tfr_dict[cond] = get_lateralized_power_difference(tfr_dict[cond], 
+                                                               config.chans_CDA_dict['Contra'], 
+                                                               config.chans_CDA_dict['Ipsi'])
 
         times = tfr_dict[conditions[0]].times
         freqs = tfr_dict[conditions[0]].freqs
