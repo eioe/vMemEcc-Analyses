@@ -1,6 +1,6 @@
 #!/bin/bash -l 
 # specify the indexes of the job array elements
-#SBATCH --array=0-27 
+#SBATCH --array=0-24
 # Standard output and error: 
 #SBATCH -o ./job.out.%j        # Standard output, %A = job ID, %a = job array index 
 #SBATCH -e ./job.err.%j        # Standard error, %A = job ID, %a = job array index 
@@ -24,4 +24,4 @@ module load anaconda/3
 conda activate mne
  
 # Run the program: 
-srun python ./vme_analysis/Analyses_Py/05.2-tfr_decoding_wavelet_batch_2.py $SLURM_ARRAY_TASK_ID
+srun python ./vme_analysis/Analyses_Py/05.2-tfr_decoding_wavelet_batch.py $SLURM_ARRAY_TASK_ID
