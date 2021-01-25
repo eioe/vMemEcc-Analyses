@@ -62,10 +62,11 @@ def get_lateralized_power_difference(pwr_, picks_contra, picks_ipsi):
     return pwr_diff
 
 
-def batch_trials(epos, batch_size):
+def batch_trials(epos, batch_size, random_seed=42):
     n_trials = len(epos)
     n_batches = int(n_trials / batch_size)
     rnd_seq = np.arange(n_trials)
+    np.random.seed(random_seed)
     np.random.shuffle(rnd_seq)
     rnd_seq = rnd_seq[:n_batches * batch_size]
     rnd_seq = rnd_seq.reshape(-1, batch_size)
@@ -137,7 +138,7 @@ def get_data(subID, part_epo, signaltype, conditions, event_dict,
     y = np.r_[np.zeros(n_[conditions[0]]),
               np.concatenate([(np.ones(n_[conditions[i]]) * i)
                               for i in np.arange(1, len(conditions))])]
-
+    
     return X, y, times_n, freqs
 
 
@@ -192,6 +193,7 @@ def decode(sub_list_str, conditions, part_epo='fulllength', signaltype='collapse
                     ending = 'y' if (len(f_not_found) == 1) else 'ies'
                     raise ValueError(f'Frequenc{ending} not present in data: {f_not_found}')
             if shuffle_labels:
+                np.random.seed(42+i)
                 np.random.shuffle(y)
             for i in np.unique(y):
                 print(f'Size of class {i}: {np.sum(y == i)}\n')
@@ -249,9 +251,14 @@ def decode(sub_list_str, conditions, part_epo='fulllength', signaltype='collapse
             else:
                  sub_folder = sub_list_str[0]
                  
-            fpath = op.join(config.path_decod_tfr, 'wavelet', part_epo, signaltype, contrast_str, sub_folder)
+            if shuffle_labels:
+                shuf_labs = 'labels_shuffled'
+            else: 
+                shuf_labs = ''
+                
+            fpath = op.join(config.path_decod_tfr, 'wavelet', part_epo, signaltype, contrast_str, shuf_labs, sub_folder)
             if (op.exists(fpath) and not overwrite):
-                path_save = op.join(config.path_decod_tfr, 'wavelet', part_epo, signaltype, contrast_str, 
+                path_save = op.join(config.path_decod_tfr, 'wavelet', part_epo, signaltype, contrast_str, shuf_labs, 
                                     sub_folder + datetime_str)
             else:
                 path_save = fpath
@@ -294,17 +301,19 @@ sub_list = np.setdiff1d(np.arange(1, 28), config.ids_missing_subjects +
                         config.ids_excluded_subjects)               
 sub_list_str = ['VME_S%02d' % sub for sub in sub_list]
 subID = sub_list_str[job_nr]
-for ecc_cont in [['LoadLow', 'LoadHigh'], ['EccS', 'EccM'], ['EccS', 'EccL'], ['EccM', 'EccL']]:
-	res_load = decode([subID], ecc_cont, 
-        	        event_dict=config.event_dict, 
-                	freqs_decod='all', 
-                  	n_rep_sub=10, 
-                    signaltype='difference',
-                  	batch_size=1, 
-                  	smooth_winsize=250,
-                  	overwrite=True, 
-                  	save_scores=True,
-                  	save_patterns=True)
+for ecc in ['']:
+    for ecc_cont in [['LoadLow'+ecc, 'LoadHigh'+ecc]]: #, ['EccS', 'EccM'], ['EccS', 'EccL'], ['EccM', 'EccL']]:
+        res_load = decode([subID], ecc_cont, 
+                        event_dict=config.event_dict, 
+                        freqs_decod='all', 
+                        n_rep_sub=10, 
+                        shuffle_labels=True,
+                        signaltype='collapsed',
+                        batch_size=1, 
+                        smooth_winsize=50,
+                        overwrite=True, 
+                        save_scores=True,
+                        save_patterns=True)
 
 
 # In[ ]:
