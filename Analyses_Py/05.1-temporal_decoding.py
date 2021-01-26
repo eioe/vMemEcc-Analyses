@@ -6,6 +6,7 @@ from os import path as op
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+from numpy.lib.npyio import load
 
 import pandas as pd
 import seaborn as sns
@@ -169,27 +170,14 @@ def decode(sub_list_str, conditions, epo_part='stimon', signaltype='collapsed',
         sub_coef.append(np.asarray(all_coef).mean(axis=0))
 
         # save shizzle:
-        if save_single_rep_scores:
-            if len(sub_scores_per_rep) == 0:
-                sub_scores_per_rep = np.asarray(all_scores)
-            else:
-                sub_scores_per_rep = np.concatenate([sub_scores_per_rep,
-                                                    np.asarray(all_scores)],
-                                                    axis=0)
-
-            fpath = op.join(config.path_decod_temp, contrast_str, 'single_rep_data')
-            helpers.chkmk_dir(fpath)
-            fname = op.join(fpath,
-                            f'reps{n_rep_sub}_' \
-                            f'swin{smooth_winsize}_batchs{batch_size}.npy')
-            np.save(fname, sub_scores_per_rep)
-            np.save(fname[:-4] + '__times' + '.npy', times_n)
-            del(fpath, fname)
+        shuf_labs = 'labels_shuffled' if shuffle_labels else ''
+        path_save = op.join(config.path_decod_temp, epo_part, signaltype, contrast_str, 
+                            scoring, shuf_labs)
 
         # save accuracies:
         if save_scores:
             sub_scores_ = np.asarray(sub_scores)
-            fpath = op.join(config.path_decod_temp, epo_part, signaltype, contrast_str, 'scores')
+            fpath = op.join(path_save, 'scores')
             helpers.chkmk_dir(fpath)
             fname = op.join(fpath, 'scores_per_sub.npy')
             np.save(fname, sub_scores_)
@@ -200,7 +188,7 @@ def decode(sub_list_str, conditions, epo_part='stimon', signaltype='collapsed',
         # save patterns:
         if save_patterns:
             sub_patterns = np.asarray(sub_coef)
-            fpath = op.join(config.path_decod_temp, epo_part, signaltype, contrast_str, 'patterns')
+            fpath = op.join(path_save, 'patterns')
             helpers.chkmk_dir(fpath)
             fname = op.join(fpath, 'patterns_per_sub.npy')
             np.save(fname, sub_patterns)
@@ -214,10 +202,29 @@ def decode(sub_list_str, conditions, epo_part='stimon', signaltype='collapsed',
                          'smooth_winsize': smooth_winsize, 
                          'cv_folds': cv_folds, 
                          'scoring': scoring}
-            fpath = op.join(config.path_decod_temp, epo_part, signaltype, contrast_str)
+            fpath = path_save
             fname = op.join(fpath, 'info.json')
             with open(fname, 'w+') as outfile:  
                 json.dump(info_dict, outfile) 
+
+        # save data from single reps:
+        if save_single_rep_scores:
+            if len(sub_scores_per_rep) == 0:
+                sub_scores_per_rep = np.asarray(all_scores)
+            else:
+                sub_scores_per_rep = np.concatenate([sub_scores_per_rep,
+                                                    np.asarray(all_scores)],
+                                                    axis=0)
+
+            fpath = op.join(path_save, 'single_rep_data')
+            helpers.chkmk_dir(fpath)
+            fname = op.join(fpath,
+                            f'reps{n_rep_sub}_' \
+                            f'swin{smooth_winsize}_batchs{batch_size}.npy')
+            np.save(fname, sub_scores_per_rep)
+            np.save(fname[:-4] + '__times' + '.npy', times_n)
+            del(fpath, fname)
+
             
     return sub_scores, sub_coef, times_n
 
@@ -248,11 +255,21 @@ def plot_score_per_factor(factor, data, scoring='roc_auc', sign_clusters=[], p_l
               linestyles='dashed')
     ax.hlines(0.5, xmin=plt_dict['xmin'], xmax=plt_dict['xmax'])
     p_lvl_str = 'p < .' + str(p_lvl).split('.')[-1]
-    for sc in sign_clusters:
-        xmin = sc[0]
-        xmax = sc[-1]
-        ax.hlines(ytick_range[0] + 0.05*np.ptp(ytick_range), xmin=xmin, xmax=xmax, color='purple', 
-                 label=p_lvl_str)
+    if isinstance(sign_clusters, dict):
+        for i, key in enumerate(sign_clusters):
+            col = config.colors[key]
+            for sc in sign_clusters[key]:
+                xmin = sc[0]
+                xmax = sc[-1]
+                ax.hlines(ytick_range[0] + (i+1)*0.025*np.ptp(ytick_range), xmin=xmin, xmax=xmax, color=col, 
+                          label=p_lvl_str)
+
+    else:
+        for sc in sign_clusters:
+            xmin = sc[0]
+            xmax = sc[-1]
+            ax.hlines(ytick_range[0] + 0.05*np.ptp(ytick_range), xmin=xmin, xmax=xmax, color='purple', 
+                    label=p_lvl_str)
     handles, labels = ax.get_legend_handles_labels()
     print(labels)
     n_sgn_clu = None if len(sign_clusters) <= 1 else -(len(sign_clusters)-1)
@@ -424,11 +441,11 @@ for ecc in cond_dict['Ecc']:
     sc_, pat_, ts_ = decode(sub_list_str, 
                             conditions=conditions,
                             epo_part='stimon', 
-                            signaltype='difference',
+                            signaltype='collapsed',
                             event_dict=config.event_dict, 
-                            n_rep_sub=1,
-                            batch_size=10,
-                            smooth_winsize=5,
+                            n_rep_sub=50,
+                            batch_size=5,
+                            smooth_winsize=10,
                             save_single_rep_scores=False,
                             save_patterns=True,
                             save_scores=True)
@@ -436,14 +453,47 @@ for ecc in cond_dict['Ecc']:
     decod_results_load[ecc]['patterns'] = pat_
     decod_results_load[ecc]['times'] = ts_
 
+
+    
+sc_, _, _ = decode(sub_list_str, 
+                   conditions=['LoadLowEccS', 'LoadHighEccS'],
+                   epo_part='stimon', 
+                   signaltype='collapsed',
+                   event_dict=config.event_dict, 
+                   n_rep_sub=50,
+                   shuffle_labels=True,
+                   batch_size=5,
+                   smooth_winsize=10,
+                   save_single_rep_scores=False,
+                   save_patterns=True,
+                   save_scores=True)
+
 # %% Plot the results:
 
+def load_decod_res_per_ecc(ecc = '', epo_part='stimon', signaltype='collapsed'):
+    data_dict = dict()
+    for ecc in cond_dict['Ecc']:
+        data_dict[ecc] = {}
+        contrast_str = f'LoadLow{ecc}_vs_LoadHigh{ecc}'
+        fpath = op.join(config.path_decod_temp, epo_part, signaltype, contrast_str, 'scores')
+        fname = op.join(fpath, 'scores_per_sub.npy')
+        data_dict[ecc]['scores'] = np.load(fname)
+        data_dict[ecc]['times'] = np.load(fname[:-4] + '__times' + '.npy')
+        fpath = op.join(config.path_decod_temp, epo_part, signaltype, contrast_str, 'patterns')
+        fname = op.join(fpath, 'patterns_per_sub.npy')
+        data_dict[ecc]['patterns'] = np.load(fname)
+    return(data_dict)
+    
+data_dict = load_decod_res_per_ecc('')
+
+
+# %%
 
 # Prepare data for plotting with seaborn:
 results_df_list = list()
 for ecc in cond_dict['Ecc']:
-    times = decod_results_load[ecc]['times']
-    acc = np.asarray(decod_results_load[ecc]['acc'])
+    times = data_dict[ecc]['times']
+    acc = np.asarray(data_dict[ecc]['scores'])
     acc_df = pd.DataFrame(acc)
     acc_df.columns = times
     df = acc_df.melt(var_name='time', value_name='score')  # put into long format
@@ -451,9 +501,21 @@ for ecc in cond_dict['Ecc']:
     results_df_list.append(df)
 data_plot = pd.concat(results_df_list)
 
+# run CBP:
+
+sign_cluster_times = dict()
+for ecc in cond_dict['Ecc']:
+    data = np.asarray(data_dict[ecc]['scores']) - 0.5
+    t_values, clusters, p_values = run_cbp_test(data)
+    p_val_cbp = 0.05
+    idx_sign_clusters = np.argwhere(p_values<p_val_cbp)
+    sign_cluster_times[ecc] = [times[clusters[idx[0]]][[0,-1]] for idx in idx_sign_clusters]
+
+# %%
 # Plot it:
 fig, ax = plt.subplots(1, figsize=(6,4))
-plot_score_per_factor('Ecc', data=data_plot, plt_dict=plt_dict['stimon'], n_boot=10, ax=ax)
+plot_score_per_factor('Ecc', data=data_plot, plt_dict=plt_dict['stimon'], 
+                      scoring='roc_auc', sign_clusters=sign_cluster_times, p_lvl=p_val_cbp, n_boot=10, ax=ax)
 ax.legend(title='Eccentricity', labels=['4°', '9°', '14°'], loc=1, prop={'size': 9})
 
 # %% Plot the corresponding patterns per eccentricity level:
