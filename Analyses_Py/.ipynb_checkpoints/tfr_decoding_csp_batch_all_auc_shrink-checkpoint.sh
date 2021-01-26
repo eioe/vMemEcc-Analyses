@@ -1,6 +1,6 @@
 #!/bin/bash -l 
 # specify the indexes of the job array elements
-#SBATCH --array=0-3
+#SBATCH --array=0-22
 # Standard output and error: 
 #SBATCH -o ./job.out.%j        # Standard output, %A = job ID, %a = job array index 
 #SBATCH -e ./job.err.%j        # Standard error, %A = job ID, %a = job array index 
@@ -18,7 +18,7 @@
 #SBATCH --mail-type=all 
 #SBATCH --mail-user=klotzsche@cbs.mpg.de 
 # 
-#SBATCH --time=06:00:00
+#SBATCH --time=10:00:00
  
 module load anaconda/3
 conda activate mne
