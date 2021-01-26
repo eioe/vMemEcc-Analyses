@@ -301,9 +301,9 @@ signaltype = 'difference'
 
 fpath = op.join(config.path_decod_temp, epo_part, signaltype, contrast_str, 'scores')
             
-            fname = op.join(fpath, 'scores_per_sub.npy')
-            np.save(fname, sub_scores_)
-            np.save(fname[:-4] + '__times' + '.npy', times_n)
+            # fname = op.join(fpath, 'scores_per_sub.npy')
+            # np.save(fname, sub_scores_)
+            # np.save(fname[:-4] + '__times' + '.npy', times_n)
 
 
 times = decod_results_load['times']
