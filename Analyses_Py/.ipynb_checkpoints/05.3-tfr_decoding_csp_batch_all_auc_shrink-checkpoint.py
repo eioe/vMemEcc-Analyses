@@ -241,7 +241,7 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'accuracy',
         # Loop through each frequency range of interest
         for freq, (fmin, fmax) in enumerate(freq_ranges):
 
-            # print(f'Freq. {freq} of {len(freq_ranges)}')
+            print(f'Freq. {freq} of {len(freq_ranges)}')
 
             if (w_size is None):
                 # Infer window size based on the frequency being used (default behavuior is to use a fixed w_size)
@@ -488,7 +488,7 @@ print(old_log_level)
 sub_list = np.setdiff1d(np.arange(1, 28), config.ids_missing_subjects +
                         config.ids_excluded_subjects)               
 sub_list_str = ['VME_S%02d' % sub for sub in sub_list]
-sub_list_str = ['VME_S26']
+# sub_list_str = ['VME_S26', 'VME_S03']
 sub_list_str = [sub_list_str[job_nr]]
 
 cond_dict = {'Load': ['LoadLow', 'LoadHigh'], 
@@ -501,16 +501,16 @@ cond_dict = {'Load': ['LoadLow', 'LoadHigh'],
 import warnings
 warnings.filterwarnings('ignore')
 
-for shuf_labels_bool in [False, True]:
+for shuf_labels_bool in [False]: # , True]:
 
-#     _ = decode(sub_list_str, ['LoadLowEccL', 'LoadHighEccL'], config.event_dict, reps=10, scoring='roc_auc', 
-#                shuffle_labels=shuf_labels_bool, overwrite=True)
-#     _ = decode(sub_list_str, ['LoadLowEccS', 'LoadHighEccS'], config.event_dict, reps=10, scoring='roc_auc', 
-#                shuffle_labels=shuf_labels_bool, overwrite=True)
-#     _ = decode(sub_list_str, ['LoadLowEccM', 'LoadHighEccM'], config.event_dict, reps=10, scoring='roc_auc', 
-#                shuffle_labels=shuf_labels_bool, overwrite=True)
-    _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
-           shuffle_labels=shuf_labels_bool, overwrite=True)
+    _ = decode(sub_list_str, ['LoadLowEccL', 'LoadHighEccL'], config.event_dict, reps=50, scoring='roc_auc', 
+               shuffle_labels=shuf_labels_bool, overwrite=True)
+    _ = decode(sub_list_str, ['LoadLowEccS', 'LoadHighEccS'], config.event_dict, reps=50, scoring='roc_auc', 
+               shuffle_labels=shuf_labels_bool, overwrite=True)
+    _ = decode(sub_list_str, ['LoadLowEccM', 'LoadHighEccM'], config.event_dict, reps=50, scoring='roc_auc', 
+               shuffle_labels=shuf_labels_bool, overwrite=True)
+#     _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
+#            shuffle_labels=shuf_labels_bool, overwrite=True)
 #     _ = decode(sub_list_str, ['EccS', 'EccL'], config.event_dict, reps=100, scoring='roc_auc', 
 #                shuffle_labels=shuf_labels_bool, overwrite=True)
 #     _ = decode(sub_list_str, ['EccM', 'EccL'], config.event_dict, reps=100, scoring='roc_auc', 
