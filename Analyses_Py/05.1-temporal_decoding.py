@@ -6,6 +6,7 @@ from os import path as op
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+
 import pandas as pd
 import seaborn as sns
 
@@ -13,11 +14,14 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import LogisticRegression
 
+from scipy import stats
+
 import mne
 from mne import EvokedArray
 # from mne.epochs import concatenate_epochs
 from mne.decoding import (SlidingEstimator,  # GeneralizingEstimator,
                           cross_val_multiscore, LinearModel, get_coef)
+from mne.stats import permutation_cluster_1samp_test, f_mway_rm, f_threshold_mway_rm
 
 from library import config, helpers
 
@@ -118,7 +122,7 @@ def decode(sub_list_str, conditions, epo_part='stimon', signaltype='collapsed',
            save_scores=True, save_patterns=False):
 
     contrast_str = '_vs_'.join(conditions)
-    scoring = 'accuracy'
+    scoring = 'roc_auc' # 'accuracy'
     cv_folds = 5
 
 
@@ -218,7 +222,10 @@ def decode(sub_list_str, conditions, epo_part='stimon', signaltype='collapsed',
     return sub_scores, sub_coef, times_n
 
 
-def plot_score_per_factor(factor, data, plt_dict, ax, n_boot=1000):
+def plot_score_per_factor(factor, data, scoring='roc_auc', sign_clusters=[], p_lvl=0.01, 
+                          plt_dict=None, ax=None, n_boot=1000):
+
+    
     sns.lineplot(x='time', 
                  y='score', 
                  hue=factor, 
@@ -228,7 +235,11 @@ def plot_score_per_factor(factor, data, plt_dict, ax, n_boot=1000):
                  ax=ax)
     ytick_range = ax.get_ylim()
     ax.set(xlim=(plt_dict['xmin'], plt_dict['xmax']), ylim=ytick_range)
-    ax.set_ylabel('accuracy')
+    if scoring == 'roc_auc':
+        scoring_str = 'ROC AUC'
+    else: 
+        scoring_str = scoring
+    ax.set_ylabel(scoring_str)
     ax.set_xlabel('Time (s)')
     ax.axvspan(plt_dict['t_stimon'], plt_dict['t_stimon']+0.2, color='grey', alpha=0.3)
     ax.axvspan(plt_dict['t_stimon']+ 2.2, plt_dict['t_stimon'] + 2.5, color='grey', alpha=0.3)
@@ -236,9 +247,46 @@ def plot_score_per_factor(factor, data, plt_dict, ax, n_boot=1000):
               ymin=ytick_range[0], ymax=ytick_range[1], 
               linestyles='dashed')
     ax.hlines(0.5, xmin=plt_dict['xmin'], xmax=plt_dict['xmax'])
+    p_lvl_str = 'p < .' + str(p_lvl).split('.')[-1]
+    for sc in sign_clusters:
+        xmin = sc[0]
+        xmax = sc[-1]
+        ax.hlines(ytick_range[0] + 0.05*np.ptp(ytick_range), xmin=xmin, xmax=xmax, color='purple', 
+                 label=p_lvl_str)
+    handles, labels = ax.get_legend_handles_labels()
+    print(labels)
+    n_sgn_clu = None if len(sign_clusters) <= 1 else -(len(sign_clusters)-1)
+    ax.legend(handles=handles[0:n_sgn_clu], labels=labels[0:n_sgn_clu])
 
+
+
+def run_cbp_test(data):
+    # number of permutations to run
+    n_permutations = 1000 
+    # set initial threshold
+    p_initial = 0.05
+    # set family-wise p-value
+    p_thresh = 0.05
+    connectivity = None
+    tail = 1.  # for one-sided test
+
+    # set cluster threshold
+    n_samples = len(data)
+    threshold = -stats.t.ppf(p_initial / (1 + (tail == 0)), n_samples - 1)
+    if np.sign(tail) < 0:
+        threshold = -threshold
+
+    cluster_stats = mne.stats.permutation_cluster_1samp_test(
+        data, threshold=threshold, n_jobs=config.n_jobs, verbose=False, tail=tail,
+        step_down_p=0.0005, adjacency=connectivity,
+        n_permutations=n_permutations, seed=42, out_type='mask')
+
+    T_obs, clusters, cluster_p_values, _ = cluster_stats
+    return(T_obs, clusters, cluster_p_values)
 
 # %% setup params:
+
+mne.set_log_level('WARNING')
 
 
 # plotting:
@@ -268,26 +316,28 @@ contrast_str = '_vs_'.join(conditions)
 sc_, pat_, ts_ = decode(sub_list_str, 
                         conditions=conditions,
                         epo_part='stimon', 
-                        signaltype='difference',
+                        signaltype='collapsed',
                         event_dict=config.event_dict, 
-                        n_rep_sub=50,
+                        n_rep_sub=10,
                         shuffle_labels=False,
-                        batch_size=10,
+                        batch_size=5,
                         smooth_winsize=10,
                         save_single_rep_scores=False,
-                        save_patterns=True,
-                        save_scores=True)
+                        save_patterns=False,
+                        save_scores=False)
 decod_results_load['acc'] = sc_
 decod_results_load['patterns'] = pat_
 decod_results_load['times'] = ts_
+
+
 sc_, _, _ = decode(sub_list_str, 
                    conditions=conditions,
                    epo_part='stimon', 
-                   signaltype='difference',
+                   signaltype='collapsed',
                    event_dict=config.event_dict, 
-                   n_rep_sub=50,
+                   n_rep_sub=10,
                    shuffle_labels=True,
-                   batch_size=10,
+                   batch_size=5,
                    smooth_winsize=10,
                    save_single_rep_scores=False,
                    save_patterns=False,
@@ -301,9 +351,9 @@ signaltype = 'difference'
 
 fpath = op.join(config.path_decod_temp, epo_part, signaltype, contrast_str, 'scores')
             
-            fname = op.join(fpath, 'scores_per_sub.npy')
-            np.save(fname, sub_scores_)
-            np.save(fname[:-4] + '__times' + '.npy', times_n)
+            # fname = op.join(fpath, 'scores_per_sub.npy')
+            # np.save(fname, sub_scores_)
+            # np.save(fname[:-4] + '__times' + '.npy', times_n)
 
 
 times = decod_results_load['times']
@@ -321,12 +371,29 @@ chance_df_long['decoding target'] = 'Random'
 
 data_plot = pd.concat([acc_df_long, chance_df_long])
 
+# %%
+
+# run CBP:
+
+data = np.asarray(decod_results_load['acc']) - np.asarray(decod_results_load['random'])
+t_values, clusters, p_values = run_cbp_test(data)
+p_val_cbp = 0.05
+idx_sign_clusters = np.argwhere(p_values<p_val_cbp)
+sign_cluster_times = [times[clusters[idx[0]]][[0,-1]] for idx in idx_sign_clusters]
+
+
+# %%
 
 
 # Plot it:
 fig, ax = plt.subplots(1, figsize=(6,4))
-plot_score_per_factor('decoding target', data=data_plot, plt_dict=plt_dict['stimon'], n_boot=10, ax=ax)
-ax.legend(title='Decoding Target', labels=['Size Memory Array', 'Random'], loc=1, prop={'size': 9})
+plot_score_per_factor('decoding target', data=data_plot, sign_clusters=sign_cluster_times, p_lvl=p_val_cbp,
+plt_dict=plt_dict['stimon'], n_boot=10, ax=ax)
+handles, labels = ax.get_legend_handles_labels()
+p_lvl_str = "$\it{p}$ < ." + str(p_val_cbp).split('.')[-1]
+ax.legend(title='Decoding Target', 
+          handles = handles,
+          labels=['Load: 2 vs 4', 'chance', p_lvl_str], loc=1, prop={'size': 9})
 
 
 # %% Plot patterns:
@@ -342,7 +409,7 @@ sub_patterns_avg = sub_patterns.mean(axis=0)
 sub_patterns_avg = sub_patterns_avg / np.linalg.norm(sub_patterns_avg, axis=0, ord=2, keepdims=True)
 sub_patterns_evo = EvokedArray(sub_patterns_avg, dummy_epos.info)
 sub_patterns_evo.times = decod_results_load['times']
-sub_patterns_evo.plot_topomap(times = [0.25, 0.55, 0.85, 1.15], scalings=1, units='', 
+sub_patterns_evo.plot_topomap(times = [0.25, 0.55, 0.85, 1.15, 1.5, 2.0], scalings=1, units='', 
                                 title=config.labels['Load'])
 
 
