@@ -50,11 +50,23 @@ def load_singletrialtfr(subID, condition, pwr_style='induced',
     
     return tfr_selection
 
+def get_lateralized_power_difference(pwr_, picks_contra, picks_ipsi):
+    if not len(picks_contra) == len(picks_ipsi):
+        raise ValueError('Picks must be of same length.')
+    pwr_diff = pwr_.copy().pick_channels(picks_contra, ordered=True)
+    pwr_ordered_chans = pwr_.copy().reorder_channels(picks_contra + picks_ipsi)
+    # keep flexible to use for data with 3 (AvgTFR) and 4 (EpoTFR) dimensions: 
+    d_contra = pwr_ordered_chans._data[..., :len(picks_contra), :, :]
+    d_ipsi = pwr_ordered_chans._data[..., len(picks_contra):, :, :]
+    pwr_diff._data = d_contra - d_ipsi
+    return pwr_diff
 
-def batch_trials(epos, batch_size):
+
+def batch_trials(epos, batch_size, random_seed=42):
     n_trials = len(epos)
     n_batches = int(n_trials / batch_size)
     rnd_seq = np.arange(n_trials)
+    np.random.seed(random_seed)
     np.random.shuffle(rnd_seq)
     rnd_seq = rnd_seq[:n_batches * batch_size]
     rnd_seq = rnd_seq.reshape(-1, batch_size)
@@ -94,6 +106,11 @@ def get_data(subID, part_epo, signaltype, conditions, event_dict,
                                              baseline=None,
                                              mode=None)
 
+        if signaltype is 'difference':
+            tfr_dict[cond] = get_lateralized_power_difference(tfr_dict[cond], 
+                                                               config.chans_CDA_dict['Contra'], 
+                                                               config.chans_CDA_dict['Ipsi'])
+
         times = tfr_dict[conditions[0]].times
         freqs = tfr_dict[conditions[0]].freqs
 
@@ -121,7 +138,7 @@ def get_data(subID, part_epo, signaltype, conditions, event_dict,
     y = np.r_[np.zeros(n_[conditions[0]]),
               np.concatenate([(np.ones(n_[conditions[i]]) * i)
                               for i in np.arange(1, len(conditions))])]
-
+    
     return X, y, times_n, freqs
 
 
@@ -176,6 +193,7 @@ def decode(sub_list_str, conditions, part_epo='fulllength', signaltype='collapse
                     ending = 'y' if (len(f_not_found) == 1) else 'ies'
                     raise ValueError(f'Frequenc{ending} not present in data: {f_not_found}')
             if shuffle_labels:
+                np.random.seed(42+i)
                 np.random.shuffle(y)
             for i in np.unique(y):
                 print(f'Size of class {i}: {np.sum(y == i)}\n')
@@ -233,9 +251,14 @@ def decode(sub_list_str, conditions, part_epo='fulllength', signaltype='collapse
             else:
                  sub_folder = sub_list_str[0]
                  
-            fpath = op.join(config.path_decod_tfr, 'wavelet', part_epo, signaltype, contrast_str, sub_folder)
+            if shuffle_labels:
+                shuf_labs = 'labels_shuffled'
+            else: 
+                shuf_labs = ''
+                
+            fpath = op.join(config.path_decod_tfr, 'wavelet', part_epo, signaltype, contrast_str, shuf_labs, sub_folder)
             if (op.exists(fpath) and not overwrite):
-                path_save = op.join(config.path_decod_tfr, 'wavelet', part_epo, signaltype, contrast_str, 
+                path_save = op.join(config.path_decod_tfr, 'wavelet', part_epo, signaltype, contrast_str, shuf_labs, 
                                     sub_folder + datetime_str)
             else:
                 path_save = fpath
@@ -279,16 +302,18 @@ sub_list = np.setdiff1d(np.arange(1, 28), config.ids_missing_subjects +
 sub_list_str = ['VME_S%02d' % sub for sub in sub_list]
 subID = sub_list_str[job_nr]
 for ecc in ['S', 'M', 'L']:
-	res_load = decode([subID], 
-                    conditions=['LoadLowEcc'+ecc, 'LoadHighEcc'+ecc], 
-        	        event_dict=config.event_dict, 
-                	freqs_decod='all', 
-                  	n_rep_sub=10, 
-                  	batch_size=1, 
-                  	smooth_winsize=250,
-                  	overwrite=True, 
-                  	save_scores=True,
-                  	save_patterns=True)
+    for ecc_cont in [['LoadLowEcc'+ecc, 'LoadHighEcc'+ecc]]: #, ['EccS', 'EccM'], ['EccS', 'EccL'], ['EccM', 'EccL']]:
+        res_load = decode([subID], ecc_cont, 
+                        event_dict=config.event_dict, 
+                        freqs_decod='all', 
+                        n_rep_sub=10, 
+                        shuffle_labels=True,
+                        signaltype='collapsed',
+                        batch_size=1, 
+                        smooth_winsize=250,
+                        overwrite=True, 
+                        save_scores=True,
+                        save_patterns=True)
 
 
 # In[ ]:

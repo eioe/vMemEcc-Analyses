@@ -13,12 +13,12 @@
 # Number of nodes and MPI tasks per node: 
 #SBATCH --nodes=1 
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=40 
+#SBATCH --cpus-per-task=32 
 # 
 #SBATCH --mail-type=all 
 #SBATCH --mail-user=klotzsche@cbs.mpg.de 
 # 
-#SBATCH --time=08:00:00
+#SBATCH --time=01:30:00
  
 module load anaconda/3
 conda activate mne
