@@ -29,7 +29,7 @@ from library import config, helpers
 
 # %% Functions:
 
-def get_epos(subID, epo_part, signaltype, condition, event_dict):
+def get_epos(subID, epo_part, signaltype, condition, event_dict, picks_str):
     if signaltype == 'uncollapsed':
         fname = op.join(config.path_rejepo, subID + '-' + epo_part +
                         '-postica-rejepo' + '-epo.fif')
@@ -40,6 +40,13 @@ def get_epos(subID, epo_part, signaltype, condition, event_dict):
         raise ValueError(f'Invalid value for "signaltype": {signaltype}')
     epos = mne.read_epochs(fname, verbose=False)
     epos = epos.pick_types(eeg=True)
+    
+    # pick channel selection:
+    if (picks_str is not None) and (picks_str is not 'All'):
+        roi_dict = mne.channels.make_1020_channel_selections(epos.info)
+        picks = [epos.ch_names[idx] for idx in roi_dict[picks_str]]
+        epos.pick_channels(picks, ordered=True)
+        
     uppers = [letter.isupper() for letter in condition]
     if (np.sum(uppers) > 2):
         cond_1 = condition[:np.where(uppers)[0][2]]
@@ -79,14 +86,15 @@ def batch_trials(epos, batch_size):
 
 
 def get_data(subID, epo_part, signaltype, conditions, event_dict,
-             batch_size=1, smooth_winsize=1):
+             batch_size=1, smooth_winsize=1, picks_str=None):
     epos_dict = defaultdict(dict)
     for cond in conditions:
         epos_dict[cond] = get_epos(subID,
                                    epo_part=epo_part,
                                    signaltype=signaltype,
                                    condition=cond,
-                                   event_dict=event_dict)
+                                   event_dict=event_dict, 
+                                   picks_str=picks_str)
 
     times = epos_dict[conditions[0]][0].copy().times
 
@@ -117,19 +125,20 @@ def get_data(subID, epo_part, signaltype, conditions, event_dict,
     return X, y, times_n
 
 
-def decode(sub_list_str, conditions, epo_part='stimon', signaltype='collapsed',
-           event_dict=config.event_dict, n_rep_sub=100, shuffle_labels=False,
+def decode(sub_list_str, conditions, epo_part='stimon', signaltype='collapsed', scoring='roc_auc',
+           event_dict=config.event_dict, n_rep_sub=100, picks_str=None, shuffle_labels=False,
            batch_size=10, smooth_winsize=5, save_single_rep_scores=False,
            save_scores=True, save_patterns=False):
 
     contrast_str = '_vs_'.join(conditions)
-    scoring = 'roc_auc' # 'accuracy'
+    scoring = scoring # 'roc_auc' # 'accuracy'
     cv_folds = 5
 
 
     clf = make_pipeline(StandardScaler(),
                         LinearModel(LogisticRegression(solver='liblinear',
                                                        penalty='l2',
+                                                       C=0.8,
                                                        random_state=42,
                                                        verbose=False)))
 
@@ -137,7 +146,7 @@ def decode(sub_list_str, conditions, epo_part='stimon', signaltype='collapsed',
                           scoring=scoring,
                           n_jobs=-2,
                           verbose=0)
-
+    subs_processed = list()
     sub_scores = list()
     sub_scores_per_rep = list()
     sub_coef = list()
@@ -145,6 +154,7 @@ def decode(sub_list_str, conditions, epo_part='stimon', signaltype='collapsed',
 
     for sub in sub_list_str:
         print(f'### RUNING SUBJECT {sub}')
+        subs_processed.append(sub)
         all_scores = list()
         all_coef = list()
         for i in np.arange(n_rep_sub):
@@ -154,7 +164,8 @@ def decode(sub_list_str, conditions, epo_part='stimon', signaltype='collapsed',
                                      conditions=conditions,
                                      event_dict=event_dict,
                                      batch_size=batch_size,
-                                     smooth_winsize=smooth_winsize)
+                                     smooth_winsize=smooth_winsize, 
+                                     picks_str=picks_str)
             if shuffle_labels:
                 np.random.shuffle(y)
             for i in np.unique(y):
@@ -171,8 +182,14 @@ def decode(sub_list_str, conditions, epo_part='stimon', signaltype='collapsed',
 
         # save shizzle:
         shuf_labs = 'labels_shuffled' if shuffle_labels else ''
+        
+        if picks_str is not None:
+            picks_str_folder = picks_str
+        else:
+            picks_str_folder = ''
+        
         path_save = op.join(config.path_decod_temp, epo_part, signaltype, contrast_str, 
-                            scoring, shuf_labs)
+                            scoring, picks_str_folder, shuf_labs)
 
         # save accuracies:
         if save_scores:
@@ -197,7 +214,8 @@ def decode(sub_list_str, conditions, epo_part='stimon', signaltype='collapsed',
 
         # save info:
         if save_scores or save_patterns or save_single_rep_scores:
-            info_dict = {'n_rep_sub': n_rep_sub, 
+            info_dict = {'included subs': subs_processed,
+                         'n_rep_sub': n_rep_sub, 
                          'batch_size': batch_size, 
                          'smooth_winsize': smooth_winsize, 
                          'cv_folds': cv_folds, 
@@ -328,213 +346,219 @@ cond_dict = {'Load': ['LoadLow', 'LoadHigh'],
 
 decod_results_load = defaultdict(dict)
 
-conditions = ['LoadLow', 'LoadHigh']
-contrast_str = '_vs_'.join(conditions)
-sc_, pat_, ts_ = decode(sub_list_str, 
-                        conditions=conditions,
-                        epo_part='stimon', 
-                        signaltype='collapsed',
-                        event_dict=config.event_dict, 
-                        n_rep_sub=10,
-                        shuffle_labels=False,
-                        batch_size=5,
-                        smooth_winsize=10,
-                        save_single_rep_scores=False,
-                        save_patterns=False,
-                        save_scores=False)
-decod_results_load['acc'] = sc_
-decod_results_load['patterns'] = pat_
-decod_results_load['times'] = ts_
+shuf_labs = True
 
-
-sc_, _, _ = decode(sub_list_str, 
-                   conditions=conditions,
-                   epo_part='stimon', 
-                   signaltype='collapsed',
-                   event_dict=config.event_dict, 
-                   n_rep_sub=10,
-                   shuffle_labels=True,
-                   batch_size=5,
-                   smooth_winsize=10,
-                   save_single_rep_scores=False,
-                   save_patterns=False,
-                   save_scores=False)
-decod_results_load['random'] = sc_
-
-# %% Plot the results:
-# Prepare data for plotting with seaborn:
-epo_part = 'stimon'
-signaltype = 'difference'
-
-fpath = op.join(config.path_decod_temp, epo_part, signaltype, contrast_str, 'scores')
-            
-            # fname = op.join(fpath, 'scores_per_sub.npy')
-            # np.save(fname, sub_scores_)
-            # np.save(fname[:-4] + '__times' + '.npy', times_n)
-
-
-times = decod_results_load['times']
-acc = np.asarray(decod_results_load['acc'])
-acc_df = pd.DataFrame(acc)
-acc_df.columns = times
-acc_df_long = acc_df.melt(var_name='time', value_name='score')  # put into long format
-acc_df_long['decoding target'] = 'Load'
-
-chance = np.asarray(decod_results_load['random'])
-chance_df = pd.DataFrame(chance)
-chance_df.columns = times
-chance_df_long = chance_df.melt(var_name='time', value_name='score')  # put into long format
-chance_df_long['decoding target'] = 'Random'
-
-data_plot = pd.concat([acc_df_long, chance_df_long])
-
-# %%
-
-# run CBP:
-
-data = np.asarray(decod_results_load['acc']) - np.asarray(decod_results_load['random'])
-t_values, clusters, p_values = run_cbp_test(data)
-p_val_cbp = 0.05
-idx_sign_clusters = np.argwhere(p_values<p_val_cbp)
-sign_cluster_times = [times[clusters[idx[0]]][[0,-1]] for idx in idx_sign_clusters]
-
-
-# %%
-
-
-# Plot it:
-fig, ax = plt.subplots(1, figsize=(6,4))
-plot_score_per_factor('decoding target', data=data_plot, sign_clusters=sign_cluster_times, p_lvl=p_val_cbp,
-plt_dict=plt_dict['stimon'], n_boot=10, ax=ax)
-handles, labels = ax.get_legend_handles_labels()
-p_lvl_str = "$\it{p}$ < ." + str(p_val_cbp).split('.')[-1]
-ax.legend(title='Decoding Target', 
-          handles = handles,
-          labels=['Load: 2 vs 4', 'chance', p_lvl_str], loc=1, prop={'size': 9})
-
-
-# %% Plot patterns:
-
-
-# get dummy epos file to get electrode locations
-dummy_epos = get_epos('VME_S01', 'stimon', 'collapsed','LoadLow', event_dict)
-sub_patterns = np.asarray(decod_results_load['patterns'])
-# normalize them by l2 norm to allow fair average across subjects:
-sub_patterns = sub_patterns / np.linalg.norm(sub_patterns, axis=1, ord=2, keepdims=True)
-sub_patterns_avg = sub_patterns.mean(axis=0) 
-# normalize per timebin
-sub_patterns_avg = sub_patterns_avg / np.linalg.norm(sub_patterns_avg, axis=0, ord=2, keepdims=True)
-sub_patterns_evo = EvokedArray(sub_patterns_avg, dummy_epos.info)
-sub_patterns_evo.times = decod_results_load['times']
-sub_patterns_evo.plot_topomap(times = [0.25, 0.55, 0.85, 1.15, 1.5, 2.0], scalings=1, units='', 
-                                title=config.labels['Load'])
-
-
-
-# %% decode load per eccentricity:
-
-decod_results_load = defaultdict(dict)
-
-for ecc in cond_dict['Ecc']:
-    conditions = ['LoadLow' + ecc, 'LoadHigh' + ecc]
+for picks_str in ['All']: # ['Right', 'Left']: 
+    conditions = ['LoadLow', 'LoadHigh']
     contrast_str = '_vs_'.join(conditions)
     sc_, pat_, ts_ = decode(sub_list_str, 
                             conditions=conditions,
                             epo_part='stimon', 
                             signaltype='collapsed',
                             event_dict=config.event_dict, 
-                            n_rep_sub=50,
+                            n_rep_sub=100,
+                            picks_str=picks_str,
+                            shuffle_labels=shuf_labs,
                             batch_size=5,
                             smooth_winsize=10,
                             save_single_rep_scores=False,
                             save_patterns=True,
                             save_scores=True)
-    decod_results_load[ecc]['acc'] = sc_
-    decod_results_load[ecc]['patterns'] = pat_
-    decod_results_load[ecc]['times'] = ts_
+# decod_results_load['acc'] = sc_
+# decod_results_load['patterns'] = pat_
+# decod_results_load['times'] = ts_
+
+
+# sc_, _, _ = decode(sub_list_str, 
+#                    conditions=conditions,
+#                    epo_part='stimon', 
+#                    signaltype='collapsed',
+#                    event_dict=config.event_dict, 
+#                    n_rep_sub=10,
+#                    shuffle_labels=True,
+#                    batch_size=5,
+#                    smooth_winsize=10,
+#                    save_single_rep_scores=False,
+#                    save_patterns=False,
+#                    save_scores=False)
+# decod_results_load['random'] = sc_
+
+# # %% Plot the results:
+# # Prepare data for plotting with seaborn:
+# epo_part = 'stimon'
+# signaltype = 'difference'
+
+# fpath = op.join(config.path_decod_temp, epo_part, signaltype, contrast_str, 'scores')
+            
+#             # fname = op.join(fpath, 'scores_per_sub.npy')
+#             # np.save(fname, sub_scores_)
+#             # np.save(fname[:-4] + '__times' + '.npy', times_n)
+
+
+# times = decod_results_load['times']
+# acc = np.asarray(decod_results_load['acc'])
+# acc_df = pd.DataFrame(acc)
+# acc_df.columns = times
+# acc_df_long = acc_df.melt(var_name='time', value_name='score')  # put into long format
+# acc_df_long['decoding target'] = 'Load'
+
+# chance = np.asarray(decod_results_load['random'])
+# chance_df = pd.DataFrame(chance)
+# chance_df.columns = times
+# chance_df_long = chance_df.melt(var_name='time', value_name='score')  # put into long format
+# chance_df_long['decoding target'] = 'Random'
+
+# data_plot = pd.concat([acc_df_long, chance_df_long])
+
+# # %%
+
+# # run CBP:
+
+# data = np.asarray(decod_results_load['acc']) - np.asarray(decod_results_load['random'])
+# t_values, clusters, p_values = run_cbp_test(data)
+# p_val_cbp = 0.05
+# idx_sign_clusters = np.argwhere(p_values<p_val_cbp)
+# sign_cluster_times = [times[clusters[idx[0]]][[0,-1]] for idx in idx_sign_clusters]
+
+
+# # %%
+
+
+# # Plot it:
+# fig, ax = plt.subplots(1, figsize=(6,4))
+# plot_score_per_factor('decoding target', data=data_plot, sign_clusters=sign_cluster_times, p_lvl=p_val_cbp,
+# plt_dict=plt_dict['stimon'], n_boot=10, ax=ax)
+# handles, labels = ax.get_legend_handles_labels()
+# p_lvl_str = "$\it{p}$ < ." + str(p_val_cbp).split('.')[-1]
+# ax.legend(title='Decoding Target', 
+#           handles = handles,
+#           labels=['Load: 2 vs 4', 'chance', p_lvl_str], loc=1, prop={'size': 9})
+
+
+# # %% Plot patterns:
+
+
+# # get dummy epos file to get electrode locations
+# dummy_epos = get_epos('VME_S01', 'stimon', 'collapsed','LoadLow', event_dict)
+# sub_patterns = np.asarray(decod_results_load['patterns'])
+# # normalize them by l2 norm to allow fair average across subjects:
+# sub_patterns = sub_patterns / np.linalg.norm(sub_patterns, axis=1, ord=2, keepdims=True)
+# sub_patterns_avg = sub_patterns.mean(axis=0) 
+# # normalize per timebin
+# sub_patterns_avg = sub_patterns_avg / np.linalg.norm(sub_patterns_avg, axis=0, ord=2, keepdims=True)
+# sub_patterns_evo = EvokedArray(sub_patterns_avg, dummy_epos.info)
+# sub_patterns_evo.times = decod_results_load['times']
+# sub_patterns_evo.plot_topomap(times = [0.25, 0.55, 0.85, 1.15, 1.5, 2.0], scalings=1, units='', 
+#                                 title=config.labels['Load'])
+
+
+
+# %% decode load per eccentricity:
+
+# decod_results_load = defaultdict(dict)
+
+# for ecc in cond_dict['Ecc']:
+#     conditions = ['LoadLow' + ecc, 'LoadHigh' + ecc]
+#     contrast_str = '_vs_'.join(conditions)
+#     sc_, pat_, ts_ = decode(sub_list_str, 
+#                             conditions=conditions,
+#                             epo_part='stimon', 
+#                             signaltype='collapsed',
+#                             scoring='roc_auc',
+#                             event_dict=config.event_dict, 
+#                             n_rep_sub=50,
+#                             batch_size=5,
+#                             smooth_winsize=10,
+#                             save_single_rep_scores=False,
+#                             save_patterns=True,
+#                             save_scores=True)
+#     decod_results_load[ecc]['acc'] = sc_
+#     decod_results_load[ecc]['patterns'] = pat_
+#     decod_results_load[ecc]['times'] = ts_
 
 
     
-sc_, _, _ = decode(sub_list_str, 
-                   conditions=['LoadLowEccS', 'LoadHighEccS'],
-                   epo_part='stimon', 
-                   signaltype='collapsed',
-                   event_dict=config.event_dict, 
-                   n_rep_sub=50,
-                   shuffle_labels=True,
-                   batch_size=5,
-                   smooth_winsize=10,
-                   save_single_rep_scores=False,
-                   save_patterns=True,
-                   save_scores=True)
+# sc_, _, _ = decode(sub_list_str, 
+#                    conditions=['LoadLowEccS', 'LoadHighEccS'],
+#                    epo_part='stimon', 
+#                    signaltype='collapsed',
+#                    scoring='roc_auc',
+#                    event_dict=config.event_dict, 
+#                    n_rep_sub=50,
+#                    shuffle_labels=True,
+#                    batch_size=5,
+#                    smooth_winsize=10,
+#                    save_single_rep_scores=False,
+#                    save_patterns=True,
+#                    save_scores=True)
 
 # %% Plot the results:
 
-def load_decod_res_per_ecc(ecc = '', epo_part='stimon', signaltype='collapsed'):
-    data_dict = dict()
-    for ecc in cond_dict['Ecc']:
-        data_dict[ecc] = {}
-        contrast_str = f'LoadLow{ecc}_vs_LoadHigh{ecc}'
-        fpath = op.join(config.path_decod_temp, epo_part, signaltype, contrast_str, 'scores')
-        fname = op.join(fpath, 'scores_per_sub.npy')
-        data_dict[ecc]['scores'] = np.load(fname)
-        data_dict[ecc]['times'] = np.load(fname[:-4] + '__times' + '.npy')
-        fpath = op.join(config.path_decod_temp, epo_part, signaltype, contrast_str, 'patterns')
-        fname = op.join(fpath, 'patterns_per_sub.npy')
-        data_dict[ecc]['patterns'] = np.load(fname)
-    return(data_dict)
+# def load_decod_res_per_ecc(ecc = '', epo_part='stimon', signaltype='collapsed'):
+#     data_dict = dict()
+#     for ecc in cond_dict['Ecc']:
+#         data_dict[ecc] = {}
+#         contrast_str = f'LoadLow{ecc}_vs_LoadHigh{ecc}'
+#         fpath = op.join(config.path_decod_temp, epo_part, signaltype, contrast_str, 'scores')
+#         fname = op.join(fpath, 'scores_per_sub.npy')
+#         data_dict[ecc]['scores'] = np.load(fname)
+#         data_dict[ecc]['times'] = np.load(fname[:-4] + '__times' + '.npy')
+#         fpath = op.join(config.path_decod_temp, epo_part, signaltype, contrast_str, 'patterns')
+#         fname = op.join(fpath, 'patterns_per_sub.npy')
+#         data_dict[ecc]['patterns'] = np.load(fname)
+#     return(data_dict)
     
-data_dict = load_decod_res_per_ecc('')
+# data_dict = load_decod_res_per_ecc('')
 
 
-# %%
+# # %%
 
-# Prepare data for plotting with seaborn:
-results_df_list = list()
-for ecc in cond_dict['Ecc']:
-    times = data_dict[ecc]['times']
-    acc = np.asarray(data_dict[ecc]['scores'])
-    acc_df = pd.DataFrame(acc)
-    acc_df.columns = times
-    df = acc_df.melt(var_name='time', value_name='score')  # put into long format
-    df['Ecc'] = ecc
-    results_df_list.append(df)
-data_plot = pd.concat(results_df_list)
+# # Prepare data for plotting with seaborn:
+# results_df_list = list()
+# for ecc in cond_dict['Ecc']:
+#     times = data_dict[ecc]['times']
+#     acc = np.asarray(data_dict[ecc]['scores'])
+#     acc_df = pd.DataFrame(acc)
+#     acc_df.columns = times
+#     df = acc_df.melt(var_name='time', value_name='score')  # put into long format
+#     df['Ecc'] = ecc
+#     results_df_list.append(df)
+# data_plot = pd.concat(results_df_list)
 
-# run CBP:
+# # run CBP:
 
-sign_cluster_times = dict()
-for ecc in cond_dict['Ecc']:
-    data = np.asarray(data_dict[ecc]['scores']) - 0.5
-    t_values, clusters, p_values = run_cbp_test(data)
-    p_val_cbp = 0.05
-    idx_sign_clusters = np.argwhere(p_values<p_val_cbp)
-    sign_cluster_times[ecc] = [times[clusters[idx[0]]][[0,-1]] for idx in idx_sign_clusters]
+# sign_cluster_times = dict()
+# for ecc in cond_dict['Ecc']:
+#     data = np.asarray(data_dict[ecc]['scores']) - 0.5
+#     t_values, clusters, p_values = run_cbp_test(data)
+#     p_val_cbp = 0.05
+#     idx_sign_clusters = np.argwhere(p_values<p_val_cbp)
+#     sign_cluster_times[ecc] = [times[clusters[idx[0]]][[0,-1]] for idx in idx_sign_clusters]
 
-# %%
-# Plot it:
-fig, ax = plt.subplots(1, figsize=(6,4))
-plot_score_per_factor('Ecc', data=data_plot, plt_dict=plt_dict['stimon'], 
-                      scoring='roc_auc', sign_clusters=sign_cluster_times, p_lvl=p_val_cbp, n_boot=10, ax=ax)
-ax.legend(title='Eccentricity', labels=['4°', '9°', '14°'], loc=1, prop={'size': 9})
+# # %%
+# # Plot it:
+# fig, ax = plt.subplots(1, figsize=(6,4))
+# plot_score_per_factor('Ecc', data=data_plot, plt_dict=plt_dict['stimon'], 
+#                       scoring='roc_auc', sign_clusters=sign_cluster_times, p_lvl=p_val_cbp, n_boot=10, ax=ax)
+# ax.legend(title='Eccentricity', labels=['4°', '9°', '14°'], loc=1, prop={'size': 9})
 
-# %% Plot the corresponding patterns per eccentricity level:
+# # %% Plot the corresponding patterns per eccentricity level:
 
-for ecc in cond_dict['Ecc']:
-# get dummy epos file to get electrode locations
-    dummy_epos = get_epos('VME_S01', 'stimon', 'difference','LoadLow', event_dict)
-    sub_patterns = np.asarray(decod_results_load[ecc]['patterns'])
-    # normalize them by l2 norm to allow fair average across subjects:
-    sub_patterns = sub_patterns / np.linalg.norm(sub_patterns, axis=1, ord=2, keepdims=True)
-    sub_patterns_avg = sub_patterns.mean(axis=0) 
-    # normalize per timebin
-    sub_patterns_avg = sub_patterns_avg / np.linalg.norm(sub_patterns_avg, axis=0, ord=2, keepdims=True)
-    sub_patterns_evo = EvokedArray(sub_patterns_avg, dummy_epos.info)
-    sub_patterns_evo.times = decod_results_load['EccL']['times']
-    sub_patterns_evo.plot_topomap(times = [0.25, 0.55, 0.85, 1.15], scalings=1, units='', 
-                                  title=config.labels[ecc])
+# for ecc in cond_dict['Ecc']:
+# # get dummy epos file to get electrode locations
+#     dummy_epos = get_epos('VME_S01', 'stimon', 'difference','LoadLow', event_dict)
+#     sub_patterns = np.asarray(decod_results_load[ecc]['patterns'])
+#     # normalize them by l2 norm to allow fair average across subjects:
+#     sub_patterns = sub_patterns / np.linalg.norm(sub_patterns, axis=1, ord=2, keepdims=True)
+#     sub_patterns_avg = sub_patterns.mean(axis=0) 
+#     # normalize per timebin
+#     sub_patterns_avg = sub_patterns_avg / np.linalg.norm(sub_patterns_avg, axis=0, ord=2, keepdims=True)
+#     sub_patterns_evo = EvokedArray(sub_patterns_avg, dummy_epos.info)
+#     sub_patterns_evo.times = decod_results_load['EccL']['times']
+#     sub_patterns_evo.plot_topomap(times = [0.25, 0.55, 0.85, 1.15], scalings=1, units='', 
+#                                   title=config.labels[ecc])
 
 
-# %%
-2+2
-# %%
+# # %%
+# 2+2
+# # %%

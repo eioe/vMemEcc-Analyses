@@ -9,11 +9,11 @@
 # Job Name: 
 #SBATCH -J hansi_ftw
 # Queue (Partition): 
-#SBATCH --partition=short 
+#SBATCH --partition=general 
 # Number of nodes and MPI tasks per node: 
 #SBATCH --nodes=1 
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=1 
+#SBATCH --cpus-per-task=10
 # 
 #SBATCH --mail-type=all 
 #SBATCH --mail-user=klotzsche@cbs.mpg.de 
@@ -24,4 +24,4 @@ module load anaconda/3
 conda activate mne
  
 # Run the program: 
-srun python ./vme_analysis/Analyses_Py/05.3-tfr_decoding_csp_batch_all_auc_shrink.py $SLURM_ARRAY_TASK_ID
+srun python ./vme_analysis/Analyses_Py/csp_demo.py $SLURM_ARRAY_TASK_ID
