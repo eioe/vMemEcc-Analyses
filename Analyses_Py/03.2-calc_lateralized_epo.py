@@ -37,7 +37,7 @@ for sub_nr in sub_list:
     subID = 'VME_S%02d' % sub_nr
     # subID = 'VME_S02'
 
-    for epo_part in ['cue', 'stimon', 'fulllength']:
+    for epo_part in ['stimon']: #['cue', 'stimon', 'fulllength']:
 
         # Load data:
         data = helpers.load_data(subID + '-' + epo_part + '-postica-rejepo', config.path_rejepo, '-epo')
@@ -108,7 +108,7 @@ for sub_nr in sub_list:
         epos_CDA._data = data_diff
 
         ## You can use this to visualize:
-        # mne.viz.plot_compare_evokeds([epos_CDA[event_dict['EccL']].average(), epos_CDA[event_dict['EccS']].average()], combine='mean', picks = chans_CDA_dict['Left'])
+        #  mne.viz.plot_compare_evokeds([epos_CDA[event_dict['LoadLow']].average(), epos_CDA[event_dict['LoadHigh']].average()], combine='mean', picks = chans_CDA_dict['Left'])
 
         helpers.save_data(epos_collapsed, subID, 
                         config.path_epos_sorted + '/' + epo_part + '/' + 'collapsed', 
