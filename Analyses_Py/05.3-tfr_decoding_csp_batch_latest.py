@@ -37,7 +37,7 @@ old_log_level = mne.set_log_level('WARNING', return_old_level=True)
 
 
 
-def get_epos(subID, part_epo, signaltype, condition, event_dict):
+def get_epos(subID, part_epo, signaltype, condition, event_dict, picks_str=None):
     """Load a set of specified epochs.
     
      Parameters
@@ -54,7 +54,9 @@ def get_epos(subID, part_epo, signaltype, condition, event_dict):
         Experimental condition. Combination of 'Ecc' and 'Load' (eg, 'LoadLow' or 'LoadLowEccS')
     event_dict: dict
         Dictionnary explaining the event codes. Normally this can be grabbed from config.event_dict
-
+    picks_str: str
+        Predefined selection, has to be either 'Left', 'Right', 'Midline' or 'All'; None (default) is thesame as 'All'
+        
     Returns
     -------
     mne.Epochs
@@ -71,6 +73,13 @@ def get_epos(subID, part_epo, signaltype, condition, event_dict):
         raise ValueError(f'Invalid value for "signaltype": {signaltype}')
     epos = mne.read_epochs(fname, verbose=False)
     epos = epos.pick_types(eeg=True)
+    
+    # pick channel selection:
+    if (picks_str is not None) and (picks_str is not 'All'):
+        roi_dict = mne.channels.make_1020_channel_selections(epos.info)
+        picks = [epos.ch_names[idx] for idx in roi_dict[picks_str]]
+        epos.pick_channels(picks, ordered=True)
+
     uppers = [letter.isupper() for letter in condition]
     if (np.sum(uppers) > 2):
         cond_1 = condition[:np.where(uppers)[0][2]]
@@ -81,7 +90,7 @@ def get_epos(subID, part_epo, signaltype, condition, event_dict):
     return(selection)
 
 
-def get_sensordata(subID, part_epo, signaltype, conditions, event_dict):
+def get_sensordata(subID, part_epo, signaltype, conditions, event_dict, picks_str=None):
     """Load a set of specified epochs for classification.
     
      Parameters
@@ -98,7 +107,9 @@ def get_sensordata(subID, part_epo, signaltype, conditions, event_dict):
         List of experimental conditions. Combination of 'Ecc' and 'Load' (eg, 'LoadLow' or 'LoadLowEccS')
     event_dict: dict
         Dictionnary explaining the event codes. Normally this can be grabbed from config.event_dict
-
+    picks_str: str
+        Predefined selection, has to be either 'Left', 'Right', 'Midline' or 'All'; None (default) is thesame as 'All'
+        
     Returns
     -------
     X_epos: Epochs
@@ -115,7 +126,8 @@ def get_sensordata(subID, part_epo, signaltype, conditions, event_dict):
                                    part_epo=part_epo,
                                    signaltype=signaltype,
                                    condition=cond,
-                                   event_dict=event_dict)
+                                   event_dict=event_dict,
+                                   picks_str=picks_str)
 
     times = epos_dict[conditions[0]][0].copy().times
 
@@ -132,8 +144,10 @@ def get_sensordata(subID, part_epo, signaltype, conditions, event_dict):
     return X_epos, y, times_n
 
 
-def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'accuracy', shuffle_labels = False, save_scores = True, save_csp_patterns = True, 
-           overwrite = False, part_epo = 'stimon', signaltype='collapsed'):
+def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc', 
+           min_freq=6, max_freq=26, n_freqs=10,
+           shuffle_labels = False, save_scores = True, save_csp_patterns = True, 
+           overwrite = False, part_epo = 'stimon', signaltype='collapsed', picks_str=None):
     """Apply CSP and LDA to perform binary classification from (the power) of epoched data.
     
     
@@ -155,6 +169,14 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'accuracy',
         Dictionnary explaining the event codes. Normally this can be grabbed from config.event_dict
     reps: int 
         Number of repetions for the CV procedure.
+    scoring: str
+        Scoring metric to be used; 'roc_auc' (default), 'accuracy', or 'balanced_accuracy'
+    min_freq: float, int
+        Lower bound of lowest freq band to be used (default: 6)
+    max_freq: float, int
+        Upper bound of highest freq band to be used (default: 26)
+    n_freqs: 
+        Number of freq bands that the interval between min_freq and max_freq is split into (default: 10)
     shuffle_labels: bool
         Shuffle the labels to produce a null distribution.
     save_scores: bool, optional
@@ -170,7 +192,9 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'accuracy',
                                                        'uncollapsed': normal electrode positions,
                                                        'difference': difference signal: contra minus ipsilateral
                                                        (default is 'collapsed'.)
-
+    picks_str: str
+        Predefined selection, has to be either 'Left', 'Right', 'Midline' or 'All'; None (default) is thesame as 'All'
+        
     Returns
     -------
     tf_scores_list: list
@@ -180,11 +204,12 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'accuracy',
     """
     
     contrast_str = '_vs_'.join(conditions)
-    scoring = scoring
+
     cv_folds = 5
     n_components = 6
+    reg = 0.4 # 'ledoit_wolf'
     
-    csp = CSP(n_components=n_components, reg=None, log=True, norm_trace=False)
+    csp = CSP(n_components=n_components, reg=reg, log=True, norm_trace=False, component_order='alternate')
     clf = make_pipeline(csp, LinearDiscriminantAnalysis())
     
     # Classification & time-frequency parameters
@@ -193,9 +218,9 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'accuracy',
     n_cycles = None  # how many complete cycles: used to define window size
     w_size = 0.5
     w_overlap = 0.5 # how much shall the windows overlap [value in [0,1]; 0: no overlap, 1: full overlap]
-    min_freq = 6
-    max_freq = 26
-    n_freqs = 10  # how many frequency bins to use
+    min_freq = min_freq
+    max_freq = max_freq
+    n_freqs = n_freqs  # how many frequency bins to use
 
     # Get datetime identifier for uniqure folder names (if not overwriting):
     datetime_str = datetime.today().strftime('%Y-%m-%d-%H-%M')
@@ -230,7 +255,7 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'accuracy',
 
         print(f'Running {subID}')
 
-        X_epos, y, t = get_sensordata(subID, part_epo, signaltype, conditions, event_dict)
+        X_epos, y, t = get_sensordata(subID, part_epo, signaltype, conditions, event_dict, picks_str)
         n_channels = len(X_epos.ch_names)
         # init scores
         tf_scores = np.zeros((n_freqs, n_windows))
@@ -240,7 +265,7 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'accuracy',
         # Loop through each frequency range of interest
         for freq, (fmin, fmax) in enumerate(freq_ranges):
 
-            # print(f'Freq. {freq} of {len(freq_ranges)}')
+            print(f'Freq. {freq} of {len(freq_ranges)}')
 
             if (w_size is None):
                 # Infer window size based on the frequency being used (default behavuior is to use a fixed w_size)
@@ -276,7 +301,7 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'accuracy',
                     patterns_ = getattr(csp, 'patterns_')
                     tf_patterns[:, :, freq, t] = patterns_[:n_components, :]
                 
-        tf_scores = np.mean(tf_scores_tmp, axis=0)        
+        tf_scores = tf_scores_tmp # , axis=0)        
         tf_scores_list.append(tf_scores)
         tf_patterns_list.append(tf_patterns)
 
@@ -310,10 +335,23 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'accuracy',
                 shuf_labs = 'labels_shuffled'
             else: 
                 shuf_labs = ''
+                
+            if reg is not None:
+                if isinstance(reg, float):
+                    reg_str = 'shrinkage'+str(reg)
+                else: 
+                    reg_str = reg
+            else:
+                reg_str = ''
+                
+            if picks_str is not None:
+                picks_str_folder = picks_str
+            else:
+                picks_str_folder = ''
             
-            fpath = op.join(config.path_decod_tfr, part_epo, signaltype, contrast_str, scoring, shuf_labs, sub_folder)
+            fpath = op.join(config.path_decod_tfr, part_epo, signaltype, contrast_str, scoring, reg_str, picks_str_folder, shuf_labs, sub_folder)
             if (op.exists(fpath) and not overwrite):
-                path_save = op.join(config.path_decod_tfr, part_epo, signaltype, contrast_str + datetime_str, scoring, shuf_labs, 
+                path_save = op.join(config.path_decod_tfr, part_epo, signaltype, contrast_str + datetime_str, scoring, reg_str, picks_str_folder, shuf_labs, 
                                    sub_folder + datetime_str)
             else:
                 path_save = fpath
@@ -479,7 +517,7 @@ print(old_log_level)
 sub_list = np.setdiff1d(np.arange(1, 28), config.ids_missing_subjects +
                         config.ids_excluded_subjects)               
 sub_list_str = ['VME_S%02d' % sub for sub in sub_list]
-sub_list_str = sub_list_str[11:]
+# sub_list_str = ['VME_S01', 'VME_S02']
 sub_list_str = [sub_list_str[job_nr]]
 
 cond_dict = {'Load': ['LoadLow', 'LoadHigh'], 
@@ -492,15 +530,16 @@ cond_dict = {'Load': ['LoadLow', 'LoadHigh'],
 import warnings
 warnings.filterwarnings('ignore')
 
-for shuf_labels_bool in [True]:
-    _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=100, scoring='roc_auc', 
-               shuffle_labels=shuf_labels_bool, overwrite=True)
-    _ = decode(sub_list_str, ['LoadLowEccL', 'LoadHighEccL'], config.event_dict, reps=100, scoring='roc_auc', 
-               shuffle_labels=shuf_labels_bool, overwrite=True)
-    _ = decode(sub_list_str, ['LoadLowEccS', 'LoadHighEccS'], config.event_dict, reps=100, scoring='roc_auc', 
-               shuffle_labels=shuf_labels_bool, overwrite=True)
-    _ = decode(sub_list_str, ['LoadLowEccM', 'LoadHighEccM'], config.event_dict, reps=100, scoring='roc_auc', 
-               shuffle_labels=shuf_labels_bool, overwrite=True)
+# for shuf_labels_bool in [False]: # , True]:
+
+#     _ = decode(sub_list_str, ['LoadLowEccL', 'LoadHighEccL'], config.event_dict, reps=50, scoring='roc_auc', 
+#                shuffle_labels=shuf_labels_bool, overwrite=True)
+#     _ = decode(sub_list_str, ['LoadLowEccS', 'LoadHighEccS'], config.event_dict, reps=50, scoring='roc_auc', 
+#                shuffle_labels=shuf_labels_bool, overwrite=True)
+#     _ = decode(sub_list_str, ['LoadLowEccM', 'LoadHighEccM'], config.event_dict, reps=50, scoring='roc_auc', 
+#                shuffle_labels=shuf_labels_bool, overwrite=True)
+#     _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
+#            shuffle_labels=shuf_labels_bool, overwrite=True)
 #     _ = decode(sub_list_str, ['EccS', 'EccL'], config.event_dict, reps=100, scoring='roc_auc', 
 #                shuffle_labels=shuf_labels_bool, overwrite=True)
 #     _ = decode(sub_list_str, ['EccM', 'EccL'], config.event_dict, reps=100, scoring='roc_auc', 
@@ -514,3 +553,10 @@ for shuf_labels_bool in [True]:
 
 
 
+# Decode from single hemispheres:
+
+_ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
+           shuffle_labels=False, overwrite=True, picks_str='Left', min_freq=8, max_freq=14, n_freqs=1)
+
+_ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
+           shuffle_labels=False, overwrite=True, picks_str='Right', min_freq=8, max_freq=14, n_freqs=1)
