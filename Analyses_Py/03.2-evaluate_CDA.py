@@ -27,7 +27,7 @@ def get_evokeds_dict(epo_part, sub_list):
     for sub in sub_list:  # [3, 7, 22]:
         subID = 'VME_S%02d' % sub
         fname = op.join(config.path_epos_sorted, epo_part,
-                        'difference', subID + '-epo.fif')
+                        'collapsed', subID + '-epo.fif')
         epos = mne.read_epochs(fname, verbose=False)
         epos.pick_channels(config.chans_CDA_dict['Left'])
         epos.crop(plt_dict[epo_part]['xmin'], plt_dict[epo_part]['xmax'])
