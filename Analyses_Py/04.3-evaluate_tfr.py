@@ -78,7 +78,7 @@ def load_avgtfr(subID, condition, pwr_style='induced',
 
 
 def plot_tfr_side(ax, tfr, picks, cbar=True, tmin=None, tmax=None, 
-                  vmin=None, vmax=None, title='', cmap='RdBu'):
+                  vmin=None, vmax=None, title='', cmap='RdBu_r'):
         ha = tfr.copy().crop(tmin, tmax).plot(axes=ax, 
                                       show=False, 
                                       colorbar=cbar,
@@ -285,7 +285,7 @@ cond_dict = {'Load': ['LoadLow', 'LoadHigh'],
              'Ecc': ['EccS', 'EccM', 'EccL']}
 
 
-#%% get list with avg TFRs for all trials and conditions:
+#%% get list with avg TFRs for all trials and conditions: !!! THIS BLOCK TAKES AGES
 tfr_list = [load_avgtfr(subID, 'all', pwr_style, part_epo, 
                         baseline=(-(config.times_dict['cue_dur']+0.3), 
                                   -(config.times_dict['cue_dur']+0.1)), 
@@ -330,6 +330,7 @@ tf_contra = plot_tfr_side(ax, diff_diff, picks=config.chans_CDA_dict['Contra'],
 
 
 # %% CSP decoding pipe
+''' This block can probably entirely be deleted.
 
 def decode(sub_list_str, conditions, event_dict, save_scores = True, part_epo = 'stimon', 
            signaltype='collapsed'):
@@ -440,7 +441,7 @@ def decode(sub_list_str, conditions, event_dict, save_scores = True, part_epo = 
                 json.dump(info_dict, outfile)
 
     return tf_scores_list, centered_w_times
-
+ 
 
 # %%
 a, b = decode(sub_list_str, ['EccS', 'EccL'], config.event_dict)
@@ -501,6 +502,8 @@ scores_avg = np.mean(a, axis=0)
 plot_im_dectfr(scores_avg, conditions, times, freqs)
 plot_line_dectfr(scores_avg, conditions, times)
 
+'''
+
 #%%###########################################################################################
 # Plot TF diag per hemisphere across all conditions:
 for side in ['Contra', 'Ipsi']:
@@ -513,7 +516,7 @@ for side in ['Contra', 'Ipsi']:
     fpath = op.join(config.path_plots, 'TFR', part_epo)
     helpers.chkmk_dir(fpath)
     fname = op.join(fpath, f'grandavgTFR_{side}.png')
-    fig.savefig(fname, bbox_inches="tight")
+    # fig.savefig(fname, bbox_inches="tight")
 ##############################################################################################
 ##############################################################################################
 
