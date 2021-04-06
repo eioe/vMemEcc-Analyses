@@ -44,7 +44,7 @@ source(file.path(here('Utils', 'load_data.R')))
 
 #--------------------------------------------------------------------------
 ## Run analysis 01: Is there an effect of workload or eccentricity on 
-##                  accuracy in the VSTM task and in the perception task?
+##                  performance in the VSTM task and in the perception task?
 ##                  ANOVA & post hoc t test
 
 # VSTM task:

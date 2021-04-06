@@ -13,6 +13,7 @@ library(tidyverse)
 library(here)
 library(cowplot)
 library(rstatix)
+library(kableExtra)
 
 # load color regime:
 source(here('Utils', 'load_colors.R'))
@@ -21,6 +22,7 @@ source(here('Utils', 'R_rainclouds.R'))
 
 # get data from virtual drive (set FALSE if you're not Felix)
 data_from_seafile <- TRUE
+save_output <- FALSE
 
 if (data_from_seafile) {
   path_data <- file.path('S:', 
@@ -108,10 +110,11 @@ data_demog %>%  select(sub_id, ssq_sum_pre, ssq_sum_post) %>%
   scale_colour_manual(values = cols_discrete_25) + 
   scale_fill_brewer(palette = "Accent", direction = -1) -> plt_sum
  
-# save png: 
-fname <- 'SSQ_sumscore.png'
-ggsave(file.path(path_plots, 'SSQ', fname), plt_sum)
-
+if (save_output) {
+  # save png: 
+  fname <- 'SSQ_sumscore.png'
+  ggsave(file.path(path_plots, 'SSQ', fname), plt_sum)
+}
  
 # function to remove first and last part from '_' separated strings in 
 # a vector:
@@ -160,10 +163,12 @@ data_demog %>% select(sub_id, matches('^ssq_')) %>%
   scale_colour_manual(values = cols_discrete_25) + 
   scale_fill_brewer(palette = "Accent", direction = -1) -> plt_subscales
   
-# save png: 
-fname <- 'SSQ_subscales.png'
-ggsave(file.path(path_plots, fname), plt_subscales)
-
+if (save_output) {
+  # save png: 
+  fname <- 'SSQ_subscales.png'
+  ggsave(file.path(path_plots, fname), plt_subscales)
+}
+  
 # print to output:
 plt_sum
 plt_subscales
@@ -185,9 +190,38 @@ data_demog %>% select(sub_id, matches('^ssq_')) %>%
   wilcox_test(value ~ time, 
               paired = TRUE, 
               exact = FALSE) %>%
-  select(subscale, n1, statistic, p) -> wilcox_results
+  data.frame() %>% 
+  dplyr::select(subscale, n1, statistic, p) -> wilcox_results
 
-knitr::kable(wilcox_results)
+kbl(wilcox_results) %>% 
+  kable_styling()
+
+data_demog %>% select(sub_id, matches('^ssq_')) %>% 
+  pivot_longer(cols = starts_with('ssq'), 
+               names_to = 'quest') %>% 
+  mutate(subscale = rm_stuff(quest)) %>% 
+  mutate(subscale = gsub('_', ' ', subscale)) %>% 
+  mutate(time = ifelse(str_detect(quest, '_pre'), 'pre', 'post')) %>% 
+  group_by(subscale, time) %>% 
+  dplyr::summarize(mean=mean(value), sd=sd(value)) %>% 
+  dplyr::arrange(desc(time), .by_group=TRUE) -> summary_stats
+kbl(summary_stats, digits=3) %>% 
+  collapse_rows(columns=1:2) %>%
+  kable_styling()
+
+
+data_demog %>% select(sub_id, matches('^ssq_')) %>% 
+  pivot_longer(cols = ends_with(c('_pre', '_post')), 
+               names_to = c('.value', 'time'), 
+               names_pattern = 'ssq_(.*)_(.*)') %>% 
+  group_by(time) %>% 
+  select(-sub_id) %>% 
+  summarise_all(list(mean=mean, sd=sd)) %>% 
+  select(time, sort(current_vars())) %>% 
+  dplyr::arrange(desc(time), .by_group=TRUE) -> summary_stats 
+ 
+knitr::kable(summary_stats)
+
 
 ```
 
