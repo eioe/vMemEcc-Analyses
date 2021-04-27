@@ -2,7 +2,7 @@
 library(tidyverse)
 library(magrittr)
 
-data_annot <- read_csv('C:/Users/Felix/Seafile/Experiments/vMemEcc/Data/SubjectData/VME_S08/EyeTracking/Block3x/000/exports/000/
+data_annot <- read_csv('C:/Users/Felix/Seafile/Experiments/vMemEcc/Data/SubjectData/VME_S08/EyeTracking/Block3x/000/exports/000/')
 data_gaze <- read_csv('C:/Users/Felix/Seafile/Experiments/vMemEcc/Data/SubjectData/VME_S08/EyeTracking/Block4x/000/exports/000/gaze_positions.csv ')
 
 data_trialtype <- data_annot %>% 

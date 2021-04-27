@@ -23,14 +23,15 @@ library(rstatix)
 
 source(here("Utils", "wrangle_data.R"))
 source(here("Utils", "plot_behavior.R"))
+source(here("Workflow_Sven", "osf_experiment1", "_RScripts", "loadColors.R"))
 ```
 
 ```{r, include=F, message=F}
 
 # set data choices:
-write_fulldat_to_disk <- TRUE
-get_fulldat_from_disk <- FALSE
-get_data_from_sdrive <- TRUE
+write_fulldat_to_disk <- FALSE # TRUE
+get_fulldat_from_disk <- TRUE # FALSE
+get_data_from_sdrive <- FALSE # TRUE
 
 # If we're on my laptop, get data from virtual drive:
 current_machine = Sys.info()['nodename']

@@ -294,6 +294,9 @@ for (sub_id in sub_ids) {
                       .keep_all = TRUE) %>% 
           drop_na(timestamp_eye_1, gaze_normal1_x, gaze_normal1_y)  
         
+        # Interpolate bad samples (confidence below given threshold)
+        # CAVE: the naming is unfortunate here, interpolation is actually done in 
+        # a linear fashion, not as spline!
         if (interpolate_low_conf_samples) {
           if (!nrow(timings_eye0) == 0) {
             timings_eye0 <- timings_eye0 %>% 
@@ -318,7 +321,7 @@ for (sub_id in sub_ids) {
           }
         }
         
-        # Calculate (micro)saccaes per eye:
+        # Calculate (micro)saccades per eye:
         # msr: micro-saccades right eye
         # msl: -------------- left ----
         

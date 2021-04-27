@@ -21,6 +21,10 @@ from mne.stats import permutation_cluster_1samp_test, f_mway_rm, f_threshold_mwa
 from mne.decoding import CSP
 from library import helpers, config
 
+# TODO: extract values for manuscript:
+# - latalpha_cbp_2ndlvl_pval
+# - 
+
 
 # %%
 def get_epos(subID, epo_part, signaltype, condition, event_dict):

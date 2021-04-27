@@ -47,6 +47,17 @@ if (data_from_seafile) {
                      'Pics')
 }
 
+# TODO: vars to save: 
+# - ssq_sum_pre_mean
+# - ssq_sum_pre_sd
+# - ssq_sum_post_mean
+# - ssq_sum_post_sd
+# - ssq_sum_z (z value wilcox)
+# - ssq_sum_p (p value)
+# - ssq_n (number of subjects in test)
+
+
+
 ```
 
 ```{r data loading and sample info, echo=TRUE, message=FALSE, warning=FALSE}
@@ -208,19 +219,6 @@ data_demog %>% select(sub_id, matches('^ssq_')) %>%
 kbl(summary_stats, digits=3) %>% 
   collapse_rows(columns=1:2) %>%
   kable_styling()
-
-
-data_demog %>% select(sub_id, matches('^ssq_')) %>% 
-  pivot_longer(cols = ends_with(c('_pre', '_post')), 
-               names_to = c('.value', 'time'), 
-               names_pattern = 'ssq_(.*)_(.*)') %>% 
-  group_by(time) %>% 
-  select(-sub_id) %>% 
-  summarise_all(list(mean=mean, sd=sd)) %>% 
-  select(time, sort(current_vars())) %>% 
-  dplyr::arrange(desc(time), .by_group=TRUE) -> summary_stats 
- 
-knitr::kable(summary_stats)
 
 
 ```
