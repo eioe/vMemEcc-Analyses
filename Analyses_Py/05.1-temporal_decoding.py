@@ -26,6 +26,14 @@ from mne.stats import permutation_cluster_1samp_test, f_mway_rm, f_threshold_mwa
 
 from library import config, helpers
 
+# %% TODO:
+# Extract:
+# temp_decod_batch_size = batch_size
+# temp_decod_smooth_winsize = smooth_winsize
+# temp_decod_lambda = 1 - C
+# temp_decod_cv_folds = cv_folds
+# temp_decod_n_rep_sub = n_rep_sub
+
 
 # %% Functions:
 
