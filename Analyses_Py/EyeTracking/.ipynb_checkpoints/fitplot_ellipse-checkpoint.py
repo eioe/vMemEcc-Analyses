@@ -26,7 +26,7 @@ show_imgs = False
 plot_points = False
 
 # Path to "videos" folder:
-path_main = op.join('u', 'fklotzsche', 'ptmp_link', 'Experiments', 'vMemEcc', 'Data', 'SubjectData', 'VME_S08', 'EyeTracking', 'Block7', '000')
+path_main = op.join('C:\\', 'Users', 'Felix', 'Downloads', 'videos')
 
 # Path to save images to:
 path_out = op.join(path_main, 'ell_out')

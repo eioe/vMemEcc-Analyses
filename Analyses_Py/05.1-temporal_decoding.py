@@ -20,7 +20,7 @@ from scipy import stats
 import mne
 from mne import EvokedArray
 # from mne.epochs import concatenate_epochs
-from mne.decoding import (SlidingEstimator,  # GeneralizingEstimator,
+from mne.decoding import (SlidingEstimator,  GeneralizingEstimator,
                           cross_val_multiscore, LinearModel, get_coef)
 from mne.stats import permutation_cluster_1samp_test, f_mway_rm, f_threshold_mway_rm
 
@@ -127,7 +127,7 @@ def get_data(subID, epo_part, signaltype, conditions, event_dict,
 
 def decode(sub_list_str, conditions, epo_part='stimon', signaltype='collapsed', scoring='roc_auc',
            event_dict=config.event_dict, n_rep_sub=100, picks_str=None, shuffle_labels=False,
-           batch_size=10, smooth_winsize=5, save_single_rep_scores=False,
+           batch_size=10, smooth_winsize=5, temp_gen=False, save_single_rep_scores=False,
            save_scores=True, save_patterns=False):
 
     contrast_str = '_vs_'.join(conditions)
@@ -142,10 +142,19 @@ def decode(sub_list_str, conditions, epo_part='stimon', signaltype='collapsed', 
                                                        random_state=42,
                                                        verbose=False)))
 
-    se = SlidingEstimator(clf,
-                          scoring=scoring,
-                          n_jobs=-2,
-                          verbose=0)
+    # TODO: refactor: rename "se"
+    if temp_gen:
+        gen_str = 'gen_temp'
+        se = GeneralizingEstimator(clf,
+                              scoring=scoring,
+                              n_jobs=-2,
+                              verbose=0)
+    else:
+        gen_str = ''
+        se = SlidingEstimator(clf,
+                              scoring=scoring,
+                              n_jobs=-2,
+                              verbose=0)
     subs_processed = list()
     sub_scores = list()
     sub_scores_per_rep = list()
@@ -356,7 +365,7 @@ for picks_str in ['All']: # ['Right', 'Left']:
                             epo_part='stimon', 
                             signaltype='collapsed',
                             event_dict=config.event_dict, 
-                            n_rep_sub=100,
+                            n_rep_sub=5,  #  100,
                             picks_str=picks_str,
                             shuffle_labels=shuf_labs,
                             batch_size=5,
