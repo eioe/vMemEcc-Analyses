@@ -84,13 +84,15 @@ def load_avgtfr(subID, condition, pwr_style='induced',
 def plot_tfr_side(ax, tfr, picks, cbar=True, tmin=None, tmax=None, 
                   vmin=None, vmax=None, title='', cmap='RdBu_r'):
         ha = tfr.copy().crop(tmin, tmax).plot(axes=ax, 
-                                      show=False, 
+                                      show=False,
+                                      baseline=(-1.1,-0.9),
+                                      mode='mean', 
                                       colorbar=cbar,
                                       picks=picks, 
                                       combine='mean', 
                                       title=title, 
-                                      vmax=vmax, 
-                                      vmin=vmin, 
+                                      #vmax=vmax, 
+                                      #vmin=vmin, 
                                       cmap=cmap)
         ytick_range = ax.get_ylim()
         ytick_vals = np.arange(*np.round(ytick_range), 2)
@@ -263,7 +265,7 @@ def get_condition_pwrdiff_df(factor, cond_dict, sub_list_str):
                                                 config.chans_CDA_dict['Ipsi']) for 
                 tfr in tfr_list]
 
-        frqs_idx = [(8 <= diffs_[0].freqs) & (diffs_[0].freqs <= 12)]
+        frqs_idx = [(8 <= diffs_[0].freqs) & (diffs_[0].freqs <= 13)]
         diffs_mean = [d.data[:, frqs_idx[0], :].mean(axis=(0, 1)) for d in diffs_]
         plt_df = pd.DataFrame(np.array(diffs_mean).swapaxes(1, 0),
                               columns=sub_list_str)
@@ -510,6 +512,9 @@ plot_line_dectfr(scores_avg, conditions, times)
 
 #%%###########################################################################################
 # Plot TF diag per hemisphere across all conditions:
+plt.rcParams['svg.fonttype'] = 'none'
+plt.rcParams["legend.loc"] = 'upper left'
+plt.rcParams['font.size'] = 18
 for side in ['Contra', 'Ipsi']:
     fig, ax = plt.subplots(1, figsize=(6,4))
     tf_contra = plot_tfr_side(ax, grand_avgtfr_all, picks=config.chans_CDA_dict[side], 
@@ -519,8 +524,8 @@ for side in ['Contra', 'Ipsi']:
     # Save it: 
     fpath = op.join(config.path_plots, 'TFR', part_epo)
     helpers.chkmk_dir(fpath)
-    fname = op.join(fpath, f'grandavgTFR_{side}.png')
-    # fig.savefig(fname, bbox_inches="tight")
+    fname = op.join(fpath, f'grandavgTFR_{side}.svg')
+    fig.savefig(fname, bbox_inches="tight")
 ##############################################################################################
 ##############################################################################################
 
@@ -539,7 +544,7 @@ tf_contra = plot_tfr_side(ax, diff_avgtfr_all, picks='all',
 # Save it: 
 fpath = op.join(config.path_plots, 'TFR', part_epo)
 helpers.chkmk_dir(fpath)
-fname = op.join(fpath, f'grandavgTFR_Difference.png')
+fname = op.join(fpath, f'grandavgTFR_Difference.svg')
 fig.savefig(fname, bbox_inches="tight")
 
 # Create version with red box around classical alpha range (8-12Hz):
@@ -549,7 +554,7 @@ ax.add_patch(rect)
 # Save it: 
 fpath = op.join(config.path_plots, 'TFR', part_epo)
 helpers.chkmk_dir(fpath)
-fname = op.join(fpath, f'grandavgTFR_Difference_classAlpha.png')
+fname = op.join(fpath, f'grandavgTFR_Difference_classAlpha.svg')
 fig.savefig(fname, bbox_inches="tight")
 ##############################################################################################
 ##############################################################################################
@@ -586,8 +591,8 @@ fig.savefig(fname, bbox_inches="tight")
 ##############################################################################################
 
 
-#%% Extract standard alpha (8-12Hz):
-frqs_idx = [(8 <= diffs_avgtfr_all[0].freqs) & (diffs_avgtfr_all[0].freqs <= 12)]
+#%% Extract standard alpha (8-13Hz):
+frqs_idx = [(8 <= diffs_avgtfr_all[0].freqs) & (diffs_avgtfr_all[0].freqs <= 13)]
 diffs_stdalpha_mean = [d.data[:, :, :].mean(axis=(0,1)) for d in diffs_avgtfr_all]
 
 ##############################################################################################
@@ -682,7 +687,7 @@ mean_pwrdiff_all_df.to_csv(fname, index=False)
 load_df_long = get_condition_pwrdiff_df('Load', cond_dict, sub_list_str)
 ecc_df_long = get_condition_pwrdiff_df('Ecc', cond_dict, sub_list_str)
 
-
+#%%
 #Plot main effect Load:
 fig, ax = plt.subplots(1, figsize=(12,4))
 plot_main_eff('Load', cond_dict, load_df_long, ax)
@@ -691,7 +696,7 @@ ax.legend(title='Size Memory Array', labels=['2', '4'], loc=1, prop={'size': 9})
 # Save it: 
 fpath = op.join(config.path_plots, 'TFR', part_epo)
 helpers.chkmk_dir(fpath)
-fname = op.join(fpath, 'mainEff_load.png')
+fname = op.join(fpath, 'mainEff_load.svg')
 fig.savefig(fname, bbox_inches="tight")
 
 # Plot main effect Ecc:
@@ -703,7 +708,7 @@ ax.legend(title='Eccentricity', labels=['4°', '9°', '14°'],
 # Save it: 
 fpath = op.join(config.path_plots, 'TFR', part_epo)
 helpers.chkmk_dir(fpath)
-fname = op.join(fpath, 'mainEff_ecc.png')
+fname = op.join(fpath, 'mainEff_ecc.svg')
 fig.savefig(fname, bbox_inches="tight")
 
 ##############################################################################################
