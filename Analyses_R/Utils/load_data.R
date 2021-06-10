@@ -29,34 +29,35 @@ data_behav <- data_full %>%
 
 
 # Filter out trials in which a (large) saccade was detected:
-# TODO: implement also for perception block
 
-block_style = 'experiment'
-
-path_ET_rej_trials <- file.path(path_global, 
-                                'Data', 
-                                'DataMNE', 
-                                'EEG', 
-                                '05.1_rejepo', 
+path_ET_rej_trials <- file.path(path_r_data,
                                 'CSV_rejEpos_ET')
-files <- list.files(path_ET_rej_trials)
 
-rej_epos_per_sub <- list()
-for (file in files) {
-  sub_id <- str_split(file, '-')[[1]][1]
-  fpath <- file.path(path_ET_rej_trials, file)
-  # Extracted trial numbers of the to-be-rejected trials are indices relative to the task 
-  # (perception: 1-72, vSTM-task=='experiment': 1:720).
-  # `trial_num`in `data_behav` are indices relative to all trials incl. training (1:812).
-  # We need to add an offset to compensate for earlier trials in the exp (training trials, trials in perception task):
-  trial_num_offset <- if_else(block_style == 'experiment', 92, 10)
-  rej_epos <- read_csv(fpath, col_names='trial_num') %>% 
-    mutate(trial_num = trial_num + trial_num_offset)
-  rej_epos_per_sub[[sub_id]] <- rej_epos
+for (block_style in c('perception', 'experiment')) {
+                             
+  files <- list.files(file.path(path_ET_rej_trials, block_style))
+  
+  rej_epos_per_sub <- list()
+  for (file in files) {
+    sub_id <- str_split(file, '-')[[1]][1]
+    fpath <- file.path(path_ET_rej_trials, block_style, file)
+    # Extracted trial numbers of the to-be-rejected trials are indices relative to the task 
+    # (perception: 1-72, vSTM-task=='experiment': 1:720).
+    # `trial_num`in `data_behav` are indices relative to all trials incl. training (1:812).
+    # We need to add an offset to compensate for earlier trials in the exp (training trials, trials in perception task):
+    trial_num_offset <- if_else(block_style == 'experiment', 92, 10)
+    rej_epos <- read_csv(fpath, col_names='trial_num') 
+    if (nrow(rej_epos) == 0) { next }
+    rej_epos <- rej_epos %>% 
+      mutate(trial_num = trial_num + trial_num_offset)
+    rej_epos_per_sub[[sub_id]] <- rej_epos
+  }
+  rej_epos_df <- bind_rows(rej_epos_per_sub, .id='ppid') %>% mutate(BlockStyle = block_style) 
+  
+  data_behav <- anti_join(data_behav, rej_epos_df, by = c('ppid', 'trial_num', 'BlockStyle'))
 }
-rej_epos_df <- bind_rows(rej_epos_per_sub, .id='ppid') %>% mutate(BlockStyle = block_style) 
 
-data_behav <- anti_join(data_behav, rej_epos_df, by = c('ppid', 'trial_num', 'BlockStyle'))
+
 
 
 

@@ -68,7 +68,7 @@ for (sub_id in sub_ids) {
   # Output dir: 
   path_plots        <- file.path(path_data_sub, 'R_plots')
   path_data_sub_out <- file.path(path_data_sub, 'R_data')
-  path_data_rejepo_out <- file.path(path_data, 'CSV_rejEpos_ET')
+  path_data_rejepo_out <- file.path(path_data, .., 'DataR', 'CSV_rejEpos_ET')
   checkmake_dirs(c(path_plots, path_data_sub_out, path_data_rejepo_out))
   
   blocks <- list.files(path_data_sub)
@@ -740,6 +740,7 @@ for (sub_id in sub_ids) {
   }
   
   # write out info which trials to reject: 
+  # "experiment" block (vSTM task) --> trials which will also be discarded for EEG analysis:
   rej_trials <- sacc_info %>% 
     ungroup() %>% 
     filter(block != "Block2", 
@@ -751,7 +752,20 @@ for (sub_id in sub_ids) {
   
   rej_trials <- unique(rej_trials)
   fname <- file.path(path_data_rejepo_out, 
+                     'experiment',
                      str_c(sub_id, '-rejTrials-ET.csv'))
   write_csv2(rej_trials, fname, col_names = F)
   
+  # "perception" block --> rejected for behavioral analysis (no EEG data)
+  rej_trials <- sacc_info %>% 
+    ungroup() %>% 
+    filter(block == "Block2", 
+           reject_eeg == TRUE) %>% 
+    select(trial) 
+  
+  rej_trials <- unique(rej_trials)
+  fname <- file.path(path_data_rejepo_out, 
+                     'perception',
+                     str_c(sub_id, '-rejTrials-ET-perception.csv'))
+  write_csv2(rej_trials, fname, col_names = F)
 }
