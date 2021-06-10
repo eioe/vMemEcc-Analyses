@@ -27,7 +27,12 @@ data_behav <- data_full %>%
          c_ResponseTime, 
          BlockStyle)
 
-# Filter rout trials in which a (large) saccade was detected:
+
+# Filter out trials in which a (large) saccade was detected:
+# TODO: implement also for perception block
+
+block_style = 'experiment'
+
 path_ET_rej_trials <- file.path(path_global, 
                                 'Data', 
                                 'DataMNE', 
@@ -40,18 +45,19 @@ rej_epos_per_sub <- list()
 for (file in files) {
   sub_id <- str_split(file, '-')[[1]][1]
   fpath <- file.path(path_ET_rej_trials, file)
-  rej_epos <- read_csv(fpath, col_names='trial_num')
+  # Extracted trial numbers of the to-be-rejected trials are indices relative to the task 
+  # (perception: 1-72, vSTM-task=='experiment': 1:720).
+  # `trial_num`in `data_behav` are indices relative to all trials incl. training (1:812).
+  # We need to add an offset to compensate for earlier trials in the exp (training trials, trials in perception task):
+  trial_num_offset <- if_else(block_style == 'experiment', 92, 10)
+  rej_epos <- read_csv(fpath, col_names='trial_num') %>% 
+    mutate(trial_num = trial_num + trial_num_offset)
   rej_epos_per_sub[[sub_id]] <- rej_epos
 }
+rej_epos_df <- bind_rows(rej_epos_per_sub, .id='ppid') %>% mutate(BlockStyle = block_style) 
 
-rej_epos_df <- bind_rows(rej_epos_per_sub, .id='ppid') %>%  
-  mutate('ET_sacc_detected'=TRUE, BlockStyle = 'experiment')
+data_behav <- anti_join(data_behav, rej_epos_df, by = c('ppid', 'trial_num', 'BlockStyle'))
 
-
-data_behav <- left_join(data_behav, rej_epos_df, by = c('ppid', 'trial_num')) %>% 
-  mutate(ET_sacc_detected = if_else(is.na(ET_sacc_detected), FALSE, TRUE)) %>% 
-  filter(!ET_sacc_detected) %>% 
-  select(!ET_sacc_detected)
 
 
 ##-----------------------------------------------------------------------
