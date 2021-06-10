@@ -21,12 +21,12 @@ Loads packages, custom functions, custom themes, and data.
 Data is made availbale in the workspace as data frame `data_behav`.  
 
 * **ppid** (chr): subject id (e.g., "VME_S09")
-* **trial_num**: index of the trial in the experiment (includes all trials from all blocks; also training)
+* **trial_num** (num): index of the trial in the experiment (includes all trials from all blocks; also training)
     "perception" block: 11-82  
     vSTM block ("experiment"): 93-812  
-* **block_num**: index of the block 
-* **c_StimN**: number of memory items (2 or 4)  
-* **c_Ecc**: stimulus eccentricity (4, 9, 14)  
+* **block_num** (num): index of the block 
+* **c_StimN** (num): number of memory items (2 or 4)  
+* **c_Ecc** (num): stimulus eccentricity (4, 9, 14)  
 * **c_ResponseCorrect** (logi): correctness of response in this trial  
 * **c_ResponseTime** (num): RT  
 * **BlockStyle** (chr): denotes if trial was in "perception" or vSTM ("experiment") block  

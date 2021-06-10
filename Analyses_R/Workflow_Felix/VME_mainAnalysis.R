@@ -12,6 +12,9 @@ path_r_data       <- file.path(path_global, 'Data/DataR')
 path_scripts_sven <- file.path(here('Workflow_Sven', 
                                     'osf_experiment1', 
                                     '_RScripts'))
+path_extracted_vars <- file.path(path_global, 'Writing', 
+                             'Other', 
+                             'VME_extracted_vars.json')
 
 #--------------------------------------------------------------------------
 ## load packages
@@ -103,4 +106,4 @@ func_analysis_05()
 ##                  mean alpha power in the VSTM task?
 ##                  ANOVA & post hoc t test
 
-func_analysis_06()
+# func_analysis_06()
