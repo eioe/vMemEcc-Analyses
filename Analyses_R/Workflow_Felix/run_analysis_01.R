@@ -44,11 +44,14 @@ func_analysis_01 <- function(condition) {
   
   # main effect Eccentricity:
   res_ttest <- c1.aov %>% 
+    group_by(ppid, c_Ecc) %>% 
+    summarise(meanAcc = mean(meanAcc)) %>% 
+    ungroup() %>% 
     pairwise_t_test(
       meanAcc ~ c_Ecc, paired = TRUE, 
       p.adjust.method = "bonferroni"
     )
-  
+
   print_header(str_c('Results post-hoc t test\ntask: ', condition))
   print(res_ttest)
   #--------------------------------------------------------------------------
