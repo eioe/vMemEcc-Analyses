@@ -17,7 +17,22 @@ knitr::opts_chunk$set(echo = TRUE)
 This file prints relevant statistics and plots of the vMemEcc manuscript. Please note, analyses and plots produced in Python are not included here - but in a separate notebook.
 
 ## Init workspace
-```{r init, message=FALSE, warning=FALSE, echo=FALSE}
+Loads packages, custom functions, custom themes, and data. 
+Data is made availbale in the workspace as data frame `data_behav`.  
+
+* **ppid** (chr): subject id (e.g., "VME_S09")
+* **trial_num**: index of the trial in the experiment (includes all trials from all blocks; also training)
+    "perception" block: 11-82  
+    vSTM block ("experiment"): 93-812  
+* **block_num**: index of the block 
+* **c_StimN**: number of memory items (2 or 4)  
+* **c_Ecc**: stimulus eccentricity (4, 9, 14)  
+* **c_ResponseCorrect** (logi): correctness of response in this trial  
+* **c_ResponseTime** (num): RT  
+* **BlockStyle** (chr): denotes if trial was in "perception" or vSTM ("experiment") block  
+  
+
+```{r init, message=FALSE, warning=FALSE, echo=TRUE}
 
 #--------------------------------------------------------------------------
 # Run main script for analysis for:
