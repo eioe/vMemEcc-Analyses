@@ -145,7 +145,7 @@ def get_sensordata(subID, part_epo, signaltype, conditions, event_dict, picks_st
 
 
 def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc', 
-           min_freq=6, max_freq=26, n_freqs=10, pwr_style = '',
+           min_freq=6, max_freq=26, n_freqs=10,
            shuffle_labels = False, save_scores = True, save_csp_patterns = True, 
            overwrite = False, part_epo = 'stimon', signaltype='collapsed', picks_str=None):
     """Apply CSP and LDA to perform binary classification from (the power) of epoched data.
@@ -177,9 +177,6 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc',
         Upper bound of highest freq band to be used (default: 26)
     n_freqs: 
         Number of freq bands that the interval between min_freq and max_freq is split into (default: 10)
-    pwr_style: 
-        If set to 'induced', calculate induced power. Otherwise nothing happens. 
-        Saves induced power to separate subfolder.
     shuffle_labels: bool
         Shuffle the labels to produce a null distribution.
     save_scores: bool, optional
@@ -259,10 +256,6 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc',
         print(f'Running {subID}')
 
         X_epos, y, t = get_sensordata(subID, part_epo, signaltype, conditions, event_dict, picks_str)
-        
-        if pwr_style == 'induced':
-            X_epos = X_epos.subtract_evoked()
-        
         n_channels = len(X_epos.ch_names)
         # init scores
         tf_scores = np.zeros((n_freqs, n_windows))
@@ -279,7 +272,7 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc',
                 w_size = n_cycles / ((fmax + fmin) / 2.)  # in seconds
 
             # Apply band-pass filter to isolate the specified frequencies
-            X_epos_filter = X_epos.copy().filter(fmin, fmax, n_jobs=1, fir_design='firwin')
+            X_epos_filter = X_epos.copy().filter(fmin, fmax, n_jobs=-2, fir_design='firwin')
 
             # Roll covariance, csp and lda over time
             for t, w_time in enumerate(centered_w_times):
@@ -356,9 +349,9 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc',
             else:
                 picks_str_folder = ''
             
-            fpath = op.join(config.path_decod_tfr, pwr_style, part_epo, signaltype, contrast_str, scoring, reg_str, picks_str_folder, shuf_labs, sub_folder)
+            fpath = op.join(config.path_decod_tfr, part_epo, signaltype, contrast_str, scoring, reg_str, picks_str_folder, shuf_labs, sub_folder)
             if (op.exists(fpath) and not overwrite):
-                path_save = op.join(config.path_decod_tfr, pwr_style, part_epo, signaltype, contrast_str + datetime_str, scoring, reg_str, picks_str_folder, shuf_labs, 
+                path_save = op.join(config.path_decod_tfr, part_epo, signaltype, contrast_str + datetime_str, scoring, reg_str, picks_str_folder, shuf_labs, 
                                    sub_folder + datetime_str)
             else:
                 path_save = fpath
@@ -559,15 +552,11 @@ warnings.filterwarnings('ignore')
 #                shuffle_labels=shuf_labels_bool, overwrite=True)
 
 
-## Decode 
-_ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, pwr_style = 'induced', reps=50, scoring='roc_auc', 
-           shuffle_labels=False, overwrite=False)
 
+# Decode from single hemispheres:
 
-## Decode from single hemispheres:
+_ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
+           shuffle_labels=False, overwrite=True, picks_str='Left', min_freq=8, max_freq=14, n_freqs=1)
 
-# _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
-#            shuffle_labels=False, overwrite=True, picks_str='Left', min_freq=8, max_freq=14, n_freqs=1)
-
-# _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
-#            shuffle_labels=False, overwrite=True, picks_str='Right', min_freq=8, max_freq=14, n_freqs=1)
+_ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
+           shuffle_labels=False, overwrite=True, picks_str='Right', min_freq=8, max_freq=14, n_freqs=1)

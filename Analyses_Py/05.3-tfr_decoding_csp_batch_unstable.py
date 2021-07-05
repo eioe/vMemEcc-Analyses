@@ -145,7 +145,7 @@ def get_sensordata(subID, part_epo, signaltype, conditions, event_dict, picks_st
 
 
 def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc', 
-           min_freq=6, max_freq=26, n_freqs=10, pwr_style = '',
+           min_freq=6, max_freq=26, n_freqs=10,
            shuffle_labels = False, save_scores = True, save_csp_patterns = True, 
            overwrite = False, part_epo = 'stimon', signaltype='collapsed', picks_str=None):
     """Apply CSP and LDA to perform binary classification from (the power) of epoched data.
@@ -177,9 +177,6 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc',
         Upper bound of highest freq band to be used (default: 26)
     n_freqs: 
         Number of freq bands that the interval between min_freq and max_freq is split into (default: 10)
-    pwr_style: 
-        If set to 'induced', calculate induced power. Otherwise nothing happens. 
-        Saves induced power to separate subfolder.
     shuffle_labels: bool
         Shuffle the labels to produce a null distribution.
     save_scores: bool, optional
@@ -221,16 +218,16 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc',
     n_cycles = None  # how many complete cycles: used to define window size
     w_size = 0.5
     w_overlap = 0.5 # how much shall the windows overlap [value in [0,1]; 0: no overlap, 1: full overlap]
-    min_freq = min_freq
-    max_freq = max_freq
-    n_freqs = n_freqs  # how many frequency bins to use
+    fmin = min_freq
+    fmax = max_freq
+#     n_freqs = n_freqs  # how many frequency bins to use
 
-    # Get datetime identifier for uniqure folder names (if not overwriting):
-    datetime_str = datetime.today().strftime('%Y-%m-%d-%H-%M')
+#     # Get datetime identifier for uniqure folder names (if not overwriting):
+#     datetime_str = datetime.today().strftime('%Y-%m-%d-%H-%M')
 
-    # Assemble list of frequency range tuples
-    freqs = np.linspace(min_freq, max_freq, n_freqs + 1)  # assemble frequencies
-    freq_ranges = list(zip(freqs[:-1], freqs[1:]))  # make freqs list of tuples# Setup list of seeds for the repetitions:
+#     # Assemble list of frequency range tuples
+#     freqs = np.linspace(min_freq, max_freq, n_freqs + 1)  # assemble frequencies
+#     freq_ranges = list(zip(freqs[:-1], freqs[1:]))  # make freqs list of tuples# Setup list of seeds for the repetitions:
     
     # Setup list of seeds for the repetitions:
     np.random.seed(seed=42)
@@ -252,6 +249,7 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc',
 
     tf_scores_list = list()
     tf_patterns_list = list()
+    
     completed_subs = list()
     for subID in sub_list_str:
         part_epo = part_epo
@@ -259,54 +257,49 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc',
         print(f'Running {subID}')
 
         X_epos, y, t = get_sensordata(subID, part_epo, signaltype, conditions, event_dict, picks_str)
-        
-        if pwr_style == 'induced':
-            X_epos = X_epos.subtract_evoked()
-        
         n_channels = len(X_epos.ch_names)
         # init scores
-        tf_scores = np.zeros((n_freqs, n_windows))
-        tf_scores_tmp = np.zeros((reps, n_freqs, n_windows))
-        tf_patterns = np.zeros((n_components, n_channels, n_freqs, n_windows))
+        tf_scores = np.zeros(n_windows)
+        tf_x_arr = np.zeros((X_epos.shape[0], X_epos.shape[1], w_size * X_epos.info['sfreq'], n_windows))
+        tf_scores_tmp = np.zeros((reps, n_windows))
+        tf_patterns = np.zeros((n_components, n_channels, n_windows))
 
-        # Loop through each frequency range of interest
-        for freq, (fmin, fmax) in enumerate(freq_ranges):
 
-            print(f'Freq. {freq} of {len(freq_ranges)}')
-
-            if (w_size is None):
+        if (w_size is None):
                 # Infer window size based on the frequency being used (default behavuior is to use a fixed w_size)
-                w_size = n_cycles / ((fmax + fmin) / 2.)  # in seconds
+            w_size = n_cycles / ((fmax + fmin) / 2.)  # in seconds
 
-            # Apply band-pass filter to isolate the specified frequencies
-            X_epos_filter = X_epos.copy().filter(fmin, fmax, n_jobs=1, fir_design='firwin')
+        # Apply band-pass filter to isolate the specified frequencies
+        X_epos_filter = X_epos.copy().filter(fmin, fmax, n_jobs=-2, fir_design='firwin')
 
-            # Roll covariance, csp and lda over time
-            for t, w_time in enumerate(centered_w_times):
+        # Roll covariance, csp and lda over time
+        for t, w_time in enumerate(centered_w_times):
 
-                # Center the min and max of the window
-                w_tmin = w_time - w_size / 2.
-                w_tmax = w_time + w_size / 2.
+            # Center the min and max of the window
+            w_tmin = w_time - w_size / 2.
+            w_tmax = w_time + w_size / 2.
 
-                # Crop data into time-window of interest
-                X = X_epos_filter.copy().crop(w_tmin, w_tmax).get_data()
+            # Crop data into time-window of interest
+            X = X_epos_filter.copy().crop(w_tmin, w_tmax).get_data()
+            tf_x_arr[:,:,:,t] = X
                 
-                # Run repeated CV to estimate decoding score:
-                for rep, rand_state in enumerate(rep_seeds):
-                    cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=rand_state)
 
-                    if shuffle_labels:
-                        np.random.seed(rand_state)
-                        np.random.shuffle(y)
-                    # Save mean scores over folds for each frequency and time window for this repetition
-                    tf_scores_tmp[rep, freq, t] = np.mean(cross_val_score(estimator=clf, X=X, y=y,
-                                                                          scoring=scoring, cv=cv,
-                                                                          n_jobs=-2), axis=0)
-                if save_csp_patterns:
-                    # get CSP patterns - fitted to all data:
-                    csp.fit(X, y)
-                    patterns_ = getattr(csp, 'patterns_')
-                    tf_patterns[:, :, freq, t] = patterns_[:n_components, :]
+#                 # Run repeated CV to estimate decoding score:
+#                 for rep, rand_state in enumerate(rep_seeds):
+#                     cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=rand_state)
+
+#                     if shuffle_labels:
+#                         np.random.seed(rand_state)
+#                         np.random.shuffle(y)
+#                     # Save mean scores over folds for each frequency and time window for this repetition
+#                     tf_scores_tmp[rep, freq, t] = np.mean(cross_val_score(estimator=clf, X=X, y=y,
+#                                                                           scoring=scoring, cv=cv,
+#                                                                           n_jobs=-2), axis=0)
+#             if save_csp_patterns:
+#                 # get CSP patterns - fitted to all data:
+#                 csp.fit(X, y)
+#                 patterns_ = getattr(csp, 'patterns_')
+#                 tf_patterns[:, :, freq, t] = patterns_[:n_components, :]
                 
         tf_scores = tf_scores_tmp # , axis=0)        
         tf_scores_list.append(tf_scores)
@@ -356,9 +349,9 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc',
             else:
                 picks_str_folder = ''
             
-            fpath = op.join(config.path_decod_tfr, pwr_style, part_epo, signaltype, contrast_str, scoring, reg_str, picks_str_folder, shuf_labs, sub_folder)
+            fpath = op.join(config.path_decod_tfr, part_epo, signaltype, contrast_str, scoring, reg_str, picks_str_folder, shuf_labs, sub_folder)
             if (op.exists(fpath) and not overwrite):
-                path_save = op.join(config.path_decod_tfr, pwr_style, part_epo, signaltype, contrast_str + datetime_str, scoring, reg_str, picks_str_folder, shuf_labs, 
+                path_save = op.join(config.path_decod_tfr, part_epo, signaltype, contrast_str + datetime_str, scoring, reg_str, picks_str_folder, shuf_labs, 
                                    sub_folder + datetime_str)
             else:
                 path_save = fpath
@@ -559,15 +552,11 @@ warnings.filterwarnings('ignore')
 #                shuffle_labels=shuf_labels_bool, overwrite=True)
 
 
-## Decode 
-_ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, pwr_style = 'induced', reps=50, scoring='roc_auc', 
-           shuffle_labels=False, overwrite=False)
 
+# Decode from single hemispheres:
 
-## Decode from single hemispheres:
+_ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
+           shuffle_labels=False, overwrite=True, picks_str='Left', min_freq=8, max_freq=14, n_freqs=1)
 
-# _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
-#            shuffle_labels=False, overwrite=True, picks_str='Left', min_freq=8, max_freq=14, n_freqs=1)
-
-# _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
-#            shuffle_labels=False, overwrite=True, picks_str='Right', min_freq=8, max_freq=14, n_freqs=1)
+_ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
+           shuffle_labels=False, overwrite=True, picks_str='Right', min_freq=8, max_freq=14, n_freqs=1)
