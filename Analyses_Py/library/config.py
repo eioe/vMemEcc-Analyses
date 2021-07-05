@@ -97,6 +97,9 @@ n_subjects_total = 27
 ids_missing_subjects = [11, 14, 19]
 ids_excluded_subjects = [7, 12, 22]
 
+# font sizes:
+plt_label_size = 18
+
 # colors: 
 #"#66C2A5" "#3288BD"
 

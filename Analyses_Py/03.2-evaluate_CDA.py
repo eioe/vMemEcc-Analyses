@@ -281,30 +281,34 @@ def plot_main_effect_load(ax):
                                 truncate_yaxis=False, 
                                 truncate_xaxis=False
                                 )
-    ax.legend(loc=1, prop={'size': 9}, title='Size Memory Array')
+    ax.legend(loc=1, prop={'size': config.plt_label_size},
+              title='Size Memory Array',
+              labels=['2 items', '4 items'])
     ax.axvspan(0, 0.2, color='grey', alpha=0.3)
     ax.axvspan(2.2, 2.3, color='grey', alpha=0.3)
     # ax.vlines([0,0.2,2.2], *[-1.5,1.5], linestyles='--', colors='k',
     #             linewidth=1., zorder=1)
     ax.set_aspect(0.25)
     ax.set_title('')
-    ax.xaxis.label.set_size(9)
-    ax.yaxis.label.set_size(9)
-    plt.xticks(fontsize=9)
+    ax.set_ylabel('CDA amplitude (' + chr(956) + 'V)')
+    ax.xaxis.label.set_size(config.plt_label_size)
+    ax.yaxis.label.set_size(config.plt_label_size)
+    plt.xticks(fontsize=config.plt_label_size)
+    plt.yticks(fontsize=config.plt_label_size)
 
 
 # Plot main eefect load:
-plt.subplots(1,1,figsize=(12,4))
-ax = plt.axes()
+fig, ax = plt.subplots(1,1,figsize=(12,4))
+#  ax = plt.axes()
 
 plot_main_effect_load(ax)
 #plt.show()
 
 # Save it: 
-fpath = op.join(config.path_plots, 'CDA', part_epo)
+fpath = op.join(config.path_plots, 'CDA', epo_part)
 helpers.chkmk_dir(fpath)
-fname = op.join(fpath, 'mainEff_load.png')
-plt.savefig(fname, bbox_inches="tight")
+fname = op.join(fpath, 'mainEff_load.svg')
+fig.savefig(fname, bbox_inches="tight")
 ################################################################
 # Main effect load:
 
@@ -325,29 +329,33 @@ def plot_main_effect_ecc(ax):
                                 truncate_yaxis=False, 
                                 truncate_xaxis=False
                                 )
-    ax.legend(loc=1, prop={'size': 9}, title='Eccentricity', ncol=3)
+    ax.legend(loc=1, prop={'size': config.plt_label_size}, 
+              title='Eccentricity', ncol=3)
     ax.axvspan(0, 0.2, color='grey', alpha=0.3)
     ax.axvspan(2.2, 2.3, color='grey', alpha=0.3)
     # ax.vlines([0,0.2,2.2], *[-1.5,1.5], linestyles='--', colors='k',
     #             linewidth=1., zorder=1)
     ax.set_aspect(0.25)
     ax.set_title('')
-    ax.xaxis.label.set_size(9)
-    ax.yaxis.label.set_size(9)
-    plt.xticks(fontsize=9)
+    ax.set_ylabel('CDA amplitude (' + chr(956) + 'V)')
+    ax.xaxis.label.set_size(config.plt_label_size)
+    ax.yaxis.label.set_size(config.plt_label_size)
+    plt.xticks(fontsize=config.plt_label_size)
+    plt.yticks(fontsize=config.plt_label_size)
 
 # plot main effect ecc: 
-plt.subplots(1,1,figsize=(12,4))
+fig, ax = plt.subplots(1,1,figsize=(12,4))
 ax = plt.axes()
 
 plot_main_effect_ecc(ax)
+fig.show()
 plt.show()
 
 # Save it: 
-fpath = op.join(config.path_plots, 'CDA', part_epo)
+fpath = op.join(config.path_plots, 'CDA', epo_part)
 helpers.chkmk_dir(fpath)
-fname = op.join(fpath, 'mainEff_ecc.png')
-plt.savefig(fname, bbox_inches="tight")
+fname = op.join(fpath, 'mainEff_ecc.svg')
+fig.savefig(fname, bbox_inches="tight")
 
 
 
