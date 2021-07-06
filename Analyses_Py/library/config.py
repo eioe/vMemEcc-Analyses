@@ -26,6 +26,8 @@ else:
     # running interactively:
     path_study = Path(os.getcwd()).parents[1]
 #path_study = os.path.join(path_study, 'Experiments', 'vMemEcc')
+path_extracted_vars = op.join(path_study, 'Writing', 'Other',
+                              'VME_extracted_vars.json')
 path_data = os.path.join(path_study, 'Data')
 path_postICA = op.join(path_data, 'DataMNE', 'EEG', '05.3_rejICA')
 path_rejepo = op.join(path_data, 'DataMNE', 'EEG', '05.1_rejepo')
