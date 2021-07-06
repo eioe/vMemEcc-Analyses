@@ -182,7 +182,8 @@ def write_mean_cda_amplitude_per_trial(epo_part, sub_list, cluster_times):
     df_all_sub.to_csv(fname, index=False)
                  
 
-sub_list = np.setdiff1d(np.arange(1,28), config.ids_missing_subjects + config.ids_excluded_subjects)
+sub_list = np.setdiff1d(np.arange(1, 28), config.ids_missing_subjects +
+                        config.ids_excluded_subjects)
 
 epo_part = 'stimon'  #in ['stimon']:
 

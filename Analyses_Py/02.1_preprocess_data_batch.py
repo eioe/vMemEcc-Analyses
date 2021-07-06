@@ -244,7 +244,7 @@ for subsub in sub_list:
         rej_epos.append(str(n_rej_epo))
     fname_ar_rejsummary = op.join(config.path_autoreject_logs, 'ar_reject_summary.csv')
     with open(fname_ar_rejsummary, 'a+') as f:
-        f.write(subsub + ';' + ';'.join(rej_epos))
+        f.write(subsub + ';' + ';'.join(rej_epos) + '\n')
 
 
     # Save results: 
