@@ -11,9 +11,10 @@ func_analysis_06 <- function() {
   
   condition <- "experiment"  #Only EEG data for VSTM task. 
   
-  c1.aov <- data_alpha %>% 
+  c1.aov <- data_behav %>% 
+    filter(BlockStyle == 'experiment') %>% 
     group_by(ppid, c_StimN, c_Ecc) %>%   
-    summarise(meanAlpha = mean(alpha_pwr)) %>% 
+    summarise(meanAlpha = mean(alphapwr_diff_retent, na.rm=TRUE)) %>% 
     ungroup() %>% 
     select("meanAlpha", "c_StimN", "c_Ecc", "ppid") 
   
@@ -46,6 +47,9 @@ func_analysis_06 <- function() {
   
   # main effect Eccentricity:
   res_ttest <- c1.aov %>% 
+    group_by(ppid, c_Ecc) %>% 
+    summarise(meanAlpha = mean(meanAlpha)) %>% 
+    ungroup() %>% 
     pairwise_t_test(
       meanAlpha ~ c_Ecc, paired = TRUE, 
       p.adjust.method = "bonferroni"

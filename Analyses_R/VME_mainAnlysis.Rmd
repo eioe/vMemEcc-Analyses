@@ -30,6 +30,9 @@ Data is made availbale in the workspace as data frame `data_behav`.
 * **c_ResponseCorrect** (logi): correctness of response in this trial  
 * **c_ResponseTime** (num): RT  
 * **BlockStyle** (chr): denotes if trial was in "perception" or vSTM ("experiment") block  
+* **CDA_amp** (num): avg. CDA amplitude in this trial (see paper for spec. of ROI and time window)
+* **PNP_amp** (num): avg. PNP amplitude in this trial (see paper for spec. of ROI and time window)
+* **alphapwr_diff_retent** (num): avg. lateralized alpha power in this trial (see paper for spec. of freq. band, ROI and time window)
   
 
 ```{r init, message=FALSE, warning=FALSE, echo=TRUE}
@@ -51,6 +54,9 @@ path_r_data       <- file.path(path_global, 'Data/DataR')
 path_scripts_sven <- file.path(here('Workflow_Sven', 
                                     'osf_experiment1', 
                                     '_RScripts'))
+path_extracted_vars <- file.path(path_global, 'Writing', 
+                             'Other', 
+                             'VME_extracted_vars.json')
 
 #--------------------------------------------------------------------------
 ## load packages
@@ -82,8 +88,49 @@ source(file.path(here('Utils', 'load_data.R')))
 #--------------------------------------------------------------------------
 ```
 
+## Summary stats: 
+**Extract relevants descriptives about the data set.**
+```{r, desc stats}
+# Total number of experimental trials (720 x n):
+
+n_rej_subs <- 3
+print(str_glue("N rejected subjects: {n_rej_subs}"))
+n_subs_analyzed <- length(unique(data_behav$ppid))
+n_tot_trials <- 720 * (n_subs_analyzed + n_rej_subs)
+n_tot_trials_prerej <- 720 * n_subs_analyzed
+print(str_glue("Total number of recorded experimental trials (720 x {n_subs_analyzed + n_rej_subs}): {n_tot_trials_prerej}"))
+print(str_glue("Total number of experimental trials after subject rejection (720 x {n_subs_analyzed}): {n_tot_trials_prerej}"))
+n_tot_trials_postrej <- data_behav %>% filter(BlockStyle == 'experiment') %>%  drop_na() %>% nrow()
+print(str_glue("Total number of trials after rejection: {n_tot_trials_postrej}"))
+summary_rem_trials_per_sub <- data_behav %>% 
+  filter(BlockStyle == 'experiment') %>%  
+  drop_na() %>% 
+  group_by(ppid) %>% 
+  summarise(n = n(), 
+            perc = n*100 / 720)
+print(str_glue("Remaining trials per subject (percentage):\n
+       mean: {mean(summary_rem_trials_per_sub$n)} ({format(mean(summary_rem_trials_per_sub$perc), digits=3)}%)
+       range:  {min(summary_rem_trials_per_sub$n)} ({format(min(summary_rem_trials_per_sub$perc), digits=3)}%) - {max(summary_rem_trials_per_sub$n)} ({format(max(summary_rem_trials_per_sub$perc), digits=3)}%)"))
+
+
+extract_var("n_rej_subs", n_rej_subs, exp_format = "%i")
+extract_var("n_tot_trials_prerej_allsubs", 720 * (n_subs_analyzed + n_rej_subs), exp_format = "%i")
+extract_var("n_subs_analyzed", n_subs_analyzed, exp_format = "%i")
+extract_var("n_tot_trials_prerej", n_tot_trials_prerej, exp_format = "%i")
+extract_var("n_tot_trials_postrej", n_tot_trials_postrej, exp_format = "%i")
+extract_var("n_tot_trials_prerej", n_tot_trials_prerej, exp_format = "%i")
+extract_var("avg_n_trials_per_sub_postrej", mean(summary_rem_trials_per_sub$n), exp_format="%.2f")
+extract_var("min_n_trials_per_sub_postrej", min(summary_rem_trials_per_sub$n), exp_format="%i")
+extract_var("max_n_trials_per_sub_postrej", max(summary_rem_trials_per_sub$n), exp_format="%i")
+extract_var("min_perc_trials_per_sub_postrej", min(summary_rem_trials_per_sub$perc), exp_format="%.2f")
+extract_var("max_perc_trials_per_sub_postrej", max(summary_rem_trials_per_sub$perc), exp_format="%.2f")
+
+
+```
+
+
 ## Analysis 01: 
-Is there an effect of workload or eccentricity on performance in the VSTM task and in the perception task?
+**Is there an effect of workload or eccentricity on performance in the VSTM task and in the perception task?**
 
 ### VSTM Task:
 ```{r, message=FALSE, warning=FALSE}
@@ -109,56 +156,91 @@ func_analysis_01('perception')
 ```{r func_analysis_01-source, eval = FALSE}
 ```
 
-#--------------------------------------------------------------------------
-## Run analysis 02: The influence of Memory Load and Eccentricity on 
-##                  change detection performance:
-##                  glmer
 
-# VSTM task:
-func_analysis_02('experiment', 'c_ResponseCorrect')
+## Analysis 01 - supplement: 
+**Is there an effect of workload or eccentricity on RT in the VSTM task and in the perception task?**  
+This analysis was only conducted to exclude that a speed-acc trade-off is taking place. As we did not instruct participants to answer as fast as possible and due to imprecise temporal measurements of RTs with the VR hard- and software, we do not report this analysis in the paper. 
 
-# perceptual Change Detection Task:
-func_analysis_02('perception', 'c_ResponseCorrect')
-
-
-#--------------------------------------------------------------------------
-## Run analysis 03: Is there an effect of workload or eccentricity on 
-##                  RT in the VSTM task and in the perception task?
-##                  ANOVA & post hoc t test
-
+### VSTM Task:
+```{r, message=FALSE, warning=FALSE}
 # VSTM task:
 func_analysis_03('experiment')
+```
 
+### Perception Task:
+```{r, message=FALSE, warning=FALSE}
 # perceptual Change Detection Task:
 func_analysis_03('perception')
+```
 
 
-#--------------------------------------------------------------------------
-## Run analysis 04: The influence of Memory Load and Eccentricity on 
-##                  reaction time:
-##                  glmer
 
-# VSTM task:
-func_analysis_04('experiment', 'c_ResponseTime')
+## Analysis 02: 
+**Is there an effect of workload or eccentricity on mean CDA amplitude in the VSTM task?**
 
-# perceptual Change Detection Task:
-func_analysis_04('perception', 'c_ResponseTime')
-
-
-#--------------------------------------------------------------------------
-## Run analysis 05: Is there an effect of workload or eccentricity on 
-##                  mean CDA amplitude in the VSTM task?
-##                  ANOVA & post hoc t test
-
+### CDA amplitude (rmANOVA):
+```{r, message=FALSE, warning=FALSE}
 func_analysis_05()
+```
+
+_show source:_ 
+```{r, echo=FALSE}
+# Code to chunk:
+insert_fun("func_analysis_05")
+```
+```{r func_analysis_05-source, eval = FALSE}
+```
 
 
-#--------------------------------------------------------------------------
-## Run analysis 06: Is there an effect of workload or eccentricity on 
-##                  mean alpha power in the VSTM task?
-##                  ANOVA & post hoc t test
+### Analysis 02 - Supplement 1: CDA amplitude (lmer):
+A multilevel model confirms the results of the rmANOVA:
 
-# func_analysis_06()
+```{r, message=FALSE, warning=FALSE}
+func_analysis_07('experiment', dep_variable = 'CDA_amp')
+```
+
+_show source:_ 
+```{r, echo=FALSE}
+# Code to chunk:
+insert_fun("func_analysis_07")
+```
+```{r func_analysis_07-source, eval = FALSE}
+```
+
+### Analysis 02 - Supplement 2: PNP amplitude (rmANOVA):
+Testing the effects of _memory load_ and _eccentricity_ on the mean **PNP amplitude** (see [Papaioannou & Luck, 2020](https://onlinelibrary.wiley.com/doi/abs/10.1111/psyp.13532))
+
+```{r, message=FALSE, warning=FALSE}
+func_analysis_09()
+```
+
+
+
+
+## Analysis 03: 
+**Is there an effect of workload or eccentricity on mean lateralized alpha power in the VSTM task?**
+See paper for specifics of parameters re. frequency band, ROI, and time window that were used to calculate mean lateralized power (power **contralaterally - ipsilaterally**)
+
+### lat. alpha power (rmANOVA):
+```{r, message=FALSE, warning=FALSE}
+func_analysis_06()
+```
+
+_show source:_ 
+```{r, echo=FALSE}
+# Code to chunk:
+insert_fun("func_analysis_06")
+```
+```{r func_analysis_06-source, eval = FALSE}
+```
+
+### Analysis 03 - Supplement 1: lat. alpha power (lmer):
+A multilevel model confirms the results of the rmANOVA:
+
+```{r, message=FALSE, warning=FALSE}
+func_analysis_10('experiment', dep_variable = 'alpha_pwr')
+```
+
 
 
 ```

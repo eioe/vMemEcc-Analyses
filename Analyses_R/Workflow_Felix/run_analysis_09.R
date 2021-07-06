@@ -49,6 +49,9 @@ func_analysis_09 <- function() {
   
   # main effect Eccentricity:
   res_ttest <- c1.aov %>% 
+    group_by(ppid, c_Ecc) %>% 
+    summarise(meanPNP = mean(meanPNP)) %>% 
+    ungroup() %>% 
     pairwise_t_test(
       meanPNP ~ c_Ecc, paired = TRUE, 
       p.adjust.method = "bonferroni"

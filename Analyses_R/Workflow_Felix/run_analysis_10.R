@@ -1,5 +1,5 @@
 #--------------------------------------------------------------------------
-# The influence of Memory Load and Eccentricity on CDA mean amplitude
+# The influence of Memory Load and Eccentricity on lateralized alpha power
 #
 #--------------------------------------------------------------------------
 # Set parameters:

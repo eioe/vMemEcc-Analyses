@@ -2,12 +2,19 @@
 #
 #--------------------------------------------------------------------------
 
+#TODO: check that you're not sourcing unneeded stuff
+
 source(file.path(here('Workflow_Felix', 'run_analysis_01.R')))
 source(file.path(here('Workflow_Felix', 'run_analysis_02.R')))
 source(file.path(here('Workflow_Felix', 'run_analysis_03.R')))
 source(file.path(here('Workflow_Felix', 'run_analysis_04.R')))
 source(file.path(here('Workflow_Felix', 'run_analysis_05.R')))
 source(file.path(here('Workflow_Felix', 'run_analysis_06.R')))
+source(file.path(here('Workflow_Felix', 'run_analysis_07.R')))
+source(file.path(here('Workflow_Felix', 'run_analysis_08.R')))
+source(file.path(here('Workflow_Felix', 'run_analysis_09.R')))
+source(file.path(here('Workflow_Felix', 'run_analysis_10.R')))
+source(file.path(here('Workflow_Felix', 'run_analysis_11.R')))
 
 # Define insert_fun:
 # https://stackoverflow.com/questions/32688936/putting-function-definition-after-call-in-r-knitr
@@ -19,7 +26,7 @@ insert_fun <- function(name) {
 library(rjson)
 # Export vars:
 extract_var <- function(var, val, path_ev=path_extracted_vars, overwrite=TRUE, 
-                        rm_leading_zero=FALSE, is_pval=FALSE, exp_format="%.3f") {
+                        rm_leading_zero=FALSE, is_pval=FALSE, exp_format="%.2f") {
   exp_vars <- fromJSON(file = path_ev)
   
   if (is_pval | rm_leading_zero) {
