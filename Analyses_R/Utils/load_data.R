@@ -56,29 +56,31 @@ for (block_style in c('perception', 'experiment')) {
   
   data_behav <- anti_join(data_behav, rej_epos_df, by = c('ppid', 'trial_num', 'BlockStyle'))
   
-  #TODO: check if this shouldn't be better outside of the loop
-  # Export info about rejected trials (ET):
-  n_tot_trials_rej_ET <- rej_epos_df %>% nrow()
-  summary_trials_rej_ET_per_sub <- rej_epos_df %>% filter(!ppid %in% excl_subs) %>% 
-    group_by(ppid) %>% summarise(n = n(), 
-                                 perc = n*100/720)
-  mean_n_trials_rej_ET <- mean(summary_trials_rej_ET_per_sub$n)
-  min_n_trials_rej_ET <- min(summary_trials_rej_ET_per_sub$n)
-  max_n_trials_rej_ET <- max(summary_trials_rej_ET_per_sub$n)
-  mean_perc_trials_rej_ET <- mean(summary_trials_rej_ET_per_sub$perc)
-  min_perc_trials_rej_ET <- min(summary_trials_rej_ET_per_sub$perc)
-  max_perc_trials_rej_ET <- max(summary_trials_rej_ET_per_sub$perc)
   
-  extract_var("mean_n_trials_rej_ET",  mean_n_trials_rej_ET, exp_format="%0.1f")
-  extract_var("min_n_trials_rej_ET", min_n_trials_rej_ET, exp_format="%i")
-  extract_var("max_n_trials_rej_ET", max_n_trials_rej_ET, exp_format="%i")
-  extract_var("mean_perc_trials_rej_ET", mean_perc_trials_rej_ET, exp_format="%0.1f")
-  extract_var("min_perc_trials_rej_ET", min_perc_trials_rej_ET, exp_format="%0.1f")
-  extract_var("max_perc_trials_rej_ET", max_perc_trials_rej_ET, exp_format="%0.1f")
+  # Export info about rejected trials (ET) in vSTM block:
+  if (block_style == 'experiment') {
       
+    n_tot_trials_rej_ET <- rej_epos_df %>% nrow()
+    summary_trials_rej_ET_per_sub <- rej_epos_df %>% 
+      filter(!ppid %in% excl_subs, 
+      ) %>% 
+      group_by(ppid) %>% summarise(n = n(), 
+                                   perc = n*100/720)
+    mean_n_trials_rej_ET <- mean(summary_trials_rej_ET_per_sub$n)
+    min_n_trials_rej_ET <- min(summary_trials_rej_ET_per_sub$n)
+    max_n_trials_rej_ET <- max(summary_trials_rej_ET_per_sub$n)
+    mean_perc_trials_rej_ET <- mean(summary_trials_rej_ET_per_sub$perc)
+    min_perc_trials_rej_ET <- min(summary_trials_rej_ET_per_sub$perc)
+    max_perc_trials_rej_ET <- max(summary_trials_rej_ET_per_sub$perc)
+    
+    extract_var("mean_n_trials_rej_ET",  mean_n_trials_rej_ET, exp_format="%0.1f")
+    extract_var("min_n_trials_rej_ET", min_n_trials_rej_ET, exp_format="%i")
+    extract_var("max_n_trials_rej_ET", max_n_trials_rej_ET, exp_format="%i")
+    extract_var("mean_perc_trials_rej_ET", mean_perc_trials_rej_ET, exp_format="%0.1f")
+    extract_var("min_perc_trials_rej_ET", min_perc_trials_rej_ET, exp_format="%0.1f")
+    extract_var("max_perc_trials_rej_ET", max_perc_trials_rej_ET, exp_format="%0.1f")
+  }
 }
-
-
 
 
 
@@ -152,22 +154,6 @@ data_behav <- left_join(data_behav,
                                'c_StimN', 
                                'c_Ecc'))
 
-
-
-####################################################
-## OLD versions: ###################################
-
-# 
-# # For now: read in aggregated data
-# fname <- file.path(path_r_data, 'data_CDA.rds')
-# data_CDA <- readRDS(fname)
-# rm(fname)
-# 
-# 
-# # For now: read in aggregated data
-# fname <- file.path(path_r_data, 'data_alpha.rds')
-# data_alpha <- readRDS(fname)
-# rm(fname)
 
 
 

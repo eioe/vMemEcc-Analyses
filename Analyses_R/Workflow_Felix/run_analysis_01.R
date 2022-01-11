@@ -7,7 +7,7 @@
 # ... confidence interval for repeated measures design - based on Coussineau Morey
 
 func_analysis_01 <- function(condition) {
-  
+
   c1.aov <- data_behav %>% 
     filter(BlockStyle == condition) %>% 
     group_by(ppid, c_StimN, c_Ecc) %>%   
