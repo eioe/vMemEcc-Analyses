@@ -10,7 +10,8 @@ with open(path_rep_dict) as json_file:
     rep_dict = json.load(json_file)
 
 docc = docxtpl.DocxTemplate('C:\\Users\\Felix\\Downloads\\test_rep_py.docx')
-jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+jinja_env = jinja2.Environment(undefined=jinja2.DebugUndefined) # jinja2.StrictUndefined)
 docc.render(rep_dict, jinja_env=jinja_env)
 
 docc.save('C:\\Users\\Felix\\Downloads\\test_rep_py_new.docx')
+
