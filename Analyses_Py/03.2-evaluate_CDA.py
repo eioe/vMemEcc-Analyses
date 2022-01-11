@@ -9,15 +9,15 @@ from matplotlib.offsetbox import AnchoredText
 import mne
 
 from scipy import stats
-from mne.stats import permutation_cluster_1samp_test
+from mne.stats import permutation_cluster_1samp_test, spatio_temporal_cluster_1samp_test, spatio_temporal_cluster_test
 
 from library import helpers, config
 
 
 # define dict used for plotting of different epo parts:
 plt_dict = defaultdict(dict)
-pp = {'t_stimon':  0, 
-      'xmin': -0.2, 
+pp = {'t_stimon':  0,
+      'xmin': -0.2,
       'xmax': 2.3}
 plt_dict['stimon'] = pp
 
@@ -29,7 +29,7 @@ def get_evokeds_dict(epo_part, sub_list):
         fname = op.join(config.path_epos_sorted, epo_part,
                         'difference', subID + '-epo.fif')
         epos = mne.read_epochs(fname, verbose=False)
-        epos.pick_channels(config.chans_CDA_dict['Left'])
+        # epos.pick_channels(config.chans_CDA_dict['Left'])
         epos.crop(plt_dict[epo_part]['xmin'], plt_dict[epo_part]['xmax'])
         event_dict = helpers.get_event_dict(epos.event_id)
         # epos.apply_baseline((-0.4, 0))
@@ -415,47 +415,49 @@ fname = op.join(fpath, 'interaction_loadxecc.png')
 fig.savefig(fname, bbox_inches="tight")
     
 
+# TODO: the following section is probably cruft and unneccessary 
 
-# Interaction II:
-for load, tt in zip(['LoadLow', 'LoadHigh'], ['Memory Load Low', 'Memory Load High']):
-    plot_dict = dict()
-    plot_dict['4°'] = all_evokeds[config.factor_dict[load + 'EccS']].crop(tmin=-0.4, tmax=2.3)
-    plot_dict['9°'] = all_evokeds[config.factor_dict[load + 'EccM']].crop(tmin=-0.4, tmax=2.3)
-    plot_dict['14°'] = all_evokeds[config.factor_dict[load + 'EccL']].crop(tmin=-0.4, tmax=2.3)
-    res = mne.viz.plot_compare_evokeds(plot_dict,
-                                 combine = 'mean', 
-                                 vlines=[0], 
-                                 ylim=dict(eeg=[-1.5,1.5]), 
-                                 title = tt, 
-                                 show=False)
-    ff = 'Ecc_' + load + '.png'
-    res[0].savefig(op.join(config.path_evokeds, 'plots', ff))
+# # Interaction II:
+# for load, tt in zip(['LoadLow', 'LoadHigh'], ['Memory Load Low', 'Memory Load High']):
+#     plot_dict = dict()
+#     plot_dict['4°'] = all_evokeds[config.factor_dict[load + 'EccS']].crop(tmin=-0.4, tmax=2.3)
+#     plot_dict['9°'] = all_evokeds[config.factor_dict[load + 'EccM']].crop(tmin=-0.4, tmax=2.3)
+#     plot_dict['14°'] = all_evokeds[config.factor_dict[load + 'EccL']].crop(tmin=-0.4, tmax=2.3)
+#     res = mne.viz.plot_compare_evokeds(plot_dict,
+#                                  combine = 'mean', 
+#                                  vlines=[0], 
+#                                  ylim=dict(eeg=[-1.5,1.5]), 
+#                                  title = tt, 
+#                                  show=False)
+#     ff = 'Ecc_' + load + '.png'
+#     res[0].savefig(op.join(config.path_evokeds, 'plots', ff))
 
 
 
 
 c_list = []
-for evo_l, evo_h in zip(all_evokeds[config.factor_dict['LoadLowEccL']], all_evokeds[config.factor_dict['LoadHighEccL']]):
-    contrast = mne.combine_evoked([evo_h, evo_l], weights = 'equal')
-    contrast.crop(-0.4, 0.6)
+for evo_l, evo_h in zip(evokeds['EccS'],
+                        evokeds['EccL']):
+    contrast = mne.combine_evoked([evo_l, evo_h], weights = [1, -1])
+    # contrast.crop(0.4, 0.6)
     c_list.append(contrast)
 
 n_jobs = 2  # nb of parallel jobs
 
 channel = 'ROI avg'
-#idx = contrast.ch_names.index(channel)
-c_list = cda_evokeds
-data = np.array([np.mean(c.data, axis=0) for c in c_list])
+
+# data = np.array([np.mean(c.data, axis=0) for c in c_list])
+data = np.array([c.data for c in c_list]).swapaxes(1,2)
 
 n_permutations = 1000  # number of permutations to run
 
 # set initial threshold
-p_initial = 0.001
+p_initial = 0.05
 
 # set family-wise p-value
-p_thresh = 0.01
+p_thresh = 0.05
 
-connectivity = None
+connectivity = a
 tail = 0.  # for two sided test
 
 # set cluster threshold
@@ -464,9 +466,9 @@ threshold = -stats.t.ppf(p_initial / (1 + (tail == 0)), n_samples - 1)
 if np.sign(tail) < 0:
     threshold = -threshold
 
-cluster_stats = permutation_cluster_1samp_test(
+cluster_stats = spatio_temporal_cluster_1samp_test(
     data, threshold=threshold, n_jobs=n_jobs, verbose=True, tail=tail,
-    step_down_p=0.05, connectivity=connectivity,
+    step_down_p=0.005, connectivity=connectivity,
     n_permutations=n_permutations, seed=42)
 
 T_obs, clusters, cluster_p_values, _ = cluster_stats
