@@ -2,7 +2,7 @@
 # Is there an effect of workload or eccentricity on reaction time?
 #
 #--------------------------------------------------------------------------
-#TODO: make function and return: summaries (aov, ttest), plot (figa)
+# Authors: Sven Ohl & Felix Klotzsche, 2020
 #--------------------------------------------------------------------------
 # ... confidence interval for repeated measures design - based on Coussineau Morey
 

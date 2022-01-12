@@ -13,6 +13,8 @@
 #     alpha_pwr = mean alpha power
 
 #--------------------------------------------------------------------------
+# Authors: Sven Ohl & Felix Klotzsche, 2020
+#--------------------------------------------------------------------------
 
 func_analysis_07 <- function(condition, dep_variable) {
   
