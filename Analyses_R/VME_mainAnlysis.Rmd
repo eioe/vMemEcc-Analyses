@@ -13,8 +13,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Intro
+This file prints relevant statistics and plots of the vMemEcc manuscript. Please note, analyses and plots produced in Python are not included here - but in a separate notebook. The most relevant chunkcs of the source code are included in this file as well. For the full code base, please refer to the [repository on GitHub](https://github.com/eioe/vmemecc). 
 
-This file prints relevant statistics and plots of the vMemEcc manuscript. Please note, analyses and plots produced in Python are not included here - but in a separate notebook.
+## Requirements
+We ran these analyses using `r R.Version()$version.string` (in RStudio `r rstudioapi::versionInfo()$version`). 
 
 ## Init workspace
 Loads packages, custom functions, custom themes, and data. 
@@ -102,16 +104,97 @@ print(str_glue("Total number of recorded experimental trials (720 x {n_subs_anal
 print(str_glue("Total number of experimental trials after subject rejection (720 x {n_subs_analyzed}): {n_tot_trials_prerej}"))
 n_tot_trials_postrej <- data_behav %>% filter(BlockStyle == 'experiment') %>%  drop_na() %>% nrow()
 print(str_glue("Total number of trials after rejection: {n_tot_trials_postrej}"))
-summary_rem_trials_per_sub <- data_behav %>% 
+exp_data <- data_behav %>% 
   filter(BlockStyle == 'experiment') %>%  
-  drop_na() %>% 
-  group_by(ppid) %>% 
-  summarise(n = n(), 
-            perc = n*100 / 720)
-print(str_glue("Remaining trials per subject (percentage):\n
-       mean: {mean(summary_rem_trials_per_sub$n)} ({format(mean(summary_rem_trials_per_sub$perc), digits=3)}%)
-       range:  {min(summary_rem_trials_per_sub$n)} ({format(min(summary_rem_trials_per_sub$perc), digits=3)}%) - {max(summary_rem_trials_per_sub$n)} ({format(max(summary_rem_trials_per_sub$perc), digits=3)}%)"))
+  drop_na() 
 
+# Summary remaining trials:
+summary_rem_trials_per_sub <- exp_data %>% 
+  group_by(ppid) %>% 
+  summarise(n_trials_remaining = n(), 
+            perc_trials_remaining = n_trials_remaining*100 / 720, 
+            .groups = "drop")
+
+
+
+print(str_glue("Remaining trials per subject (percentage):
+           mean: {mean(summary_rem_trials_per_sub$n_trials_remaining)} ({format(mean(summary_rem_trials_per_sub$perc_trials_remaining), digits=3)}%)
+           range:  {min(summary_rem_trials_per_sub$n_trials_remaining)} ({format(min(summary_rem_trials_per_sub$perc_trials_remaining), digits=3)}%) - {max(summary_rem_trials_per_sub$n_trials_remaining)} ({format(max(summary_rem_trials_per_sub$perc_trials_remaining), digits=3)}%)\n\n"))
+
+
+
+
+# Summary accuracy overall:
+acc_overall <- exp_data %>% 
+  group_by(ppid) %>% 
+  summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100, 
+            .groups = "drop"
+            ) %>% 
+  ungroup() %>% 
+  select(!ppid) %>% 
+  summarise_all(list (mean = mean, sd = sd, min = min, max = max))
+
+stats_overall <- list(
+  name = "overall", 
+  printName = "overall", 
+  levels = c(""),
+  stats = acc_overall
+)
+
+
+# Summary per Memory Load:
+acc_per_memLoad <- exp_data %>% 
+  group_by(ppid, c_StimN) %>% 
+  summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100, 
+            .groups = "drop") %>% 
+  pivot_wider(names_from = c_StimN, 
+              values_from = perc_resp_corr, 
+              names_prefix = "StimN_") %>% 
+  ungroup() %>% 
+  select(!ppid) %>% 
+  summarise_all(list (mean = mean, sd = sd, min = min, max = max))
+
+stats_memLoad <- list(
+  name = "StimN", 
+  printName = "memLoad", 
+  levels = str_c("StimN_", unique(exp_data$c_StimN), '_'),
+  stats = acc_per_memLoad
+)
+
+
+# Summary per Ecc:
+acc_per_ecc <- exp_data %>% 
+  group_by(ppid, c_Ecc) %>% 
+  summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100,
+            .groups = "drop") %>% 
+  pivot_wider(names_from = c_Ecc, 
+              values_from = perc_resp_corr, 
+              names_prefix = "Ecc_") %>% 
+  ungroup() %>% 
+  select(!ppid) %>% 
+  summarise_all(list (mean = mean, sd = sd, min = min, max = max))
+
+stats_ecc <- list(
+  name = "ecc", 
+  printName = "Ecc", 
+  levels = str_c("Ecc_", sort(unique(exp_data$c_Ecc)), '_'), 
+  stats = acc_per_ecc
+)
+
+
+for (tmp in list(stats_overall, stats_memLoad, stats_ecc)) {
+
+  print(str_glue("Memory performance ({if_else(str_detect(tmp$printName, 'overall'), '', 'by ')}{tmp$printName}):\n"))
+  for (lvl in tmp$levels) {
+    if (length(tmp$levels) > 1) print(str_glue("{tmp$printName} == {parse_number(lvl)}:"))
+    print(str_glue("    mean (%): {tmp$stats[str_c(lvl, 'mean')]}"))
+    print(str_glue("    SD   (%): {tmp$stats[str_c(lvl, 'sd')]}"))
+    print(str_glue("    min  (%): {tmp$stats[str_c(lvl, 'min')]}"))
+    print(str_glue("    max  (%): {tmp$stats[str_c(lvl, 'max')]}"))
+  }
+  cat("\n\n")
+}
+         
 
 extract_var("n_rej_subs", n_rej_subs, exp_format = "%i")
 extract_var("n_tot_trials_prerej_allsubs", 720 * (n_subs_analyzed + n_rej_subs), exp_format = "%i")
@@ -119,11 +202,18 @@ extract_var("n_subs_analyzed", n_subs_analyzed, exp_format = "%i")
 extract_var("n_tot_trials_prerej", n_tot_trials_prerej, exp_format = "%i")
 extract_var("n_tot_trials_postrej", n_tot_trials_postrej, exp_format = "%i")
 extract_var("n_tot_trials_prerej", n_tot_trials_prerej, exp_format = "%i")
-extract_var("avg_n_trials_per_sub_postrej", mean(summary_rem_trials_per_sub$n), exp_format="%.2f")
-extract_var("min_n_trials_per_sub_postrej", min(summary_rem_trials_per_sub$n), exp_format="%i")
-extract_var("max_n_trials_per_sub_postrej", max(summary_rem_trials_per_sub$n), exp_format="%i")
-extract_var("min_perc_trials_per_sub_postrej", min(summary_rem_trials_per_sub$perc), exp_format="%.2f")
-extract_var("max_perc_trials_per_sub_postrej", max(summary_rem_trials_per_sub$perc), exp_format="%.2f")
+extract_var("avg_n_trials_per_sub_postrej", mean(summary_rem_trials_per_sub$n_trials_remaining), exp_format="%.2f")
+extract_var("min_n_trials_per_sub_postrej", min(summary_rem_trials_per_sub$n_trials_remaining), exp_format="%i")
+extract_var("max_n_trials_per_sub_postrej", max(summary_rem_trials_per_sub$n_trials_remaining), exp_format="%i")
+extract_var("min_perc_trials_per_sub_postrej", min(summary_rem_trials_per_sub$perc_trials_remaining), exp_format="%.2f")
+extract_var("max_perc_trials_per_sub_postrej", max(summary_rem_trials_per_sub$perc_trials_remaining), exp_format="%.2f")
+for (tmp in list(stats_overall, stats_memLoad, stats_ecc)) {
+  for (lvl in tmp$levels) {
+    for (stat in c("mean", "sd", "min", "max")) {
+      extract_var(str_glue("mem_acc_{lvl}{stat}"), tmp$stats[str_c(lvl, stat)], exp_format="%.2f")
+    }
+  }
+}
 
 
 ```
