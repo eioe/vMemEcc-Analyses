@@ -109,7 +109,8 @@ n_tot_trials_prerej <- 720 * n_subs_analyzed
 print(str_glue("Total number of recorded experimental trials (720 x {n_subs_analyzed + n_rej_subs}): {n_tot_trials_prerej}"))
 print(str_glue("Total number of experimental trials after subject rejection (720 x {n_subs_analyzed}): {n_tot_trials_prerej}"))
 n_tot_trials_postrej <- data_behav %>% filter(BlockStyle == 'experiment') %>%  drop_na() %>% nrow()
-print(str_glue("Total number of trials after rejection: {n_tot_trials_postrej}"))
+n_trials_rejected <- n_tot_trials_prerej - n_tot_trials_postrej
+print(str_glue("Total number of trials after rejection: {n_tot_trials_postrej} ({n_trials_rejected} trials rejected)"))
 
 data_behav_per_task <- vector(mode = "list", length = 2)
 data_behav_per_task[['exp']] <- data_behav %>% 

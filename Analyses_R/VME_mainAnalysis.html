@@ -285,8 +285,9 @@ print(str_glue(&quot;Total number of recorded experimental trials (720 x {n_subs
 <pre class="r"><code>print(str_glue(&quot;Total number of experimental trials after subject rejection (720 x {n_subs_analyzed}): {n_tot_trials_prerej}&quot;))</code></pre>
 <pre><code>## Total number of experimental trials after subject rejection (720 x 21): 15120</code></pre>
 <pre class="r"><code>n_tot_trials_postrej &lt;- data_behav %&gt;% filter(BlockStyle == &#39;experiment&#39;) %&gt;%  drop_na() %&gt;% nrow()
-print(str_glue(&quot;Total number of trials after rejection: {n_tot_trials_postrej}&quot;))</code></pre>
-<pre><code>## Total number of trials after rejection: 13411</code></pre>
+n_trials_rejected &lt;- n_tot_trials_prerej - n_tot_trials_postrej
+print(str_glue(&quot;Total number of trials after rejection: {n_tot_trials_postrej} ({n_trials_rejected} trials rejected)&quot;))</code></pre>
+<pre><code>## Total number of trials after rejection: 13411 (1709 trials rejected)</code></pre>
 <pre class="r"><code>data_behav_per_task &lt;- vector(mode = &quot;list&quot;, length = 2)
 data_behav_per_task[[&#39;exp&#39;]] &lt;- data_behav %&gt;% 
   filter(BlockStyle == &#39;experiment&#39;) %&gt;%  
