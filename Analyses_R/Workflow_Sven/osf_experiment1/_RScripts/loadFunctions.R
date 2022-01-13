@@ -1,4 +1,12 @@
 #--------------------------------------------------------------------------
+# Calculate Cosineau-Morey confidence intervals.
+# 
+# Baguley, T. (2011). Calculating and graphing within- subject confidence intervals for ANOVA. 
+#                     Behavior Research Methods, 44(1), 158–175.
+# Morey, R. D. (2008). Confidence intervals from normalized data: A correction to Cousineau (2005). 
+#                      Tutorial in Quantitative Methods for Psychology, 42(2), 61–64.
+
+
 # load helper functions
 se_up   <-  function(x){mean(x) + 1.96*sd(x)/sqrt(length(x))}
 se_down <-  function(x){mean(x) - 1.96*sd(x)/sqrt(length(x))}
