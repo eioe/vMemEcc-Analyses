@@ -31,9 +31,9 @@ timings <- list(
 
 sacc_params <- list(
   #  VFAC			  relative velocity threshold
-  vfac = 6, # suggested by Sven [April 28]: 5
+  vfac = 6, 
   #  MINDUR		  minimal saccade duration, 
-  mindur = 4, # suggested by Sven [April 28]: 3
+  mindur = 4, 
   # Sampling rate: 
   srate = 200, 
   # Use 1 eye for sacc detection (using the one with higher confidence values):
