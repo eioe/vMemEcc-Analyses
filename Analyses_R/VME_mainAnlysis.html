@@ -189,7 +189,7 @@ pre code {
 </div>
 <div id="requirements" class="section level2">
 <h2>Requirements</h2>
-<p>We ran these analyses using R version 4.1.0 (2021-05-18) (in RStudio 1.4.1717).</p>
+<p>We ran these analyses using version 4.1.0 (2021-05-18) in RStudio v1.4.1717.</p>
 </div>
 <div id="init-workspace" class="section level2">
 <h2>Init workspace</h2>
@@ -262,7 +262,12 @@ source(file.path(path_scripts_sven, &quot;loadTheme.R&quot;))
 #--------------------------------------------------------------------------
 ## load data, assign names for columns and define variable type
 source(file.path(here(&#39;Utils&#39;, &#39;load_data.R&#39;)))
-#--------------------------------------------------------------------------</code></pre>
+#--------------------------------------------------------------------------
+
+
+# Write 
+extract_var(&quot;r_version&quot;, &quot;v4.1.0&quot;, exp_format = &quot;%s&quot;)
+extract_var(&quot;rstudio_version&quot;, &quot;v1.4.1717&quot;, exp_format = &quot;%s&quot;)</code></pre>
 </div>
 <div id="summary-stats" class="section level2">
 <h2>Summary stats:</h2>
@@ -282,12 +287,18 @@ print(str_glue(&quot;Total number of recorded experimental trials (720 x {n_subs
 <pre class="r"><code>n_tot_trials_postrej &lt;- data_behav %&gt;% filter(BlockStyle == &#39;experiment&#39;) %&gt;%  drop_na() %&gt;% nrow()
 print(str_glue(&quot;Total number of trials after rejection: {n_tot_trials_postrej}&quot;))</code></pre>
 <pre><code>## Total number of trials after rejection: 13411</code></pre>
-<pre class="r"><code>exp_data &lt;- data_behav %&gt;% 
+<pre class="r"><code>data_behav_per_task &lt;- vector(mode = &quot;list&quot;, length = 2)
+data_behav_per_task[[&#39;exp&#39;]] &lt;- data_behav %&gt;% 
   filter(BlockStyle == &#39;experiment&#39;) %&gt;%  
   drop_na() 
+data_behav_per_task[[&#39;perc&#39;]] &lt;- data_behav %&gt;% 
+  filter(BlockStyle == &#39;perception&#39;) %&gt;%  
+  select(!c(CDA_amp, PNP_amp, alphapwr_diff_retent)) %&gt;% 
+  drop_na() 
+
 
 # Summary remaining trials:
-summary_rem_trials_per_sub &lt;- exp_data %&gt;% 
+summary_rem_trials_per_sub &lt;- data_behav_per_task[[&#39;exp&#39;]] %&gt;% 
   group_by(ppid) %&gt;% 
   summarise(n_trials_remaining = n(), 
             perc_trials_remaining = n_trials_remaining*100 / 720, 
@@ -301,77 +312,96 @@ print(str_glue(&quot;Remaining trials per subject (percentage):
 <pre><code>## Remaining trials per subject (percentage):
 ##            mean: 638.619047619048 (88.7%)
 ##            range:  516 (71.7%) - 704 (97.8%)</code></pre>
-<pre class="r"><code># Summary accuracy overall:
-acc_overall &lt;- exp_data %&gt;% 
-  group_by(ppid) %&gt;% 
-  summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100, 
-            .groups = &quot;drop&quot;
-            ) %&gt;% 
-  ungroup() %&gt;% 
-  select(!ppid) %&gt;% 
-  summarise_all(list (mean = mean, sd = sd, min = min, max = max))
-
-stats_overall &lt;- list(
-  name = &quot;overall&quot;, 
-  printName = &quot;overall&quot;, 
-  levels = c(&quot;&quot;),
-  stats = acc_overall
-)
+<pre class="r"><code>acc_overall &lt;- vector(mode = &quot;list&quot;, length = 2)
+stats_overall &lt;- vector(mode = &quot;list&quot;, length = 2)
+acc_per_memLoad &lt;- vector(mode = &quot;list&quot;, length = 2)
+stats_memLoad &lt;- vector(mode = &quot;list&quot;, length = 2)
+acc_per_ecc &lt;- vector(mode = &quot;list&quot;, length = 2)
+stats_ecc &lt;- vector(mode = &quot;list&quot;, length = 2)
 
 
-# Summary per Memory Load:
-acc_per_memLoad &lt;- exp_data %&gt;% 
-  group_by(ppid, c_StimN) %&gt;% 
-  summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100, 
-            .groups = &quot;drop&quot;) %&gt;% 
-  pivot_wider(names_from = c_StimN, 
-              values_from = perc_resp_corr, 
-              names_prefix = &quot;StimN_&quot;) %&gt;% 
-  ungroup() %&gt;% 
-  select(!ppid) %&gt;% 
-  summarise_all(list (mean = mean, sd = sd, min = min, max = max))
+for (task in c(&#39;exp&#39;, &#39;perc&#39;)) {
+  
+  task_print &lt;- if_else(task == &quot;exp&quot;, &quot;vSTM&quot;, &quot;perception&quot;)
+  print(&quot;#####################################################&quot;)
+  print(str_glue(&quot;####  TASK: {task_print}&quot;))
+  print(&quot;#####################################################&quot;)
+  
+  
+  # Summary accuracy overall:
+  acc_overall[[task]] &lt;- data_behav_per_task[[task]] %&gt;% 
+    group_by(ppid) %&gt;% 
+    summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100, 
+              .groups = &quot;drop&quot;
+              ) %&gt;% 
+    ungroup() %&gt;% 
+    select(!ppid) %&gt;% 
+    summarise_all(list (mean = mean, sd = sd, min = min, max = max))
+  
+  stats_overall[[task]] &lt;- list(
+    name = &quot;overall&quot;, 
+    printName = &quot;overall&quot;, 
+    levels = c(&quot;&quot;),
+    stats = acc_overall[[task]]
+  )
+  
+  
+  # Summary per Memory Load:
+  acc_per_memLoad[[task]] &lt;- data_behav_per_task[[task]] %&gt;% 
+    group_by(ppid, c_StimN) %&gt;% 
+    summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100, 
+              .groups = &quot;drop&quot;) %&gt;% 
+    pivot_wider(names_from = c_StimN, 
+                values_from = perc_resp_corr, 
+                names_prefix = &quot;StimN_&quot;) %&gt;% 
+    ungroup() %&gt;% 
+    select(!ppid) %&gt;% 
+    summarise_all(list (mean = mean, sd = sd, min = min, max = max))
+  
+  stats_memLoad[[task]] &lt;- list(
+    name = &quot;StimN&quot;, 
+    printName = &quot;memLoad&quot;, 
+    levels = str_c(&quot;StimN_&quot;, unique(data_behav_per_task[[task]]$c_StimN), &#39;_&#39;),
+    stats = acc_per_memLoad[[task]]
+  )
+  
+  
+  # Summary per Ecc:
+  acc_per_ecc[[task]] &lt;- data_behav_per_task[[task]] %&gt;% 
+    group_by(ppid, c_Ecc) %&gt;% 
+    summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100,
+              .groups = &quot;drop&quot;) %&gt;% 
+    pivot_wider(names_from = c_Ecc, 
+                values_from = perc_resp_corr, 
+                names_prefix = &quot;Ecc_&quot;) %&gt;% 
+    ungroup() %&gt;% 
+    select(!ppid) %&gt;% 
+    summarise_all(list (mean = mean, sd = sd, min = min, max = max))
+  
+  stats_ecc[[task]] &lt;- list(
+    name = &quot;ecc&quot;, 
+    printName = &quot;Ecc&quot;, 
+    levels = str_c(&quot;Ecc_&quot;, sort(unique(data_behav_per_task[[task]]$c_Ecc)), &#39;_&#39;), 
+    stats = acc_per_ecc[[task]]
+  )
 
-stats_memLoad &lt;- list(
-  name = &quot;StimN&quot;, 
-  printName = &quot;memLoad&quot;, 
-  levels = str_c(&quot;StimN_&quot;, unique(exp_data$c_StimN), &#39;_&#39;),
-  stats = acc_per_memLoad
-)
-
-
-# Summary per Ecc:
-acc_per_ecc &lt;- exp_data %&gt;% 
-  group_by(ppid, c_Ecc) %&gt;% 
-  summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100,
-            .groups = &quot;drop&quot;) %&gt;% 
-  pivot_wider(names_from = c_Ecc, 
-              values_from = perc_resp_corr, 
-              names_prefix = &quot;Ecc_&quot;) %&gt;% 
-  ungroup() %&gt;% 
-  select(!ppid) %&gt;% 
-  summarise_all(list (mean = mean, sd = sd, min = min, max = max))
-
-stats_ecc &lt;- list(
-  name = &quot;ecc&quot;, 
-  printName = &quot;Ecc&quot;, 
-  levels = str_c(&quot;Ecc_&quot;, sort(unique(exp_data$c_Ecc)), &#39;_&#39;), 
-  stats = acc_per_ecc
-)
-
-
-for (tmp in list(stats_overall, stats_memLoad, stats_ecc)) {
-
-  print(str_glue(&quot;Memory performance ({if_else(str_detect(tmp$printName, &#39;overall&#39;), &#39;&#39;, &#39;by &#39;)}{tmp$printName}):\n&quot;))
-  for (lvl in tmp$levels) {
-    if (length(tmp$levels) &gt; 1) print(str_glue(&quot;{tmp$printName} == {parse_number(lvl)}:&quot;))
-    print(str_glue(&quot;    mean (%): {tmp$stats[str_c(lvl, &#39;mean&#39;)]}&quot;))
-    print(str_glue(&quot;    SD   (%): {tmp$stats[str_c(lvl, &#39;sd&#39;)]}&quot;))
-    print(str_glue(&quot;    min  (%): {tmp$stats[str_c(lvl, &#39;min&#39;)]}&quot;))
-    print(str_glue(&quot;    max  (%): {tmp$stats[str_c(lvl, &#39;max&#39;)]}&quot;))
+  for (tmp in list(stats_overall[[task]], stats_memLoad[[task]], stats_ecc[[task]])) {
+  
+    print(str_glue(&quot;Memory performance ({if_else(str_detect(tmp$printName, &#39;overall&#39;), &#39;&#39;, &#39;by &#39;)}{tmp$printName}):\n&quot;))
+    for (lvl in tmp$levels) {
+      if (length(tmp$levels) &gt; 1) print(str_glue(&quot;{tmp$printName} == {parse_number(lvl)}:&quot;))
+      print(str_glue(&quot;    mean (%): {tmp$stats[str_c(lvl, &#39;mean&#39;)]}&quot;))
+      print(str_glue(&quot;    SD   (%): {tmp$stats[str_c(lvl, &#39;sd&#39;)]}&quot;))
+      print(str_glue(&quot;    min  (%): {tmp$stats[str_c(lvl, &#39;min&#39;)]}&quot;))
+      print(str_glue(&quot;    max  (%): {tmp$stats[str_c(lvl, &#39;max&#39;)]}&quot;))
+    }
+    cat(&quot;\n\n&quot;)
   }
-  cat(&quot;\n\n&quot;)
-}</code></pre>
-<pre><code>## Memory performance (overall):
+}         </code></pre>
+<pre><code>## [1] &quot;#####################################################&quot;
+## ####  TASK: vSTM
+## [1] &quot;#####################################################&quot;
+## Memory performance (overall):
 ##     mean (%): 85.4286290452115
 ##     SD   (%): 4.16276799592646
 ##     min  (%): 78.8617886178862
@@ -406,7 +436,48 @@ for (tmp in list(stats_overall, stats_memLoad, stats_ecc)) {
 ##     mean (%): 84.3572909836843
 ##     SD   (%): 4.55371342304476
 ##     min  (%): 76.6169154228856
-##     max  (%): 91.8367346938776</code></pre>
+##     max  (%): 91.8367346938776
+## 
+## 
+## [1] &quot;#####################################################&quot;
+## ####  TASK: perception
+## [1] &quot;#####################################################&quot;
+## Memory performance (overall):
+##     mean (%): 93.3715164385728
+##     SD   (%): 3.15510185624458
+##     min  (%): 86.1111111111111
+##     max  (%): 100
+## 
+## 
+## Memory performance (by memLoad):
+## memLoad == 4:
+##     mean (%): 92.5425725845894
+##     SD   (%): 4.18211193565845
+##     min  (%): 80.5555555555556
+##     max  (%): 100
+## memLoad == 2:
+##     mean (%): 94.2376142376142
+##     SD   (%): 4.33186012905664
+##     min  (%): 80.5555555555556
+##     max  (%): 100
+## 
+## 
+## Memory performance (by Ecc):
+## Ecc == 4:
+##     mean (%): 95.5463015245624
+##     SD   (%): 4.11325751291181
+##     min  (%): 87.5
+##     max  (%): 100
+## Ecc == 9:
+##     mean (%): 95.373768743334
+##     SD   (%): 4.3850462022578
+##     min  (%): 87.5
+##     max  (%): 100
+## Ecc == 14:
+##     mean (%): 89.25983436853
+##     SD   (%): 5.68798543896582
+##     min  (%): 79.1666666666667
+##     max  (%): 100</code></pre>
 <pre class="r"><code>extract_var(&quot;n_rej_subs&quot;, n_rej_subs, exp_format = &quot;%i&quot;)
 extract_var(&quot;n_tot_trials_prerej_allsubs&quot;, 720 * (n_subs_analyzed + n_rej_subs), exp_format = &quot;%i&quot;)
 extract_var(&quot;n_subs_analyzed&quot;, n_subs_analyzed, exp_format = &quot;%i&quot;)
@@ -418,10 +489,13 @@ extract_var(&quot;min_n_trials_per_sub_postrej&quot;, min(summary_rem_trials_per
 extract_var(&quot;max_n_trials_per_sub_postrej&quot;, max(summary_rem_trials_per_sub$n_trials_remaining), exp_format=&quot;%i&quot;)
 extract_var(&quot;min_perc_trials_per_sub_postrej&quot;, min(summary_rem_trials_per_sub$perc_trials_remaining), exp_format=&quot;%.2f&quot;)
 extract_var(&quot;max_perc_trials_per_sub_postrej&quot;, max(summary_rem_trials_per_sub$perc_trials_remaining), exp_format=&quot;%.2f&quot;)
-for (tmp in list(stats_overall, stats_memLoad, stats_ecc)) {
-  for (lvl in tmp$levels) {
-    for (stat in c(&quot;mean&quot;, &quot;sd&quot;, &quot;min&quot;, &quot;max&quot;)) {
-      extract_var(str_glue(&quot;mem_acc_{lvl}{stat}&quot;), tmp$stats[str_c(lvl, stat)], exp_format=&quot;%.2f&quot;)
+
+for(task in c(&quot;exp&quot;, &quot;perc&quot;)) {
+  for (tmp in list(stats_overall[[task]], stats_memLoad[[task]], stats_ecc[[task]])) {
+    for (lvl in tmp$levels) {
+      for (stat in c(&quot;mean&quot;, &quot;sd&quot;, &quot;min&quot;, &quot;max&quot;)) {
+        extract_var(str_glue(&quot;mem_acc_{task}_{lvl}{stat}&quot;), tmp$stats[str_c(lvl, stat)], exp_format=&quot;%.2f&quot;)
+      }
     }
   }
 }</code></pre>
@@ -432,7 +506,7 @@ for (tmp in list(stats_overall, stats_memLoad, stats_ecc)) {
 <div id="vstm-task" class="section level3">
 <h3>VSTM Task:</h3>
 <pre class="r"><code># VSTM task:
-func_analysis_01(&#39;experiment&#39;)</code></pre>
+results_anova_behav_exp &lt;- func_analysis_01(&#39;experiment&#39;)</code></pre>
 <pre><code>## 
 ## ###########################
 ## Summary ANOVA 
@@ -522,13 +596,15 @@ function (condition)
     figa &lt;- figa + labs(title = txt_title, color = &quot;Size Memory Array&quot;)
     figa &lt;- figa + theme(legend.position = c(0.84999999999999998, 
         0.14999999999999999))
-    figa
+    plot(figa)
+    return(aov.srt)
 }</code></pre>
+<p><em>extract variables:</em></p>
 </div>
 <div id="perception-task" class="section level3">
 <h3>Perception task:</h3>
 <pre class="r"><code># perceptual Change Detection Task:
-func_analysis_01(&#39;perception&#39;)</code></pre>
+results_anova_behav_perc &lt;- func_analysis_01(&#39;perception&#39;)</code></pre>
 <pre><code>## 
 ## ###########################
 ## Summary ANOVA 
@@ -615,8 +691,10 @@ function (condition)
     figa &lt;- figa + labs(title = txt_title, color = &quot;Size Memory Array&quot;)
     figa &lt;- figa + theme(legend.position = c(0.84999999999999998, 
         0.14999999999999999))
-    figa
+    plot(figa)
+    return(aov.srt)
 }</code></pre>
+<p><em>extract variables:</em></p>
 </div>
 </div>
 <div id="analysis-01---supplement" class="section level2">
