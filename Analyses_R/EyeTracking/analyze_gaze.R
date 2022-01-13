@@ -53,8 +53,8 @@ if (data_from_hdd) {
   path_data <- here('..', '..', 'Data', 'SubjectData')
 }
 
-
-sub_ids <- str_c('VME_S', str_pad(setdiff(c(20), c(11,14,19)), 
+# load subject list and exclude bad subjects:
+sub_ids <- str_c('VME_S', str_pad(setdiff(1:27, c(11,14,19)), 
                                   2, 'left', 0))
 
 for (sub_id in sub_ids) {
