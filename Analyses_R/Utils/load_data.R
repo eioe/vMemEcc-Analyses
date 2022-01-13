@@ -3,8 +3,6 @@
 #
 #--------------------------------------------------------------------------
 
-#TODO: make function and explicitely return specific df
-
 # excluded subjects:
 excl_subs <- c('VME_S11', 'VME_S14', 'VME_S19', # incomplete data
                'VME_S22', 'VME_S07', 'VME_S12')  # bad EEG
@@ -14,7 +12,6 @@ data_full <- readRDS(fname) %>%
   filter(!ppid %in% excl_subs)
 rm(fname)
 
-#TODO: Implement filters: DroppedFrames
 
 data_behav <- data_full %>% 
   filter(BlockStyle %in% c('perception', 'experiment')) %>% 
