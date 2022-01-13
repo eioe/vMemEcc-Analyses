@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 This file prints relevant statistics and plots of the vMemEcc manuscript. Please note, analyses and plots produced in Python are not included here - but in a separate notebook. The most relevant chunkcs of the source code are included in this file as well. For the full code base, please refer to the [repository on GitHub](https://github.com/eioe/vmemecc). 
 
 ## Requirements
-We ran these analyses using `r R.Version()$version.string` (in RStudio `r rstudioapi::versionInfo()$version`). 
+We ran these analyses using version 4.1.0 (2021-05-18) in RStudio v1.4.1717. 
 
 ## Init workspace
 Loads packages, custom functions, custom themes, and data. 
@@ -88,6 +88,12 @@ source(file.path(path_scripts_sven, "loadTheme.R"))
 ## load data, assign names for columns and define variable type
 source(file.path(here('Utils', 'load_data.R')))
 #--------------------------------------------------------------------------
+
+
+# Write 
+extract_var("r_version", "v4.1.0", exp_format = "%s")
+extract_var("rstudio_version", "v1.4.1717", exp_format = "%s")
+
 ```
 
 ## Summary stats: 
@@ -104,12 +110,19 @@ print(str_glue("Total number of recorded experimental trials (720 x {n_subs_anal
 print(str_glue("Total number of experimental trials after subject rejection (720 x {n_subs_analyzed}): {n_tot_trials_prerej}"))
 n_tot_trials_postrej <- data_behav %>% filter(BlockStyle == 'experiment') %>%  drop_na() %>% nrow()
 print(str_glue("Total number of trials after rejection: {n_tot_trials_postrej}"))
-exp_data <- data_behav %>% 
+
+data_behav_per_task <- vector(mode = "list", length = 2)
+data_behav_per_task[['exp']] <- data_behav %>% 
   filter(BlockStyle == 'experiment') %>%  
   drop_na() 
+data_behav_per_task[['perc']] <- data_behav %>% 
+  filter(BlockStyle == 'perception') %>%  
+  select(!c(CDA_amp, PNP_amp, alphapwr_diff_retent)) %>% 
+  drop_na() 
+
 
 # Summary remaining trials:
-summary_rem_trials_per_sub <- exp_data %>% 
+summary_rem_trials_per_sub <- data_behav_per_task[['exp']] %>% 
   group_by(ppid) %>% 
   summarise(n_trials_remaining = n(), 
             perc_trials_remaining = n_trials_remaining*100 / 720, 
@@ -121,80 +134,92 @@ print(str_glue("Remaining trials per subject (percentage):
            mean: {mean(summary_rem_trials_per_sub$n_trials_remaining)} ({format(mean(summary_rem_trials_per_sub$perc_trials_remaining), digits=3)}%)
            range:  {min(summary_rem_trials_per_sub$n_trials_remaining)} ({format(min(summary_rem_trials_per_sub$perc_trials_remaining), digits=3)}%) - {max(summary_rem_trials_per_sub$n_trials_remaining)} ({format(max(summary_rem_trials_per_sub$perc_trials_remaining), digits=3)}%)\n\n"))
 
+acc_overall <- vector(mode = "list", length = 2)
+stats_overall <- vector(mode = "list", length = 2)
+acc_per_memLoad <- vector(mode = "list", length = 2)
+stats_memLoad <- vector(mode = "list", length = 2)
+acc_per_ecc <- vector(mode = "list", length = 2)
+stats_ecc <- vector(mode = "list", length = 2)
 
 
+for (task in c('exp', 'perc')) {
+  
+  task_print <- if_else(task == "exp", "vSTM", "perception")
+  print("#####################################################")
+  print(str_glue("####  TASK: {task_print}"))
+  print("#####################################################")
+  
+  
+  # Summary accuracy overall:
+  acc_overall[[task]] <- data_behav_per_task[[task]] %>% 
+    group_by(ppid) %>% 
+    summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100, 
+              .groups = "drop"
+              ) %>% 
+    ungroup() %>% 
+    select(!ppid) %>% 
+    summarise_all(list (mean = mean, sd = sd, min = min, max = max))
+  
+  stats_overall[[task]] <- list(
+    name = "overall", 
+    printName = "overall", 
+    levels = c(""),
+    stats = acc_overall[[task]]
+  )
+  
+  
+  # Summary per Memory Load:
+  acc_per_memLoad[[task]] <- data_behav_per_task[[task]] %>% 
+    group_by(ppid, c_StimN) %>% 
+    summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100, 
+              .groups = "drop") %>% 
+    pivot_wider(names_from = c_StimN, 
+                values_from = perc_resp_corr, 
+                names_prefix = "StimN_") %>% 
+    ungroup() %>% 
+    select(!ppid) %>% 
+    summarise_all(list (mean = mean, sd = sd, min = min, max = max))
+  
+  stats_memLoad[[task]] <- list(
+    name = "StimN", 
+    printName = "memLoad", 
+    levels = str_c("StimN_", unique(data_behav_per_task[[task]]$c_StimN), '_'),
+    stats = acc_per_memLoad[[task]]
+  )
+  
+  
+  # Summary per Ecc:
+  acc_per_ecc[[task]] <- data_behav_per_task[[task]] %>% 
+    group_by(ppid, c_Ecc) %>% 
+    summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100,
+              .groups = "drop") %>% 
+    pivot_wider(names_from = c_Ecc, 
+                values_from = perc_resp_corr, 
+                names_prefix = "Ecc_") %>% 
+    ungroup() %>% 
+    select(!ppid) %>% 
+    summarise_all(list (mean = mean, sd = sd, min = min, max = max))
+  
+  stats_ecc[[task]] <- list(
+    name = "ecc", 
+    printName = "Ecc", 
+    levels = str_c("Ecc_", sort(unique(data_behav_per_task[[task]]$c_Ecc)), '_'), 
+    stats = acc_per_ecc[[task]]
+  )
 
-# Summary accuracy overall:
-acc_overall <- exp_data %>% 
-  group_by(ppid) %>% 
-  summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100, 
-            .groups = "drop"
-            ) %>% 
-  ungroup() %>% 
-  select(!ppid) %>% 
-  summarise_all(list (mean = mean, sd = sd, min = min, max = max))
-
-stats_overall <- list(
-  name = "overall", 
-  printName = "overall", 
-  levels = c(""),
-  stats = acc_overall
-)
-
-
-# Summary per Memory Load:
-acc_per_memLoad <- exp_data %>% 
-  group_by(ppid, c_StimN) %>% 
-  summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100, 
-            .groups = "drop") %>% 
-  pivot_wider(names_from = c_StimN, 
-              values_from = perc_resp_corr, 
-              names_prefix = "StimN_") %>% 
-  ungroup() %>% 
-  select(!ppid) %>% 
-  summarise_all(list (mean = mean, sd = sd, min = min, max = max))
-
-stats_memLoad <- list(
-  name = "StimN", 
-  printName = "memLoad", 
-  levels = str_c("StimN_", unique(exp_data$c_StimN), '_'),
-  stats = acc_per_memLoad
-)
-
-
-# Summary per Ecc:
-acc_per_ecc <- exp_data %>% 
-  group_by(ppid, c_Ecc) %>% 
-  summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100,
-            .groups = "drop") %>% 
-  pivot_wider(names_from = c_Ecc, 
-              values_from = perc_resp_corr, 
-              names_prefix = "Ecc_") %>% 
-  ungroup() %>% 
-  select(!ppid) %>% 
-  summarise_all(list (mean = mean, sd = sd, min = min, max = max))
-
-stats_ecc <- list(
-  name = "ecc", 
-  printName = "Ecc", 
-  levels = str_c("Ecc_", sort(unique(exp_data$c_Ecc)), '_'), 
-  stats = acc_per_ecc
-)
-
-
-for (tmp in list(stats_overall, stats_memLoad, stats_ecc)) {
-
-  print(str_glue("Memory performance ({if_else(str_detect(tmp$printName, 'overall'), '', 'by ')}{tmp$printName}):\n"))
-  for (lvl in tmp$levels) {
-    if (length(tmp$levels) > 1) print(str_glue("{tmp$printName} == {parse_number(lvl)}:"))
-    print(str_glue("    mean (%): {tmp$stats[str_c(lvl, 'mean')]}"))
-    print(str_glue("    SD   (%): {tmp$stats[str_c(lvl, 'sd')]}"))
-    print(str_glue("    min  (%): {tmp$stats[str_c(lvl, 'min')]}"))
-    print(str_glue("    max  (%): {tmp$stats[str_c(lvl, 'max')]}"))
+  for (tmp in list(stats_overall[[task]], stats_memLoad[[task]], stats_ecc[[task]])) {
+  
+    print(str_glue("Memory performance ({if_else(str_detect(tmp$printName, 'overall'), '', 'by ')}{tmp$printName}):\n"))
+    for (lvl in tmp$levels) {
+      if (length(tmp$levels) > 1) print(str_glue("{tmp$printName} == {parse_number(lvl)}:"))
+      print(str_glue("    mean (%): {tmp$stats[str_c(lvl, 'mean')]}"))
+      print(str_glue("    SD   (%): {tmp$stats[str_c(lvl, 'sd')]}"))
+      print(str_glue("    min  (%): {tmp$stats[str_c(lvl, 'min')]}"))
+      print(str_glue("    max  (%): {tmp$stats[str_c(lvl, 'max')]}"))
+    }
+    cat("\n\n")
   }
-  cat("\n\n")
-}
-         
+}         
 
 extract_var("n_rej_subs", n_rej_subs, exp_format = "%i")
 extract_var("n_tot_trials_prerej_allsubs", 720 * (n_subs_analyzed + n_rej_subs), exp_format = "%i")
@@ -207,10 +232,13 @@ extract_var("min_n_trials_per_sub_postrej", min(summary_rem_trials_per_sub$n_tri
 extract_var("max_n_trials_per_sub_postrej", max(summary_rem_trials_per_sub$n_trials_remaining), exp_format="%i")
 extract_var("min_perc_trials_per_sub_postrej", min(summary_rem_trials_per_sub$perc_trials_remaining), exp_format="%.2f")
 extract_var("max_perc_trials_per_sub_postrej", max(summary_rem_trials_per_sub$perc_trials_remaining), exp_format="%.2f")
-for (tmp in list(stats_overall, stats_memLoad, stats_ecc)) {
-  for (lvl in tmp$levels) {
-    for (stat in c("mean", "sd", "min", "max")) {
-      extract_var(str_glue("mem_acc_{lvl}{stat}"), tmp$stats[str_c(lvl, stat)], exp_format="%.2f")
+
+for(task in c("exp", "perc")) {
+  for (tmp in list(stats_overall[[task]], stats_memLoad[[task]], stats_ecc[[task]])) {
+    for (lvl in tmp$levels) {
+      for (stat in c("mean", "sd", "min", "max")) {
+        extract_var(str_glue("mem_acc_{task}_{lvl}{stat}"), tmp$stats[str_c(lvl, stat)], exp_format="%.2f")
+      }
     }
   }
 }
@@ -225,9 +253,8 @@ for (tmp in list(stats_overall, stats_memLoad, stats_ecc)) {
 ### VSTM Task:
 ```{r, message=FALSE, warning=FALSE}
 # VSTM task:
-func_analysis_01('experiment')
+results_anova_behav_exp <- func_analysis_01('experiment')
 ```
-
 
 _show source:_ 
 ```{r, echo=FALSE}
@@ -237,14 +264,54 @@ insert_fun("func_analysis_01")
 ```{r func_analysis_01-source, eval = FALSE}
 ```
 
+_extract variables:_ 
+```{r, echo=FALSE}
+for (eff in c("c_StimN", "c_Ecc", "c_StimN:c_Ecc")) {
+  eff_print <- eff %>% 
+    str_replace_all("c_", "") %>% 
+    str_replace_all(":", "-") 
+    
+  extract_var(str_c("anova_behav_exp_eff_", eff_print, "_F"), summary(results_anova_behav_exp)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_behav_exp_eff_", eff_print, "_df_within"), summary(results_anova_behav_exp)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_behav_exp_eff_", eff_print, "_df_resid"), summary(results_anova_behav_exp)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]],
+              exp_format = "%i")
+  extract_var(str_c("anova_behav_exp_eff_", eff_print, "_p"), summary(results_anova_behav_exp)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+              is_pval = TRUE, 
+              exp_format = "%.3f")
+}
+```
+
+
+
 ### Perception task:
 ```{r,  message=FALSE, warning=FALSE}
 # perceptual Change Detection Task:
-func_analysis_01('perception')
+results_anova_behav_perc <- func_analysis_01('perception')
 ```
 
 ```{r func_analysis_01-source, eval = FALSE}
 ```
+
+_extract variables:_ 
+```{r, echo=FALSE}
+for (eff in c("c_StimN", "c_Ecc", "c_StimN:c_Ecc")) {
+  eff_print <- eff %>% 
+    str_replace_all("c_", "") %>% 
+    str_replace_all(":", "x") 
+    
+  extract_var(str_c("anova_behav_perc_eff_", eff_print, "_F"), summary(results_anova_behav_perc)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_behav_perc_eff_", eff_print, "_df_within"), summary(results_anova_behav_perc)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_behav_perc_eff_", eff_print, "_df_resid"), summary(results_anova_behav_perc)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_behav_perc_eff_", eff_print, "_p"), summary(results_anova_behav_perc)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+              is_pval = TRUE, 
+              exp_format = "%.3f")
+}
+```
+
+
 
 
 ## Analysis 01 - supplement: 
@@ -262,7 +329,6 @@ func_analysis_03('experiment')
 # perceptual Change Detection Task:
 func_analysis_03('perception')
 ```
-
 
 
 ## Analysis 02: 

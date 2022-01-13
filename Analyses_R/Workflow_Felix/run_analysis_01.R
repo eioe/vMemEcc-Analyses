@@ -89,9 +89,11 @@ func_analysis_01 <- function(condition) {
   figa <- figa + theme(legend.position = c(0.85, 0.15))
   
   
-  figa
+  plot(figa)
 
   #--------------------------------------------------------------------------
+  
+  return(aov.srt)
 }
 
 
