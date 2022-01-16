@@ -61,10 +61,12 @@ path_extracted_vars <- file.path(path_global, 'Writing',
                              'VME_extracted_vars.json')
 
 #--------------------------------------------------------------------------
-## load packages
+## load packages & custom utils:
 source(here("Utils", "load_packages.R"))
-source(here('Utils', 'print_output.R'))
 source(file.path(path_scripts_sven,"loadPackages.R"))
+source(here('Utils', 'print_output.R'))
+source(here('Utils', 'utils_report.R'))
+
 
 #--------------------------------------------------------------------------
 
@@ -252,11 +254,6 @@ for(task in c("exp", "perc")) {
 **Is there an effect of workload or eccentricity on performance in the VSTM task and in the perception task?**
 
 ### VSTM Task:
-```{r, message=FALSE, warning=FALSE}
-# VSTM task:
-results_anova_behav_exp <- func_analysis_01('experiment')
-```
-
 _show source:_ 
 ```{r, echo=FALSE}
 # Code to chunk:
@@ -265,12 +262,17 @@ insert_fun("func_analysis_01")
 ```{r func_analysis_01-source, eval = FALSE}
 ```
 
+```{r, message=FALSE, warning=FALSE}
+# VSTM task:
+results_anova_behav_exp <- func_analysis_01('experiment')
+```
+
 _extract variables:_ 
 ```{r, echo=FALSE}
 for (eff in c("c_StimN", "c_Ecc", "c_StimN:c_Ecc")) {
   eff_print <- eff %>% 
     str_replace_all("c_", "") %>% 
-    str_replace_all(":", "-") 
+    str_replace_all(":", "x") 
     
   extract_var(str_c("anova_behav_exp_eff_", eff_print, "_F"), summary(results_anova_behav_exp)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
   extract_var(str_c("anova_behav_exp_eff_", eff_print, "_df_within"), summary(results_anova_behav_exp)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
@@ -364,7 +366,7 @@ insert_fun("func_analysis_07")
 ```{r func_analysis_07-source, eval = FALSE}
 ```
 
-### Analysis 02 - Supplement 2: PNP amplitude (rmANOVA):
+### Analysis 03: PNP amplitude (rmANOVA):
 Testing the effects of _memory load_ and _eccentricity_ on the mean **PNP amplitude** (see [Papaioannou & Luck, 2020](https://onlinelibrary.wiley.com/doi/abs/10.1111/psyp.13532))
 
 ```{r, message=FALSE, warning=FALSE}
@@ -374,7 +376,7 @@ func_analysis_09()
 
 
 
-## Analysis 03: 
+## Analysis 04: 
 **Is there an effect of workload or eccentricity on mean lateralized alpha power in the VSTM task?**
 See paper for specifics of parameters re. frequency band, ROI, and time window that were used to calculate mean lateralized power (power **contralaterally - ipsilaterally**)
 
