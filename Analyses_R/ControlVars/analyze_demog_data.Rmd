@@ -19,6 +19,8 @@ library(kableExtra)
 source(here('Utils', 'load_colors.R'))
 # load rainclouds plot ingredients:
 source(here('Utils', 'R_rainclouds.R'))
+# load other utils:
+source(here('Utils', 'utils_report.R'))
 
 # get data from virtual drive (set FALSE if you're not Felix)
 data_from_seafile <- TRUE
@@ -47,16 +49,6 @@ if (data_from_seafile) {
                      'Pics')
 }
 
-# TODO: vars to save: 
-# - ssq_sum_pre_mean
-# - ssq_sum_pre_sd
-# - ssq_sum_post_mean
-# - ssq_sum_post_sd
-# - ssq_sum_z (z value wilcox)
-# - ssq_sum_p (p value)
-# - ssq_n (number of subjects in test)
-
-
 
 ```
 
@@ -75,12 +67,41 @@ data_demog <- data_demog %>%
   mutate(ssq_sum_pre = rowSums(.[grep('_pre$', names(.))])) %>% 
   mutate(ssq_sum_post = rowSums(.[grep('_post$', names(.))])) %>% 
   dplyr::filter(! sub_id %in% excl_subs)
-  
+
+# Run Wilcoxon signed rank test (non-param t-test):
+res <- wilcox.test(data_demog$ssq_sum_pre, data_demog$ssq_sum_post, paired = TRUE)
+print(res)
+
+age_mean = mean(data_demog$age)
+age_min = min(data_demog$age)
+age_max = max(data_demog$age)
+age_sd = sd(data_demog$age)
+
+
 print(str_glue("Sample info:\n
                N total: {n_tot}
                N analyzed: {nrow(data_demog)}
                N female: {sum(data_demog$gender == 'female')}
-               Mean age (sd): {format(mean(data_demog$age), digits = 2, nsmall = 2)} ({format(sd(data_demog$age), nsmall = 2, digits = 2)})"))
+               Mean age (sd): {format(age_mean, digits = 2, nsmall = 2)} ({format(age_sd, nsmall = 2, digits = 2)})"))
+
+
+# extract vars:
+extract_var('age_mean', age_mean)
+extract_var('age_sd', age_sd)
+extract_var('age_min', age_min, exp_format = "%i")
+extract_var('age_max', age_max, exp_format = "%i")
+extract_var('n_fem_subs', sum(data_demog$gender == 'female'), exp_format = "%i")
+extract_var('n_right_handed', sum(data_demog$handedness == 'right'), exp_format = "%i")
+ 
+extract_var('ssq_sum_pre_mean', mean(data_demog$ssq_sum_pre))
+extract_var('ssq_sum_post_mean', mean(data_demog$ssq_sum_post))
+extract_var('ssq_sum_pre_sd', sd(data_demog$ssq_sum_pre))
+extract_var('ssq_sum_post_sd', sd(data_demog$ssq_sum_post))
+extract_var('ssq_sum_wilcox_v', res$statistic)
+extract_var('ssq_sum_wilcox_p', res$p.value)
+
+
+
 
 
 
@@ -183,6 +204,8 @@ if (save_output) {
 # print to output:
 plt_sum
 plt_subscales
+
+
 
 ```
 
