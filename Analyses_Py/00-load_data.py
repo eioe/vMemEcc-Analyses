@@ -1,9 +1,16 @@
 """
 =============================
-00. Load data from disk
+00. Load data from disk and convert to `.raw` format. 
 =============================
 
-Loads vMemEcc raw EEG data (BrainVision format) from disk. 
+Loads vMemEcc raw EEG data (BrainVision format) from disk and stores it as `.raw` format (MNE).
+For some subjects the recording was split in multiple parts (e.g., due to required restart of the amp or recording PC). 
+In these cases, the single files are concatenated to one pseudo-continuous file. 
+
+Requires either the folder `vMemEcc/Data/SubjectData` or access to the data on the MPG cloud keeper via seadrive.
+
+If you have access to `vMemEcc/Data/DataMNE/00_raw` and it contains all files, this step can be skipped. 
+
 """
 
 import os
