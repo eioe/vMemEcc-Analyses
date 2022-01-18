@@ -63,17 +63,14 @@ def calc_eog_chans(data_raw):
         data_raw.rename_channels(rn_ch_dict) 
         print('renaming eog channels.')
 
-    # check which labels were given to EOG electrodes:
-    eog_dict = {
-        'vertical_chans' : {
-            'left': ['Fp1', 'IO1'], 
-            'right': ['Fp2', 'IO2']
-        }, 
-        'horizontal_chans' : {
-            'left': ['LO1'], 
-            'right': ['LO2']
-        }
-    }
+    ## which labels were given to EOG electrodes:
+    # 'vertical_chans' : 
+    #        'left': ['Fp1', 'IO1'], 
+    #        'right': ['Fp2', 'IO2'] 
+    # 'horizontal_chans' : 
+    #        'left': ['LO1'], 
+    #        'right': ['LO2']
+
 
     # For a few subjects electrodes 'Fp1' and 'LO1' were mistakenly exchanged. 
     # Let's find out for which and repair it:
