@@ -5,6 +5,9 @@ import jinja2
 
 #  TODO: make paths relative
 
+
+
+
 path_rep_dict = 'C:\\Users\\Felix\\Seafile\\Experiments\\vMemEcc\\Writing\\Other\\VME_extracted_vars.json'
 with open(path_rep_dict) as json_file:
     rep_dict = json.load(json_file)
