@@ -95,8 +95,8 @@ def calc_eog_chans(data_raw):
         holder.append(tmp)
 
     res = np.stack(holder).mean(axis=0)
-    # cross: corr between Fp1-LO1, Fp1-LO2, Fp2-LO1, Fp2-LO2 (should be neg)
-    # equal: corr between Fp1-Fp2, LO1-LO2 (should be pos)
+    # cross: corr between Fp1-IO1, Fp1-IO2, Fp2-IO1, Fp2-IO2 (should be neg)
+    # equal: corr between Fp1-Fp2, IO1-IO2 (should be pos)
     # fp_cor: corr betw. Fp1 and Fp2
     cross = np.concatenate([res[0,2:4].flatten(), res[1,2:4].flatten()]).mean() #, [1,2], [1,3]])
     equal = np.mean([res[0,1], res[2,3]]) 
