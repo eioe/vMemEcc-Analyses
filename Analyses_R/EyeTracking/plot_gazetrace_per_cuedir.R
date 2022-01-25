@@ -1,4 +1,38 @@
 
+data_from_hdd <- TRUE
+
+library(tidyverse)
+library(glue)
+library(here)
+source("EyeTracking/resample_gaze_data.R")
+
+
+if (data_from_hdd) {
+  path_data <- file.path('E:', 'vMemEcc', 'SubjectData_extern', 'SubjectData')
+} else {
+  path_data <- here('..', '..', 'Data', 'SubjectData')
+}
+
+
+
+# load subject list and exclude bad subjects:
+sub_ids <- str_c('VME_S', str_pad(setdiff(1:27, c(11,14,19)), 
+                                  2, 'left', 0))
+
+
+##### Preprocessing ###########################################
+
+### STEP 1
+## crop and resample gaze data
+## Crops to [-1.1;2.2] and resamples to 50Hz (choosing the closest sample with the highest confidence). 
+## Change the function if you want to change these values. Sorry. 
+## Saves the output to disk (one DF/file per subject). If wanted returns one huge DF with all data.
+## This is slow. Only run if you want to change the resampling or so. 
+
+# resample_gaze_data_w2disk(sub_ids, path_data, return_df = FALSE)
+
+### STEP 2
+## Load resampled data, combine with data about detected saccades
 
 holder <- list()
 for (sub_id in sub_ids) {
@@ -7,135 +41,94 @@ for (sub_id in sub_ids) {
   data <- readRDS(fname)
   saccdat <- readRDS(file.path(path_data_sub, glue('saccdata_{sub_id}.rds')))
   saccdat <- saccdat %>% 
-    ungroup() %>%  
-    mutate(block = as.character(block)) %>% 
     select(sub_id, block, trial, reject_eeg) %>% 
-    mutate(block_nr = as.character(block), 
-           trial = as.character(trial)) %>% 
+    mutate(block_nr = block) %>% 
     group_by(sub_id, block_nr, trial) %>% 
     summarise(reject_eeg = any(reject_eeg)) %>% 
-    mutate(rej_eeg = as.character(reject_eeg)) %>% 
+    ungroup() 
+  data_joined <- data %>% 
     ungroup() %>% 
-    distinct(sub_id, block_nr, trial, .keep_all = TRUE)
-  data_joined <- data %>% mutate(trial = as.character(trial)) %>% ungroup() %>% left_join(saccdat) %>% 
+    left_join(saccdat) %>% 
     mutate(reject_eeg = if_else(is.na(reject_eeg), FALSE, reject_eeg))
   holder[[sub_id]] <- data_joined 
 }
 
+# Merge to one DF:
+data_gaze <- bind_rows(holder, .id = 'sub_id')
 
 
-monster <- bind_rows(holder, .id = 'sub_id')
+### STEP 3
+## Clean DF for further processing
 
-# both eyes to common time
-# resample
-# long format
-# throw out bad trials (conf < 0.65 for > 33%) 
-
-
-holder2 <- list()
-for (sub_id in sub_ids) {
-  ouut<- monster %>% 
-    # slice(which(row_number() %% 5 == 1)) %>% 
-    filter(sub_id == sub_id) %>% 
-    select(sub_id, gaze_timestamp, trial, block_nr, eye, confidence, gaze_dev0_hor, gaze_dev1_hor) %>% 
-    group_by(sub_id,
-             trial,
-             block_nr,
-             eye) %>% 
-    et_resample("gaze_timestamp", 
-                c("gazedev_", "confidence"), 
-                srate = 50, 
-                tmax = 2.2, 
-                tmin = -1.1) 
-  fname <- file.path(path_data_sub, glue("dataresampled-{sub_id}.rds"))
-  saveRDS(ouut, fname)
-  print("##########################\n")
-  print(glue("Done with {sub_id}!"))
-  print("##########################\n")
-  
-}
-
-#saccdat <- readRDS(file.path(path_data_sub, glue('saccdata_{sub_id}.rds')))
-
-# discard bad motherfuckers trials
-monster %>% 
-  # downsample
-  # slice(which(row_number() %% 5 == 1)) %>% 
-  # get exp trials only:
-  filter(block_nr != "Block2" & !reject_eeg) %>% 
-  # 
-  group_by(sub_id, 
-           block_nr,
-           trial) %>% 
-  summarize(n = n(),
-            n_lowconf_sampels = sum(confidence < 0.6),
-            perc_lowconf_samples = n_lowconf_sampels / n) %>% 
-  mutate(bmf_trial = perc_lowconf_samples > 0.33) -> shw
-  
-
-
-
-
-tmax_ <- max(me$gaze_timestamp, na.rm = T)
-tmin_ <- min(me$gaze_timestamp, na.rm = T)
-tdiff <- tmax - tmin
-
-
-
-
-alldf_0 <- monster %>% 
-  #left_join(shw) %>% 
-  #choose eye & exp blocks
-  filter(block_nr != "Block2", 
-         #!bmf_trial,
-         #eye == 1, 
-         !reject_eeg) %>%
-  # downsample
-  # slice(which(row_number() %% 2 == 1)) %>% 
-  # choose cols
+data_gaze <- data_gaze %>% 
+  filter(block_nr != "Block2", # exclude perceptual block
+         !reject_eeg) %>%      # exclude trials with saccades >2dva
   select(time_resampled, 
          block_nr, 
          trial, 
          sub_id, 
          gaze_dev_hor, 
+         gaze_dev_vert, 
          confidence, 
          eye) %>% 
   # adapt vars
   mutate(block_num = parse_number(block_nr), 
          trial_num_in_block = as.integer(trial), 
          ppid = sub_id,
-         .keep = "unused") #%>% 
+         .keep = "unused") 
 
-bl <- alldf_0 %>% 
+### STEP 4
+## Combine with behavioral & experimental data
+
+data_behav <- readRDS(file.path(here(), '..', '..', 'Data', 'DataR', "fulldat_behav.rds")) %>% 
+  select(ppid, 
+         trial_num_in_block, 
+         block_num, c_CueDir, 
+         c_ResponseCorrect, 
+         c_StimN, 
+         c_Ecc) %>% 
+  mutate(c_Ecc = as_factor(c_Ecc), 
+         c_StimN = as_factor(c_StimN), 
+         c_CueDir = as_factor(c_CueDir))
+
+data_gaze <- data_gaze %>% left_join(data_behav) 
+
+
+### STEP 5 
+# Calculate baseline value per trial (mean value in the interval [-1.1; -0.8])
+
+bl <- data_gaze %>% 
   dplyr::filter(((time_resampled > -1.1) & (time_resampled < -0.8))) %>% 
   group_by(ppid, block_num, trial_num_in_block, eye) %>% 
-  summarise(bl_val = mean(gaze_dev_hor, na.rm = FALSE)) %>% 
+  summarise(bl_val_hor = mean(gaze_dev_hor, na.rm = FALSE), 
+            bl_val_vert = mean(gaze_dev_vert, na.rm = FALSE)) %>% 
   ungroup() 
 
-cdat <- alldf_0 %>% left_join(d_behv) 
-cdat <- cdat %>%  left_join(bl)
+data_gaze <- data_gaze %>% 
+  left_join(bl) %>% 
+  mutate(bl_val_hor = if_else(is.na(bl_val_hor), 0, bl_val_hor), 
+         bl_val_vert = if_else(is.na(bl_val_vert), 0, bl_val_vert), 
+         gaze_dev_hor = (gaze_dev_hor - bl_val_hor), 
+         gaze_dev_vert = (gaze_dev_vert - bl_val_vert))
 
 
-tmp_plot <- cdat %>% 
-  #filter(!((block_num == 12) & (sub_id == 'VME_S21'))) %>% 
-  mutate(bl_val = if_else(is.na(bl_val), 0, bl_val)) %>% 
-  mutate(gaze_dev_hor = (gaze_dev_hor - bl_val), 
-         c_Ecc = as_factor(c_Ecc), 
-         c_StimN = as_factor(c_StimN)) %>%
-  mutate(gaze_dev_hor = if_else(c_CueDir == -1, gaze_dev_hor*-1, gaze_dev_hor)) %>% 
+### STEP 6
+# 
+data_plot <- data_gaze %>% 
+  filter(eye == 1) %>% 
+  mutate(gaze_dev_hor_pooled = if_else(c_CueDir == -1, gaze_dev_hor*-1, gaze_dev_hor)) %>% 
+  # Subject means:
   group_by(c_StimN, time_resampled, ppid) %>% 
-  summarise(gaze_dev_hor = mean(gaze_dev_hor), na.rm = FALSE) %>% 
+  summarise(gaze_dev_hor = mean(gaze_dev_hor_pooled), na.rm = FALSE) %>% 
+  # summarize across subjects:
   summarise(dev_hor = mean(gaze_dev_hor, na.rm = FALSE), 
             sem = sd(gaze_dev_hor, na.rm = FALSE)/sqrt(21), 
             min = dev_hor - sem, 
             max = dev_hor + sem) %>% 
-  #mutate(c_CueDir = as_factor(c_CueDir)) %>% 
-  ungroup()# , 
-    #dev_hor = rollmean(na.spline(dev_hor), 5, 
-    #       na.pad = TRUE))
+  ungroup()
   
 
-tmp_plot %>%  ggplot(aes(x = time_resampled, col = c_StimN)) +  
+data_plot %>%  ggplot(aes(x = time_resampled, col = c_StimN)) +  
   geom_line(aes(y = dev_hor)) + 
   geom_line(aes(y = min)) + geom_ribbon(aes(ymin=min, ymax=max, fill = c_StimN), alpha = 0.1) +
   ylim(c(-0.5,0.5)) + 
@@ -145,10 +138,6 @@ tmp_plot %>%  ggplot(aes(x = time_resampled, col = c_StimN)) +
   theme_bw()
 
 
-data_behav <- readRDS(file.path(here(), '..', '..', 'Data', 'DataR', "fulldat_behav.rds"))
 
-d_behv <- data_behav %>% 
- # filter(ppid == "VME_S02") %>% 
-  select(ppid, trial_num_in_block, block_num, c_CueDir, c_ResponseCorrect, c_StimN, c_Ecc)
 
 
