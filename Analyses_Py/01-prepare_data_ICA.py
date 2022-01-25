@@ -63,45 +63,43 @@ def calc_eog_chans(data_raw):
         data_raw.rename_channels(rn_ch_dict) 
         print('renaming eog channels.')
 
-    # check which labels were given to EOG electrodes:
-    eog_dict = {
-        'vertical_chans' : {
-            'left': ['Fp1', 'IO1'], 
-            'right': ['Fp2', 'IO2']
-        }, 
-        'horizontal_chans' : {
-            'left': ['LO1'], 
-            'right': ['LO2']
-        }
-    }
+    ## which labels were given to EOG electrodes:
+    # 'vertical_chans' : 
+    #        'left': ['Fp1', 'IO1'], 
+    #        'right': ['Fp2', 'IO2'] 
+    # 'horizontal_chans' : 
+    #        'left': ['LO1'], 
+    #        'right': ['LO2']
+
 
     # For a few subjects electrodes 'Fp1' and 'LO1' were mistakenly exchanged. 
     # Let's find out for which and repair it:
 
-    picks = ['Fp1', 'Fp2', 'IO1', 'IO2']
+    picks = ['Fp1', 'Fp2', 'IO1', 'IO2', 'LO1', 'LO2']
     rr = data_raw.load_data().copy().pick_channels(picks).filter(l_freq = 1, h_freq= 5, picks=['eeg','misc'], verbose=False)
     # Create pseudo epochs to loop over:
     events = mne.make_fixed_length_events(rr, duration=20)
     epochs = mne.Epochs(rr, events, tmin=0.0, tmax=20, baseline = (0,1), verbose= False)
-    # For each epoch we calculate the correlations between the vert EOG channels and store it
+    epochs.load_data().reorder_channels(picks)
+    # For each epoch we calculate the correlations between all EOG channels and store it
     holder = [] 
     for epo in epochs:
-        fp1 = epo
-        fp1 = fp1 - fp1.mean(axis = 1, keepdims=True)
-        # plt.plot(epochs.times, fp1.transpose())
-        # plt.legend(picks)
-        # plt.show()
-        tmp = np.corrcoef(fp1)
+        epo = epo - epo.copy().mean(axis = 1, keepdims=True)
+        tmp = np.corrcoef(epo)
         holder.append(tmp)
 
     res = np.stack(holder).mean(axis=0)
-    # cross: corr between Fp1-LO1, Fp1-LO2, Fp2-LO1, Fp2-LO2 (should be neg)
-    # equal: corr between Fp1-Fp2, LO1-LO2 (should be pos)
-    # fp_cor: corr betw. Fp1 and Fp2
-    cross = np.concatenate([res[0,2:4].flatten(), res[1,2:4].flatten()]).mean() #, [1,2], [1,3]])
-    equal = np.mean([res[0,1], res[2,3]]) 
-    fp_cor = res[0,1]
-    if not fp_cor > 0.8:
+    
+    # correlations of "Fp1" (what could be "IO1")
+    idx_fp1 = epochs.ch_names.index('Fp1')
+    corrs_fp1 = res[idx_fp1,:]
+    # corr with itself is ofc largest, so we put it away
+    corrs_fp1[idx_fp1] = -999
+    # now get which other chan it correlates most with
+    idx_corrmax = np.argmax(corrs_fp1)
+    chan_corrmax = epochs.ch_names[idx_corrmax]
+    
+    if not chan_corrmax == 'Fp2':
         helpers.print_msg('Swopping channels LO1 and Fp1.')
         tmp = data_raw.get_data(picks = ['Fp1', 'LO1'])
         data_raw['Fp1'] = tmp[1]

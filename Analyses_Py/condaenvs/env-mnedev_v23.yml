@@ -1,4 +1,4 @@
-name: base
+name: mnedev-v23
 channels:
   - conda-forge
   - defaults
@@ -380,4 +380,3 @@ dependencies:
     - validators==0.18.1
     - vtk==8.1.2
     - watchdog==1.0.1
-prefix: C:\Users\Felix\Anaconda3
