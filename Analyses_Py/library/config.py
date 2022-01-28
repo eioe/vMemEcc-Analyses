@@ -19,16 +19,32 @@ import __main__ as main
 study_path = '../../'
 
 # Paths:
+
+paths = dict()
+
 if hasattr(main, '__file__'): 
     # running from shell
     path_study = Path(os.path.abspath(__file__)).parents[3]
+    paths['study'] = path_study
 else: 
     # running interactively:
     path_study = Path(os.getcwd()).parents[1]
-#path_study = os.path.join(path_study, 'Experiments', 'vMemEcc')
+    paths['study'] = path_study
+    
 path_extracted_vars = op.join(path_study, 'Writing', 'Other',
                               'VME_extracted_vars.json')
-path_data = os.path.join(path_study, 'Data')
+paths['extracted_vars'] = path_extracted_vars
+
+path_data = os.path.join(path_study, 'Data2022')
+paths['00_raw'] = os.path.join(path_data, 'DataMNE', 'EEG', '00_raw')
+paths['01_prepared'] = os.path.join(path_data, 'DataMNE', 'EEG', '01_prepared')
+paths['01_prepared-events'] = os.path.join(path_data, 'DataMNE', 'EEG', '01_prepared-events')
+
+for p in paths:
+    if not op.exists(paths[p]):
+        os.makedirs(paths[p])
+        print('creating dir: ' + paths[p]) 
+
 path_postICA = op.join(path_data, 'DataMNE', 'EEG', '05.3_rejICA')
 path_rejepo = op.join(path_data, 'DataMNE', 'EEG', '05.1_rejepo')
 path_reject_epos_extern = op.join(path_rejepo, 'CSV_rejEpos_ET')
