@@ -101,6 +101,58 @@ spline_interpolate_low_conf_samples <- function(vec,
   return(vec_spline)                
 }
 
+
+
+
+et_resample <- function(df, var_time, srate, tmax = NULL, tmin = NULL) {
+  # ' Resample to fixed sampling rate, keeping only sample with highest confidence
+  # '
+  # ' @param df Dataframe or tibble with eye tracking data as output by `\Analyses_R\EyeTracking\extract_data_to_rds.R`. 
+  #             Normally you'll want to hand over a grouped df (by ID, trial, ...). 
+  # ' @param var_time (character) Name of the column in the df that contains the original time stamps of the samples.
+  # ' @param srate (int) Targeted sampling rate. 
+  # ' @param tmin/tmax (double) Start/End time of the interval which shall be extracted and resampled.
+  # ' @return A vector/matrix with the elements/columns: theta (azimuth), phi (inclination), and r (dist to origin).  
+  
+  if (!is_null(tmax)) {
+    df <- df %>% 
+      filter(get(var_time) <= tmax + (1/srate)/2) 
+  } else 
+  {
+    tmax <- df$'var_time'[length(df$'var_time')]
+  }
+  
+  if (!is_null(tmin)) {
+    df <- df %>%
+      filter(get(var_time) >= tmin - (1/srate)/2)
+  } else 
+  {
+    tmin <- df$'var_time'[1]
+  }
+  
+  times <- seq(tmin, tmax, 1/srate)
+  
+  df_resampled <- df %>% 
+    mutate(time_resampled = sapply(gaze_timestamp, findindx, times)) %>% 
+    group_by(time_resampled, .add = T) %>% 
+    mutate(max_conf_ = max(confidence)) %>% 
+    filter(confidence == max_conf_) %>% 
+    select(!max_conf_) %>% 
+    ungroup(time_resampled) %>% 
+    distinct(time_resampled, .keep_all = TRUE) 
+  
+  return(df_resampled)
+}
+
+
+findindx <- function(vec, ttimes) {
+  out <- ttimes[which.min(abs(vec - ttimes))]
+  return(out)
+}
+
+
+
+
 # dir helper:
 checkmake_dirs <- function(paths) {
   for (path in paths) {
@@ -111,86 +163,3 @@ checkmake_dirs <- function(paths) {
   }
 }
 
-################### old:
-
-# # normalize it:
-# mutate(fvec0_norm = Map(function(...) set_names(normalize_vec(c(...)), 
-#                                                 c('x', 'y', 'z')),
-#                        fvec0_x, fvec0_y, fvec0_z)) %>%
-# # unpack to coulmns:
-# unnest_legacy() %>%
-# mutate(key = rep(c('x','y','z'), nrow(.)/3)) %>%
-# pivot_wider(names_from = key,
-#             values_from = fvec0_norm,
-#             names_prefix = 'fvec0_norm_') %>%
-# 
-# # same for left eye:
-# mutate(fvec1_norm = Map(function(...) set_names(normalize_vec(c(...)), 
-#                                                 c('x', 'y', 'z')),
-#                         fvec1_x, fvec1_y, fvec1_z)) %>%
-# unnest_legacy() %>%
-# mutate(key = rep(c('x','y','z'), nrow(.)/3)) %>%
-# pivot_wider(names_from = key,
-#             values_from = fvec1_norm,
-#             names_prefix = 'fvec1_norm_') %>%
-
-
-# # calculate deviation (in mm and dva):
-# mutate(dev0_x = gaze_normal0_x - fvec0_norm_x,
-#        dev0_y = gaze_normal0_y - fvec0_norm_y,
-#        dev1_x = gaze_normal1_x - fvec1_norm_x,
-#        dev1_y = gaze_normal1_y - fvec1_norm_y,
-#        dev0_deg_x = asin(dev0_x) * 180/pi,
-#        dev0_deg_y = asin(dev0_y) * 180/pi,
-#        dev1_deg_x = asin(dev1_x) * 180/pi,
-#        dev1_deg_y = asin(dev1_y) * 180/pi, 
-#        ang_hor0 =  acos(fvec0_norm_x * gaze_normal0_x + fvec0_norm_z * gaze_normal0_z) * 180/pi, 
-#        ang_hor1 =  acos(fvec1_norm_x * gaze_normal1_x + fvec1_norm_z * gaze_normal1_z) * 180/pi,
-#        angh_0 = rad2deg(atan2(fvec0_norm_z, fvec0_norm_x) - atan2(gaze_normal0_z, gaze_normal0_x) * -1), 
-#        sp_a = sqrt(fvec0_norm_x^2 + fvec0_norm_y^2 + fvec0_norm_z^2), 
-#        sp_b = atan(fvec0_norm_z / fvec0_norm_x), 
-#        sp_c = acos(fvec0_norm_y / sqrt(fvec0_norm_x^2 + fvec0_norm_y^2 + fvec0_norm_z^2)), 
-#        sp_g_a = sqrt(gaze_normal0_x^2 + gaze_normal0_y^2 + gaze_normal0_z^2),
-#        sp_g_b = atan(gaze_normal0_z / gaze_normal0_x), 
-#        sp_g_z = acos(gaze_normal0_y / sqrt(gaze_normal0_x^2 + gaze_normal0_y^2 + gaze_normal0_z^2)),
-#        ang_diff_h = rad2deg(sp_b - sp_g_b)
-#        )
-# 
-# 
-# sacc_tibble_names <- c('start', 'end', 'peakvel', 
-#                        'sacc_vec_x', 'sacc_vec_y', 
-#                        'sacc_amp_x', 'sacc_amp_y')
-
-## Following blocks can be used to produce MSTB plots;
-## Will need some tweaking!
-
-# 
-# # Plot trajectory
-# par(mfrow=c(1,2))
-# plot(as_vector(data_fix$dev1_deg_x),as_vector(data_fix$dev1_deg_y),type='l',asp=1,
-#      xlab=expression(x[l]),ylab=expression(y[l]),
-#      main="Position")
-# for ( s in 1:N ) {
-#   j <- bin[s,1]:bin[s,2] 
-#   lines(as_vector(data_fix$dev1_deg_x[j]),as_vector(data_fix$dev1_deg_y[j]),type='l',col='red',lwd=3)
-# }
-# points(as_vector(data_fix[bin[,2],42]),as_vector(data_fix[bin[,2],43]),col='red')
-# 
-# # Plot trajectory in 2D velocity space
-# vls <- vecvel(timings_eye1 %>% 
-#                 select(dev1_deg_x, dev1_deg_y) %>% 
-#                 as.matrix(),200)
-# plot(vls[,1],vls[,2],type='l',asp=1,
-#      xlab=expression(v[x]),ylab=expression(v[y]),
-#      main="Velocity")
-# for ( s in 1:N ) {
-#   j <- bin[s,1]:bin[s,2] 
-#   idxx <- which(timings_eye1$gaze_timestamp %in% data_fix$gaze_timestamp[j])
-#   lines(vls[idxx,1],vls[idxx,2],type='l',col='red',lwd=3)
-#   #points(vls[idxx,1],vls[idxx,2],col='red',lwd=3)
-# }
-# phi <- seq(from=0,to=2*pi,length.out=300)
-# cx <- msl$radius[1]*cos(phi)
-# cy <- msl$radius[2]*sin(phi)
-# lines(cx,cy,lty=2)
-# 
