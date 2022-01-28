@@ -72,7 +72,7 @@ def calc_eog_chans(data_raw):
     #        'right': ['LO2']
 
 
-    # For a few subjects electrodes 'Fp1' and 'LO1' were mistakenly exchanged. 
+    # For a few subjects electrodes 'Fp1' and 'IO1' were mistakenly exchanged. 
     # Let's find out for which and repair it:
 
     picks = ['Fp1', 'Fp2', 'IO1', 'IO2', 'LO1', 'LO2']
@@ -101,20 +101,18 @@ def calc_eog_chans(data_raw):
     
     if not chan_corrmax == 'Fp2':
         helpers.print_msg('Swopping channels LO1 and Fp1.')
-        tmp = data_raw.get_data(picks = ['Fp1', 'LO1'])
+        tmp = data_raw.get_data(picks = ['Fp1', 'IO1'])
         data_raw['Fp1'] = tmp[1]
-        data_raw['LO1'] = tmp[0]
+        data_raw['IO1'] = tmp[0]
 
 
     # calculate bipolar EOG chans:
     data_raw.load_data()
-    #VEOGl = raw.copy().pick_channels(['Fp1', 'IO1']) 
-    #VEOGr = raw.copy().pick_channels(['Fp2', 'IO2']) 
-    dataL = data_raw.get_data(['Fp1']) - data_raw.get_data(['IO1']) #VEOGl.get_data(['Fp1']) - VEOGl.get_data(['IO1']) 
-    dataR = data_raw.get_data(['Fp2']) - data_raw.get_data(['IO2']) #VEOGr.get_data(['Fp2']) - VEOGr.get_data(['IO2']) 
+    dataL = data_raw.get_data(['Fp1']) - data_raw.get_data(['IO1']) 
+    dataR = data_raw.get_data(['Fp2']) - data_raw.get_data(['IO2']) 
     dataVEOG = np.stack((dataL,dataR), axis=0).mean(0)
-    #HEOG = raw.copy().pick_channels(['LO1', 'LO2']) 
-    dataHEOG = data_raw.get_data(['LO1']) - data_raw.get_data(['LO2']) #HEOG.get_data(['LO1']) - HEOG.get_data(['LO2'])
+    
+    dataHEOG = data_raw.get_data(['LO1']) - data_raw.get_data(['LO2']) 
     dataEOG = np.concatenate((dataVEOG, dataHEOG), axis=0)
     info = mne.create_info(ch_names=['VEOG', 'HEOG'], sfreq=raw.info['sfreq'], ch_types=['eog', 'eog'])
     rawEOG = mne.io.RawArray(dataEOG, info=info)
