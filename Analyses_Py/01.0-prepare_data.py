@@ -1,6 +1,6 @@
 """
 =============================
-01. Prepare data for next steps
+01.0 Prepare data for next steps
 =============================
 
 Prepares EEG data for further processing steps & extract events. 
@@ -24,15 +24,17 @@ def get_data_and_events(subID):
     events, event_id = mne.events_from_annotations(raw)        
     return raw, events, event_id
 
-def save_events(subID, events, event_id, epo_part):
+def save_events(subID, events, event_id, bad_epos, epo_part):
     fname_eve = op.join(config.paths['01_prepared-events'], '-'.join([subID, epo_part,'eve.fif']))
     mne.write_events(fname_eve, events)
     fname_eve_id = op.join(config.paths['01_prepared-events'], '-'.join([subID, 'event_id.pkl']))
     if event_id is not None:
         with open(fname_eve_id, 'wb') as f:
             pickle.dump(event_id, f)
+    fname_bad_epos = op.join(config.paths['01_prepared-events'], '-'.join([subID, 'bad_epos_recording.pkl']))
+    with open(fname_bad_epos, 'wb') as f:
+        pickle.dump(bad_epos, f)
     return
-
 
 def calc_eog_chans(data_raw):
     # calculate and add HEOG and VEOG channels:
@@ -342,9 +344,11 @@ for idx, subID in enumerate(sub_list_str):
     # Extract and save events:
     srate = raw.info['sfreq']
     events_fix, events_cue, events_stimon, bad_epos = setup_event_structures(events, event_id, srate)
-    save_events(subID, events_stimon, event_id=event_id, epo_part='stimon')
-    save_events(subID, events_cue, event_id=None, epo_part='cue') # enough to save event_id once
-    save_events(subID, events_fix, event_id=None, epo_part='fix')
+    save_events(subID, events_stimon, event_id=event_id, bad_epos=bad_epos, epo_part='stimon')
+    save_events(subID, events_cue, event_id=None, bad_epos=bad_epos, epo_part='cue') # enough to save event_id once
+    save_events(subID, events_fix, event_id=None, bad_epos=bad_epos, epo_part='fix')
+    
+    
 
 #     event_id_fix    = {key: event_id[key] for key in event_id if event_id[key] in events_fix[:,2]}
 #     event_id_cue    = {key: event_id[key] for key in event_id if event_id[key] in events_cue[:,2]}

@@ -39,6 +39,9 @@ path_data = os.path.join(path_study, 'Data2022')
 paths['00_raw'] = os.path.join(path_data, 'DataMNE', 'EEG', '00_raw')
 paths['01_prepared'] = os.path.join(path_data, 'DataMNE', 'EEG', '01_prepared')
 paths['01_prepared-events'] = os.path.join(path_data, 'DataMNE', 'EEG', '01_prepared-events')
+paths['02_epochs'] = os.path.join(path_data, 'DataMNE', 'EEG', '02_epochs')
+paths['03_preproc-ica'] = os.path.join(path_data, 'DataMNE', 'EEG', '03_preproc-ica')
+
 
 for p in paths:
     if not op.exists(paths[p]):
@@ -108,7 +111,7 @@ times_dict = dict(CDA_start = 0.450,
                   bl_dur_tfr = 0.2)
 
 # parallelization: 
-n_jobs = 4 # let's leave the CPU some air to breath
+n_jobs = 16 # let's leave the CPU some air to breath
 
 # subjects: 
 n_subjects_total = 27

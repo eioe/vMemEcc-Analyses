@@ -355,15 +355,46 @@ for idx, sub in enumerate(sub_list):
     event_id_cue    = {key: event_id[key] for key in event_id if event_id[key] in events_cue[:,2]}
     event_id_stimon = {key: event_id[key] for key in event_id if event_id[key] in events_stimon[:,2]}
 
-    epos_ica = extract_epochs_ICA(raw.copy(), events_stimon, event_id_stimon, n_jobs = config.n_jobs)
-    save_data(epos_ica, subID + '-forica', path_outp_epo, '-epo')
+    epos_ica = extract_epochs_ICA(raw.copy(), 
+                                  events_stimon, 
+                                  event_id_stimon, 
+                                  n_jobs = config.n_jobs)
+    helpers.save_data(epos_ica,
+                      subID + '-forica',
+                      path_outp_epo, 
+                      '-epo')
 
-    epos_stimon = extract_epochs_stimon(raw.copy(), events_stimon, event_id_stimon, bad_epos_ = bad_epos.get('stimon',[]), n_jobs = config.n_jobs)
-    save_data(epos_stimon, subID + '-stimon', path_outp_epo, '-epo')
+    epos_stimon = extract_epochs_stimon(raw.copy(),
+                                        events_stimon,
+                                        event_id_stimon,
+                                        bad_epos_ = bad_epos.get('stimon',[]),
+                                        n_jobs = config.n_jobs)
+    helpers.save_data(epos_stimon,
+                      subID + '-stimon',
+                      path_outp_epo,
+                      append='-epo')
     
-    epos_cue = extract_epochs_cue(raw.copy(), events_cue, event_id_cue, tmin_ = -0.6, tmax_ = 1, bad_epos_ = bad_epos.get('cue', []), n_jobs = config.n_jobs)
-    save_data(epos_cue, subID + '-cue', path_outp_epo, '-epo')
+    epos_cue = extract_epochs_cue(raw.copy(),
+                                  events_cue,
+                                  event_id_cue,
+                                  tmin_ = -0.6, 
+                                  tmax_ = 1,
+                                  bad_epos_ = bad_epos.get('cue', []),
+                                  n_jobs = config.n_jobs)
+    helpers.save_data(epos_cue,
+                      subID + '-cue',
+                      path_outp_epo,
+                      append='-epo')
     
-    epos_fulllength = extract_epochs_fulllength(raw.copy(), events_cue, event_id_cue, tmin_ = -0.6, tmax_ = 3.3, bad_epos_ = np.unique([v for k in bad_epos.keys() for v in bad_epos.get(k, [])]), n_jobs = config.n_jobs)
-    save_data(epos_fulllength, subID + '-fulllength', path_outp_epo, '-epo')
+    epos_fulllength = extract_epochs_fulllength(raw.copy(),
+                                                events_cue,
+                                                event_id_cue,
+                                                tmin_ = -0.6,
+                                                tmax_ = 3.3,
+                                                bad_epos_ = np.unique([v for k in bad_epos.keys() for v in bad_epos.get(k, [])]),
+                                                n_jobs = config.n_jobs)
+    helpers.save_data(epos_fulllength,
+                      subID + '-fulllength',
+                      path_outp_epo,
+                      append='-epo')
     
