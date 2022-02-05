@@ -14,7 +14,7 @@
 #SBATCH --nodes=1 
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=32 
-#SBATCH --mem=100000
+#SBATCH --mem=10000000
 # 
 #SBATCH --mail-type=all 
 #SBATCH --mail-user=klotzsche@cbs.mpg.de 
