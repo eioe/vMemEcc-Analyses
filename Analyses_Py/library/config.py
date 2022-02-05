@@ -40,7 +40,8 @@ paths['00_raw'] = os.path.join(path_data, 'DataMNE', 'EEG', '00_raw')
 paths['01_prepared'] = os.path.join(path_data, 'DataMNE', 'EEG', '01_prepared')
 paths['01_prepared-events'] = os.path.join(path_data, 'DataMNE', 'EEG', '01_prepared-events')
 paths['02_epochs'] = os.path.join(path_data, 'DataMNE', 'EEG', '02_epochs')
-paths['03_preproc-ica'] = os.path.join(path_data, 'DataMNE', 'EEG', '03_preproc-ica')
+paths['03_preproc-ica'] = os.path.join(path_data, 'DataMNE', 'EEG', '03_preproc', 'ica')
+paths['03_preproc-ica-ar'] = os.path.join(path_data, 'DataMNE', 'EEG', '03_preproc', 'ica', 'ar')
 
 
 for p in paths:
