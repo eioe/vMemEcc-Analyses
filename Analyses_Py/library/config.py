@@ -42,7 +42,8 @@ paths['01_prepared-events'] = os.path.join(path_data, 'DataMNE', 'EEG', '01_prep
 paths['02_epochs'] = os.path.join(path_data, 'DataMNE', 'EEG', '02_epochs')
 paths['03_preproc-ica'] = os.path.join(path_data, 'DataMNE', 'EEG', '03_preproc', 'ica')
 paths['03_preproc-ica-ar'] = os.path.join(path_data, 'DataMNE', 'EEG', '03_preproc', 'ica', 'ar')
-
+paths['03_preproc-ica-eog'] = os.path.join(path_data, 'DataMNE', 'EEG', '03_preproc', 'ica', 'eog')
+paths['03_preproc-ar'] = os.path.join(path_data, 'DataMNE', 'EEG', '03_preproc', 'ar')
 
 for p in paths:
     if not op.exists(paths[p]):
@@ -108,11 +109,11 @@ times_dict = dict(CDA_start = 0.450,
                   cue_dur = 0.8, 
                   stim_dur = 0.2, 
                   retention_dur = 2.0, 
-                  bl_dur_erp = 0.4, 
+                  bl_dur_erp = 0.2, 
                   bl_dur_tfr = 0.2)
 
 # parallelization: 
-n_jobs = 16 # let's leave the CPU some air to breath
+n_jobs = 50 # adapt this to the number of cores in your machine. If in doubt, 6-8 is probably a good choice.
 
 # subjects: 
 n_subjects_total = 27
@@ -120,7 +121,7 @@ ids_missing_subjects = [11, 14, 19]
 ids_excluded_subjects = [7, 12, 22]
 
 # font sizes:
-plt_label_size = 18
+plt_label_size = 70
 
 # colors: 
 #"#66C2A5" "#3288BD"
