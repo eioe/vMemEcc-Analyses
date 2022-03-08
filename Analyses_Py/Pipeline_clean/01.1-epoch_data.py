@@ -7,10 +7,10 @@ Extracts 4 different kinds of epochs:
 
 name                timelocked to            intervall           filter    
 --------------------------------------------------------------------------
-1. "stimon"         stimulus onset           [-0.6;2.3]          [0.01;40]Hz
+1. "stimon"         stimulus onset           [-0.6;2.3]          [0.1;40]Hz
 2. "ica"            stimulus onset           [-0.6;2.3]          [1;40]Hz
-3. "fulllength"     cue onset                [-0.6;3.3]          [0.01;40]Hz
-3. "cue"            cue onset                [-0.6;1.0]          [0.01;40]Hz
+3. "fulllength"     cue onset                [-0.6;3.3]          [0.1;40]Hz
+3. "cue"            cue onset                [-0.6;1.0]          [0.1;40]Hz
 
 
 

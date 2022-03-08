@@ -37,11 +37,11 @@ for subID in sub_list_str:
                                         config.paths['01_prepared'],
                                         append='-raw').load_data()
     data_forICA = helpers.load_data(subID + '-ica',
-                                        op.join(config.paths['02_epochs'], '0.01', 'ica')
+                                        op.join(config.paths['02_epochs'], '0.1', 'ica')
                                         append='-epo')
 
     # clean it with autoreject local to remove bad epochs for better ICA fit:
-    data_forAR = data_forICA.copy().apply_baseline((-0.4, 0)) 
+    data_forAR = data_forICA.copy().apply_baseline((-config.times_dict['dur_bl_erp'], 0)) 
     # AR does not perform well on non-baseline corrected data
 
     _, ar, reject_log = preprocess.clean_with_ar_local(subID,
