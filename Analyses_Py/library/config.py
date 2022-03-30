@@ -31,9 +31,8 @@ else:
     path_study = Path(os.getcwd()).parents[1]
     paths['study'] = path_study
     
-path_extracted_vars = op.join(path_study, 'Writing', 'Other',
-                              'VME_extracted_vars.json')
-paths['extracted_vars'] = path_extracted_vars
+
+
 
 path_data = os.path.join(path_study, 'Data2022')
 paths['00_raw'] = os.path.join(path_data, 'DataMNE', 'EEG', '00_raw')
@@ -48,13 +47,24 @@ paths['03_preproc-ar'] = os.path.join(path_data, 'DataMNE', 'EEG', '03_preproc',
 paths['03_preproc-rejectET'] = op.join(paths['03_preproc'], 'reject-ET')
 paths['03_preproc-rejectET-CSVs'] = op.join(paths['03_preproc'], 'reject-ET', 'CSV_rejEpos_ET')
 paths['03_preproc-pooled'] = op.join(paths['03_preproc'], 'pooled')
+paths['04_evokeds'] = op.join(path_data, 'DataMNE', 'EEG', '04_evokeds')
+paths['04_evokeds-pooled'] = op.join(paths['04_evokeds'], 'pooled')
+paths['04_evokeds-CDA'] = op.join(paths['04_evokeds'], 'CDA')
+paths['04_evokeds-PNP'] = op.join(paths['04_evokeds'], 'PNP')
 
+paths['plots'] = op.join(path_study, 'Plots2022')
+paths['extracted_vars_dir'] = op.join(path_study, 'Writing', 'Other', 'ExtractedVariables2022')
 
 for p in paths:
     if not op.exists(paths[p]):
         os.makedirs(paths[p])
         print('creating dir: ' + paths[p]) 
 
+# Add paths to files:
+paths['extracted_vars_file'] = op.join(paths['extracted_vars_dir'],
+                                       'VME_extracted_vars.json')
+        
+        
 # path_postICA = op.join(path_data, 'DataMNE', 'EEG', '05.3_rejICA')
 # path_rejepo = op.join(path_data, 'DataMNE', 'EEG', '05.1_rejepo')
 # path_reject_epos_extern = op.join(path_rejepo, 'CSV_rejEpos_ET')
@@ -110,7 +120,7 @@ ids_missing_subjects = [11, 14, 19]
 ids_excluded_subjects =  [12, 13, 22]   # [7, 12, 22]<<< with old preprocessing
 
 # font sizes:
-plt_label_size = 70
+plt_label_size = 12
 
 # colors: 
 #"#66C2A5" "#3288BD"
