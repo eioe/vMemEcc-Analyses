@@ -113,9 +113,9 @@ data_gaze <- data_gaze %>%
 
 
 ### STEP 6
-# 
+#  Plot it
 data_plot <- data_gaze %>% 
-  filter(eye == 1) %>% 
+  #filter(eye == 1) %>% 
   mutate(gaze_dev_hor_pooled = if_else(c_CueDir == -1, gaze_dev_hor*-1, gaze_dev_hor)) %>% 
   # Subject means:
   group_by(c_StimN, time_resampled, ppid) %>% 
