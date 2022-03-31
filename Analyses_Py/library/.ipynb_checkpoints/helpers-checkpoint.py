@@ -105,14 +105,11 @@ def make_epos_dicts(epos, target_dicts, event_dict):
                 _dict[load + ecc] = epos[event_dict[load]][event_dict[ecc]]
 
 
-def extract_var(var, val, path_ev=config.paths['extracted_vars_file'], overwrite=True,
+def extract_var(var, val, path_ev=config.path_extracted_vars, overwrite=True,
                 rm_leading_zero=False, is_pval=False, exp_format='.2f'):
 
-    if op.exists(path_ev): 
-        with open(path_ev) as f:
-            exp_vars_dict = json.load(f)
-    else:
-        exp_vars_dict = dict()
+    with open(path_ev) as f:
+        exp_vars_dict = json.load(f)
 
     val_str = format(val, exp_format)
 

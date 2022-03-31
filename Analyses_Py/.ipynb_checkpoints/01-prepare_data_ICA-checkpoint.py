@@ -72,47 +72,48 @@ def calc_eog_chans(data_raw):
     #        'right': ['LO2']
 
 
-    # For a few subjects electrodes 'Fp1' and 'IO1' were mistakenly exchanged. 
+    # For a few subjects electrodes 'Fp1' and 'LO1' were mistakenly exchanged. 
     # Let's find out for which and repair it:
 
-    picks = ['Fp1', 'Fp2', 'IO1', 'IO2', 'LO1', 'LO2']
+    picks = ['Fp1', 'Fp2', 'IO1', 'IO2']
     rr = data_raw.load_data().copy().pick_channels(picks).filter(l_freq = 1, h_freq= 5, picks=['eeg','misc'], verbose=False)
     # Create pseudo epochs to loop over:
     events = mne.make_fixed_length_events(rr, duration=20)
     epochs = mne.Epochs(rr, events, tmin=0.0, tmax=20, baseline = (0,1), verbose= False)
-    epochs.load_data().reorder_channels(picks)
-    # For each epoch we calculate the correlations between all EOG channels and store it
+    # For each epoch we calculate the correlations between the vert EOG channels and store it
     holder = [] 
     for epo in epochs:
-        epo = epo - epo.copy().mean(axis = 1, keepdims=True)
-        tmp = np.corrcoef(epo)
+        fp1 = epo
+        fp1 = fp1 - fp1.mean(axis = 1, keepdims=True)
+        # plt.plot(epochs.times, fp1.transpose())
+        # plt.legend(picks)
+        # plt.show()
+        tmp = np.corrcoef(fp1)
         holder.append(tmp)
 
     res = np.stack(holder).mean(axis=0)
-    
-    # correlations of "Fp1" (what could be "IO1")
-    idx_fp1 = epochs.ch_names.index('Fp1')
-    corrs_fp1 = res[idx_fp1,:]
-    # corr with itself is ofc largest, so we put it away
-    corrs_fp1[idx_fp1] = -999
-    # now get which other chan it correlates most with
-    idx_corrmax = np.argmax(corrs_fp1)
-    chan_corrmax = epochs.ch_names[idx_corrmax]
-    
-    if not chan_corrmax == 'Fp2':
+    # cross: corr between Fp1-IO1, Fp1-IO2, Fp2-IO1, Fp2-IO2 (should be neg)
+    # equal: corr between Fp1-Fp2, IO1-IO2 (should be pos)
+    # fp_cor: corr betw. Fp1 and Fp2
+    cross = np.concatenate([res[0,2:4].flatten(), res[1,2:4].flatten()]).mean() #, [1,2], [1,3]])
+    equal = np.mean([res[0,1], res[2,3]]) 
+    fp_cor = res[0,1]
+    if not fp_cor > 0.8:
         helpers.print_msg('Swopping channels LO1 and Fp1.')
-        tmp = data_raw.get_data(picks = ['Fp1', 'IO1'])
+        tmp = data_raw.get_data(picks = ['Fp1', 'LO1'])
         data_raw['Fp1'] = tmp[1]
-        data_raw['IO1'] = tmp[0]
+        data_raw['LO1'] = tmp[0]
 
 
     # calculate bipolar EOG chans:
     data_raw.load_data()
-    dataL = data_raw.get_data(['Fp1']) - data_raw.get_data(['IO1']) 
-    dataR = data_raw.get_data(['Fp2']) - data_raw.get_data(['IO2']) 
+    #VEOGl = raw.copy().pick_channels(['Fp1', 'IO1']) 
+    #VEOGr = raw.copy().pick_channels(['Fp2', 'IO2']) 
+    dataL = data_raw.get_data(['Fp1']) - data_raw.get_data(['IO1']) #VEOGl.get_data(['Fp1']) - VEOGl.get_data(['IO1']) 
+    dataR = data_raw.get_data(['Fp2']) - data_raw.get_data(['IO2']) #VEOGr.get_data(['Fp2']) - VEOGr.get_data(['IO2']) 
     dataVEOG = np.stack((dataL,dataR), axis=0).mean(0)
-    
-    dataHEOG = data_raw.get_data(['LO1']) - data_raw.get_data(['LO2']) 
+    #HEOG = raw.copy().pick_channels(['LO1', 'LO2']) 
+    dataHEOG = data_raw.get_data(['LO1']) - data_raw.get_data(['LO2']) #HEOG.get_data(['LO1']) - HEOG.get_data(['LO2'])
     dataEOG = np.concatenate((dataVEOG, dataHEOG), axis=0)
     info = mne.create_info(ch_names=['VEOG', 'HEOG'], sfreq=raw.info['sfreq'], ch_types=['eog', 'eog'])
     rawEOG = mne.io.RawArray(dataEOG, info=info)
@@ -355,46 +356,15 @@ for idx, sub in enumerate(sub_list):
     event_id_cue    = {key: event_id[key] for key in event_id if event_id[key] in events_cue[:,2]}
     event_id_stimon = {key: event_id[key] for key in event_id if event_id[key] in events_stimon[:,2]}
 
-    epos_ica = extract_epochs_ICA(raw.copy(), 
-                                  events_stimon, 
-                                  event_id_stimon, 
-                                  n_jobs = config.n_jobs)
-    helpers.save_data(epos_ica,
-                      subID + '-forica',
-                      path_outp_epo, 
-                      '-epo')
+    epos_ica = extract_epochs_ICA(raw.copy(), events_stimon, event_id_stimon, n_jobs = config.n_jobs)
+    save_data(epos_ica, subID + '-forica', path_outp_epo, '-epo')
 
-    epos_stimon = extract_epochs_stimon(raw.copy(),
-                                        events_stimon,
-                                        event_id_stimon,
-                                        bad_epos_ = bad_epos.get('stimon',[]),
-                                        n_jobs = config.n_jobs)
-    helpers.save_data(epos_stimon,
-                      subID + '-stimon',
-                      path_outp_epo,
-                      append='-epo')
+    epos_stimon = extract_epochs_stimon(raw.copy(), events_stimon, event_id_stimon, bad_epos_ = bad_epos.get('stimon',[]), n_jobs = config.n_jobs)
+    save_data(epos_stimon, subID + '-stimon', path_outp_epo, '-epo')
     
-    epos_cue = extract_epochs_cue(raw.copy(),
-                                  events_cue,
-                                  event_id_cue,
-                                  tmin_ = -0.6, 
-                                  tmax_ = 1,
-                                  bad_epos_ = bad_epos.get('cue', []),
-                                  n_jobs = config.n_jobs)
-    helpers.save_data(epos_cue,
-                      subID + '-cue',
-                      path_outp_epo,
-                      append='-epo')
+    epos_cue = extract_epochs_cue(raw.copy(), events_cue, event_id_cue, tmin_ = -0.6, tmax_ = 1, bad_epos_ = bad_epos.get('cue', []), n_jobs = config.n_jobs)
+    save_data(epos_cue, subID + '-cue', path_outp_epo, '-epo')
     
-    epos_fulllength = extract_epochs_fulllength(raw.copy(),
-                                                events_cue,
-                                                event_id_cue,
-                                                tmin_ = -0.6,
-                                                tmax_ = 3.3,
-                                                bad_epos_ = np.unique([v for k in bad_epos.keys() for v in bad_epos.get(k, [])]),
-                                                n_jobs = config.n_jobs)
-    helpers.save_data(epos_fulllength,
-                      subID + '-fulllength',
-                      path_outp_epo,
-                      append='-epo')
+    epos_fulllength = extract_epochs_fulllength(raw.copy(), events_cue, event_id_cue, tmin_ = -0.6, tmax_ = 3.3, bad_epos_ = np.unique([v for k in bad_epos.keys() for v in bad_epos.get(k, [])]), n_jobs = config.n_jobs)
+    save_data(epos_fulllength, subID + '-fulllength', path_outp_epo, '-epo')
     

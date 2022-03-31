@@ -1,56 +1,43 @@
 """
 =============================
-01. Prepare data for ICA
+01.0 Prepare data for next steps
 =============================
 
-Prepares EEG data for further processing steps. 
+Prepares EEG data for further processing steps & extract events. 
 
-TODO: Write doc
 """
+
 
 import os
 import os.path as op
+import pickle
 import sys
 import numpy as np
 import mne
 from pathlib import Path
 from library import helpers, config
 
-# set paths:
-path_study = Path(os.getcwd())  # .parents[1] #str(Path(__file__).parents[2])
-# note: returns Path object >> cast for string
 
-path_data = os.path.join(path_study, 'Data')
-path_inp = os.path.join(path_data, 'DataMNE', 'EEG', '00_raw')
-path_outp_ev = op.join(path_data, 'DataMNE', 'EEG', '01_events')
-path_outp_prep = op.join(path_data, 'DataMNE', 'EEG', '02_prepared')
-path_outp_filt = op.join(path_data, 'DataMNE', 'EEG', '03_filt')
-path_outp_epo = op.join(path_data, 'DataMNE', 'EEG', '04_epo')
-
-for pp in [path_outp_ev, path_outp_prep, path_outp_filt, path_outp_epo]:
-    if not op.exists(pp):
-        os.makedirs(pp)
-        print('creating dir: ' + pp)
-
-
-# parse args:
-#helpers.print_msg('Running Job Nr. ' + sys.argv[1])
-#helpers.print_msg('Study path set to ' + str(path_study))
-#job_nr = int(float(sys.argv[1]))
-
-
-def get_events(subID, save_eeg=True, save_eve_to_file=True):
-    fname_inp = op.join(path_inp, subID + '-raw.fif')
+def get_data_and_events(subID):
+    fname_inp = op.join(config.paths['00_raw'], subID + '-raw.fif')
     raw = mne.io.read_raw_fif(fname_inp)
-    events, event_id = mne.events_from_annotations(raw)
-    fname_eve = op.join(path_outp_ev, subID + '-eve.fif')
-    mne.write_events(fname_eve, events)
+    events, event_id = mne.events_from_annotations(raw)        
     return raw, events, event_id
 
+def save_events(subID, events, event_id, bad_epos, epo_part):
+    fname_eve = op.join(config.paths['01_prepared-events'], '-'.join([subID, epo_part,'eve.fif']))
+    mne.write_events(fname_eve, events)
+    fname_eve_id = op.join(config.paths['01_prepared-events'], '-'.join([subID, 'event_id.pkl']))
+    if event_id is not None:
+        with open(fname_eve_id, 'wb') as f:
+            pickle.dump(event_id, f)
+    fname_bad_epos = op.join(config.paths['01_prepared-events'], '-'.join([subID, 'bad_epos_recording.pkl']))
+    with open(fname_bad_epos, 'wb') as f:
+        pickle.dump(bad_epos, f)
+    return
 
 def calc_eog_chans(data_raw):
     # calculate and add HEOG and VEOG channels:
-    # TODO: Review if acceptable or needs refactoring
 
     # if IO1 is not present, the old labels shall be used
     if not 'IO1' in data_raw.ch_names:
@@ -98,9 +85,10 @@ def calc_eog_chans(data_raw):
     # now get which other chan it correlates most with
     idx_corrmax = np.argmax(corrs_fp1)
     chan_corrmax = epochs.ch_names[idx_corrmax]
+    helpers.print_msg(f'What we think is Fp1 actually correlates highly with {chan_corrmax} (r = {str(np.max(corrs_fp1))})).')
     
     if not chan_corrmax == 'Fp2':
-        helpers.print_msg('Swopping channels LO1 and Fp1.')
+        helpers.print_msg('Swopping channels IO1 and Fp1.')
         tmp = data_raw.get_data(picks = ['Fp1', 'IO1'])
         data_raw['Fp1'] = tmp[1]
         data_raw['IO1'] = tmp[0]
@@ -129,17 +117,10 @@ def calc_eog_chans(data_raw):
     return data_raw
 
 def set_ecg_chan(data_raw):
-    # TODO: check if this changes the original object
     ch_type_dict = {
         'ECG': 'ecg'
     }
     data_raw.set_channel_types(ch_type_dict)
-
-
-def save_data(data, filename, path, append=''):
-    ff = op.join(path, filename + append + '.fif')
-    #print("Saving %s ..." % ff)
-    data.save(fname=ff, overwrite=True)
 
 def load_data_raw(filename, path):
     ff = op.join(path, filename + '.fif')
@@ -147,7 +128,6 @@ def load_data_raw(filename, path):
     
 
 def setup_event_structures(events_, event_id_, srate_):
-    # TODO: This one is quite wild and could use refacoring!
 
     # Define relevant events:
     targ_evs_orig = [i for i in np.arange(150, 174)]
@@ -265,6 +245,12 @@ def setup_event_structures(events_, event_id_, srate_):
                     events_stimon_ = events_tmp[events_tmp[:,0].argsort()]
             bad_epos['stimon'] = idx.flatten()
     
+    # Make sure that trials are in the same order (sorted by time)
+    events_fix_ = events_fix_[events_fix_[:,0].argsort()]
+    events_stimon_ = events_stimon_[events_stimon_[:,0].argsort()]
+    events_cue_ = events_cue_[events_cue_[:,0].argsort()]
+    assert len(events_fix_) == len(events_stimon_) == len(events_cue_)
+    
     # Add trial type info to last column:
     events_stimon_[:,2] = events_fix_[:,2]
     events_cue_[:,2] = events_fix_[:,2]
@@ -329,72 +315,85 @@ def extract_epochs_fulllength(raw_data, events, event_id_, tmin_, tmax_, bad_epo
 
 ## Full procedure:
 sub_list = np.setdiff1d(np.arange(1,config.n_subjects_total+1), config.ids_missing_subjects)
+sub_list_str = ['VME_S%02d' % sub for sub in sub_list]
 
-##
-#sub_list = sub_list[10:11]
+## to run a single subject, modify and uncomment the following line:
+# sub_list_str = ['VME_S01']
 
-# sub_list = np.setdiff1d(np.arange(15,28), config.ids_missing_subjects)
-# if job_nr > len(sub_list)-1: 
-#     helpers.print_msg('All jobs taken.')
-#     exit()
+#sub_list = np.array([sub_list_str[job_nr]])
 
-#sub_list = np.array([sub_list[job_nr]])
-
-for idx, sub in enumerate(sub_list):
-    subID = 'VME_S%02d' % sub
+for idx, subID in enumerate(sub_list_str):
     helpers.print_msg('Processing subject ' + subID + '.')
-    raw, events, event_id = get_events(subID)
+    
+    # Get data:
+    raw, events, event_id = get_data_and_events(subID)
+    
+    # Calculate EOG channels & set chan type:
     raw = calc_eog_chans(raw)   
+    
+    # Set ECG chan type:
     set_ecg_chan(raw)
-    #save_data(raw, subID, path_outp_prep, append='-raw') #TODO: replace by helper func
+    
+    # Save prepared data:
+    helpers.save_data(raw,
+                      subID + '-prepared',
+                      config.paths['01_prepared'],
+                      append='-raw') 
 
+    print("***Saving events:***")
+    # Extract and save events:
     srate = raw.info['sfreq']
     events_fix, events_cue, events_stimon, bad_epos = setup_event_structures(events, event_id, srate)
-
-    event_id_fix    = {key: event_id[key] for key in event_id if event_id[key] in events_fix[:,2]}
-    event_id_cue    = {key: event_id[key] for key in event_id if event_id[key] in events_cue[:,2]}
-    event_id_stimon = {key: event_id[key] for key in event_id if event_id[key] in events_stimon[:,2]}
-
-    epos_ica = extract_epochs_ICA(raw.copy(), 
-                                  events_stimon, 
-                                  event_id_stimon, 
-                                  n_jobs = config.n_jobs)
-    helpers.save_data(epos_ica,
-                      subID + '-forica',
-                      path_outp_epo, 
-                      '-epo')
-
-    epos_stimon = extract_epochs_stimon(raw.copy(),
-                                        events_stimon,
-                                        event_id_stimon,
-                                        bad_epos_ = bad_epos.get('stimon',[]),
-                                        n_jobs = config.n_jobs)
-    helpers.save_data(epos_stimon,
-                      subID + '-stimon',
-                      path_outp_epo,
-                      append='-epo')
+    save_events(subID, events_stimon, event_id=event_id, bad_epos=bad_epos, epo_part='stimon')
+    save_events(subID, events_cue, event_id=None, bad_epos=bad_epos, epo_part='cue') # enough to save event_id once
+    save_events(subID, events_fix, event_id=None, bad_epos=bad_epos, epo_part='fix')
     
-    epos_cue = extract_epochs_cue(raw.copy(),
-                                  events_cue,
-                                  event_id_cue,
-                                  tmin_ = -0.6, 
-                                  tmax_ = 1,
-                                  bad_epos_ = bad_epos.get('cue', []),
-                                  n_jobs = config.n_jobs)
-    helpers.save_data(epos_cue,
-                      subID + '-cue',
-                      path_outp_epo,
-                      append='-epo')
     
-    epos_fulllength = extract_epochs_fulllength(raw.copy(),
-                                                events_cue,
-                                                event_id_cue,
-                                                tmin_ = -0.6,
-                                                tmax_ = 3.3,
-                                                bad_epos_ = np.unique([v for k in bad_epos.keys() for v in bad_epos.get(k, [])]),
-                                                n_jobs = config.n_jobs)
-    helpers.save_data(epos_fulllength,
-                      subID + '-fulllength',
-                      path_outp_epo,
-                      append='-epo')
+
+#     event_id_fix    = {key: event_id[key] for key in event_id if event_id[key] in events_fix[:,2]}
+#     event_id_cue    = {key: event_id[key] for key in event_id if event_id[key] in events_cue[:,2]}
+#     event_id_stimon = {key: event_id[key] for key in event_id if event_id[key] in events_stimon[:,2]}
+
+#     epos_ica = extract_epochs_ICA(raw.copy(), 
+#                                   events_stimon, 
+#                                   event_id_stimon, 
+#                                   n_jobs = config.n_jobs)
+#     helpers.save_data(epos_ica,
+#                       subID + '-forica',
+#                       path_outp_epo, 
+#                       '-epo')
+
+#     epos_stimon = extract_epochs_stimon(raw.copy(),
+#                                         events_stimon,
+#                                         event_id_stimon,
+#                                         bad_epos_ = bad_epos.get('stimon',[]),
+#                                         n_jobs = config.n_jobs)
+#     helpers.save_data(epos_stimon,
+#                       subID + '-stimon',
+#                       path_outp_epo,
+#                       append='-epo')
+    
+#     epos_cue = extract_epochs_cue(raw.copy(),
+#                                   events_cue,
+#                                   event_id_cue,
+#                                   tmin_ = -0.6, 
+#                                   tmax_ = 1,
+#                                   bad_epos_ = bad_epos.get('cue', []),
+#                                   n_jobs = config.n_jobs)
+#     helpers.save_data(epos_cue,
+#                       subID + '-cue',
+#                       path_outp_epo,
+#                       append='-epo')
+    
+#     epos_fulllength = extract_epochs_fulllength(raw.copy(),
+#                                                 events_cue,
+#                                                 event_id_cue,
+#                                                 tmin_ = -0.6,
+#                                                 tmax_ = 3.3,
+#                                                 bad_epos_ = np.unique([v for k in bad_epos.keys() for v in bad_epos.get(k, [])]),
+#                                                 n_jobs = config.n_jobs)
+#     helpers.save_data(epos_fulllength,
+#                       subID + '-fulllength',
+#                       path_outp_epo,
+#                       append='-epo')
     

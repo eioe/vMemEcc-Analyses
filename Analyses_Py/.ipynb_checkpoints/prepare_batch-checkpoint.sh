@@ -14,12 +14,12 @@
 #SBATCH --nodes=1 
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=32 
-#SBATCH --mem=20000
+#SBATCH --mem=10000000
 # 
 #SBATCH --mail-type=all 
 #SBATCH --mail-user=klotzsche@cbs.mpg.de 
 # 
-#SBATCH --time=00:05:00
+#SBATCH --time=08:00:00
  
 module load anaconda/3
 conda activate mne
