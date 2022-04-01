@@ -138,3 +138,8 @@ def extract_var(var, val, path_ev=config.paths['extracted_vars_file'], overwrite
 
     with open(path_ev, 'w') as f:
         json.dump(exp_vars_dict, f)
+
+
+def is_interactive():
+    import __main__ as main
+    return not hasattr(main, '__file__')

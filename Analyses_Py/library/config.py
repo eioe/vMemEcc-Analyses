@@ -53,6 +53,8 @@ paths['04_evokeds-CDA'] = op.join(paths['04_evokeds'], 'CDA')
 paths['04_evokeds-PNP'] = op.join(paths['04_evokeds'], 'PNP')
 paths['05_tfrs'] = op.join(path_data, 'DataMNE', 'EEG', '05_tfrs')
 paths['05_tfrs-summaries'] = op.join(paths['05_tfrs'], 'summaries')
+paths['06_decoding'] = op.join(path_data, 'DataMNE', 'EEG', '06_decoding')
+paths['06_decoding-sensorspace'] = op.join(paths['06_decoding'], 'sensorspace')
 
 paths['plots'] = op.join(path_study, 'Plots2022')
 paths['extracted_vars_dir'] = op.join(path_study, 'Writing', 'Other', 'ExtractedVariables2022')
