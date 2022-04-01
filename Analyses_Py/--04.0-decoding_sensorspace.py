@@ -20,24 +20,18 @@ from os import path as op
 import sys
 import json
 import numpy as np
-import matplotlib.pyplot as plt
-from numpy.lib.npyio import load
 
-import pandas as pd
 import seaborn as sns
 
-from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import LogisticRegression
 
 from scipy import stats
 
 import mne
-from mne import EvokedArray
 # from mne.epochs import concatenate_epochs
 from mne.decoding import (SlidingEstimator, GeneralizingEstimator,
                           cross_val_multiscore, LinearModel, get_coef)
-from mne.stats import permutation_cluster_1samp_test, f_mway_rm, f_threshold_mway_rm
 
 from library import config, helpers
 # -
@@ -73,13 +67,13 @@ def get_epos(subID, epo_part, signaltype, condition, event_dict, picks_str):
         raise ValueError(f'Invalid value for "signaltype": {signaltype}')
     epos = mne.read_epochs(fname, verbose=False)
     epos = epos.pick_types(eeg=True)
-    
+
     # pick channel selection:
     if (picks_str is not None) and (picks_str != 'All'):
         roi_dict = mne.channels.make_1020_channel_selections(epos.info)
         picks = [epos.ch_names[idx] for idx in roi_dict[picks_str]]
         epos.pick_channels(picks, ordered=True)
-        
+
     uppers = [letter.isupper() for letter in condition]
     if (np.sum(uppers) > 2):
         cond_1 = condition[:np.where(uppers)[0][2]]
@@ -126,7 +120,7 @@ def get_data(subID, epo_part, signaltype, conditions, event_dict,
                                    epo_part=epo_part,
                                    signaltype=signaltype,
                                    condition=cond,
-                                   event_dict=event_dict, 
+                                   event_dict=event_dict,
                                    picks_str=picks_str)
 
     times = epos_dict[conditions[0]][0].copy().times
@@ -176,7 +170,7 @@ def decode(sub_list_str,
            save_patterns=False):
 
     contrast_str = '_vs_'.join(conditions)
-    scoring = scoring # 'roc_auc' # 'accuracy'
+    scoring = scoring  # 'roc_auc' # 'accuracy'
     cv_folds = 5
 
     subs_processed = list()
@@ -185,26 +179,27 @@ def decode(sub_list_str,
     sub_coef = list()
     times_n = list()
 
-    for sub in sub_list_str:
-        print(f'### RUNING SUBJECT {sub}')
-        subs_processed.append(sub)
+    for subID in sub_list_str:
+        print(f'### RUNING SUBJECT {subID}')
+        subs_processed.append(subID)
         all_scores = list()
         all_coef = list()
         for i in np.arange(n_rep_sub):
-            X, y, times_n, info = get_data(sub,
-                                         epo_part=epo_part,
-                                         signaltype=signaltype,
-                                         conditions=conditions,
-                                         event_dict=event_dict,
-                                         batch_size=batch_size,
-                                         smooth_winsize=smooth_winsize, 
-                                         picks_str=picks_str)
-            
+            X, y, times_n, info = get_data(subID,
+                                           epo_part=epo_part,
+                                           signaltype=signaltype,
+                                           conditions=conditions,
+                                           event_dict=event_dict,
+                                           batch_size=batch_size,
+                                           smooth_winsize=smooth_winsize,
+                                           picks_str=picks_str)
+
             clf = make_pipeline(mne.decoding.Scaler(info),
                                 mne.decoding.Vectorizer(),
-                                LinearModel(LogisticRegression(solver='liblinear',
-                                                               random_state=42,
-                                                               verbose=False)))
+                                LinearModel(
+                                    LogisticRegression(solver='liblinear',
+                                                       random_state=42,
+                                                       verbose=False)))
 
             # TODO: refactor: rename "se"
             if temp_gen:
@@ -219,7 +214,7 @@ def decode(sub_list_str,
                                       scoring=scoring,
                                       n_jobs=-2,
                                       verbose=0)
-            
+
             if shuffle_labels:
                 np.random.shuffle(y)
             for i in np.unique(y):
@@ -231,37 +226,36 @@ def decode(sub_list_str,
             coef = get_coef(se, 'patterns_', inverse_transform=True)
             all_coef.append(coef)
 
-        sub_scores.append(np.asarray(all_scores).mean(axis=0))
-        sub_coef.append(np.asarray(all_coef).mean(axis=0))
+        sub_scores = np.asarray(all_scores).mean(axis=0)
+        sub_coef = np.asarray(all_coef).mean(axis=0)
 
         # save shizzle:
         shuf_labs = 'labels_shuffled' if shuffle_labels else ''
-        
+
         if picks_str is not None:
             picks_str_folder = picks_str
         else:
             picks_str_folder = ''
-        
-        path_save = op.join(config.paths['06_decoding-sensorspace'], epo_part, signaltype, contrast_str, gen_str,
+
+        path_save = op.join(config.paths['06_decoding-sensorspace'], epo_part,
+                            signaltype, contrast_str, gen_str,
                             scoring, picks_str_folder, shuf_labs)
 
         # save accuracies:
         if save_scores:
-            sub_scores_ = np.asarray(sub_scores)
             fpath = op.join(path_save, 'scores')
             helpers.chkmk_dir(fpath)
-            fname = op.join(fpath, 'scores_per_sub.npy')
-            np.save(fname, sub_scores_)
+            fname = op.join(fpath, f'{subID}-scores_per_sub.npy')
+            np.save(fname, sub_scores)
             np.save(fname[:-4] + '__times' + '.npy', times_n)
             del(fpath, fname)
 
-
         # save patterns:
         if save_patterns:
-            sub_patterns = np.asarray(sub_coef)
+            sub_patterns = sub_coef
             fpath = op.join(path_save, 'patterns')
             helpers.chkmk_dir(fpath)
-            fname = op.join(fpath, 'patterns_per_sub.npy')
+            fname = op.join(fpath, f'{subID}-patterns_per_sub.npy')
             np.save(fname, sub_patterns)
             np.save(fname[:-4] + '__times' + '.npy', times_n)
             del(fpath, fname)
@@ -269,15 +263,15 @@ def decode(sub_list_str,
         # save info:
         if save_scores or save_patterns or save_single_rep_scores:
             info_dict = {'included subs': subs_processed,
-                         'n_rep_sub': n_rep_sub, 
-                         'batch_size': batch_size, 
-                         'smooth_winsize': smooth_winsize, 
-                         'cv_folds': cv_folds, 
+                         'n_rep_sub': n_rep_sub,
+                         'batch_size': batch_size,
+                         'smooth_winsize': smooth_winsize,
+                         'cv_folds': cv_folds,
                          'scoring': scoring}
             fpath = path_save
-            fname = op.join(fpath, 'info.json')
-            with open(fname, 'w+') as outfile:  
-                json.dump(info_dict, outfile) 
+            fname = op.join(fpath, f'{subID}-info.json')
+            with open(fname, 'w+') as outfile:
+                json.dump(info_dict, outfile)
 
         # save data from single reps:
         if save_single_rep_scores:
@@ -291,39 +285,41 @@ def decode(sub_list_str,
             fpath = op.join(path_save, 'single_rep_data')
             helpers.chkmk_dir(fpath)
             fname = op.join(fpath,
-                            f'reps{n_rep_sub}_' \
+                            f'{subID}-'
+                            f'reps{n_rep_sub}_'
                             f'swin{smooth_winsize}_batchs{batch_size}.npy')
             np.save(fname, sub_scores_per_rep)
             np.save(fname[:-4] + '__times' + '.npy', times_n)
             del(fpath, fname)
 
-            
     return sub_scores, sub_coef, times_n
 
 
-def plot_score_per_factor(factor, data, scoring='roc_auc', sign_clusters=[], p_lvl=0.01, 
-                          plt_dict=None, ax=None, n_boot=1000):
+def plot_score_per_factor(factor, data, scoring='roc_auc', sign_clusters=[],
+                          p_lvl=0.01, plt_dict=None, ax=None, n_boot=1000):
 
-    
-    sns.lineplot(x='time', 
-                 y='score', 
-                 hue=factor, 
-                 data=data, 
-                 n_boot=n_boot, 
-                 palette=config.colors, 
+    sns.lineplot(x='time',
+                 y='score',
+                 hue=factor,
+                 data=data,
+                 n_boot=n_boot,
+                 palette=config.colors,
                  ax=ax)
     ytick_range = ax.get_ylim()
     ax.set(xlim=(plt_dict['xmin'], plt_dict['xmax']), ylim=ytick_range)
     if scoring == 'roc_auc':
         scoring_str = 'ROC AUC'
-    else: 
+    else:
         scoring_str = scoring
     ax.set_ylabel(scoring_str)
     ax.set_xlabel('Time (s)')
-    ax.axvspan(plt_dict['t_stimon'], plt_dict['t_stimon']+0.2, color='grey', alpha=0.3)
-    ax.axvspan(plt_dict['t_stimon']+ 2.2, plt_dict['t_stimon'] + 2.5, color='grey', alpha=0.3)
-    ax.vlines((plt_dict['t_stimon'], plt_dict['t_stimon']+0.2, plt_dict['t_stimon']+2.2),
-              ymin=ytick_range[0], ymax=ytick_range[1], 
+    ax.axvspan(plt_dict['t_stimon'], plt_dict['t_stimon'] + 0.2,
+               color='grey', alpha=0.3)
+    ax.axvspan(plt_dict['t_stimon'] + 2.2, plt_dict['t_stimon'] + 2.5,
+               color='grey', alpha=0.3)
+    ax.vlines((plt_dict['t_stimon'], plt_dict['t_stimon']+0.2,
+               plt_dict['t_stimon']+2.2),
+              ymin=ytick_range[0], ymax=ytick_range[1],
               linestyles='dashed')
     ax.hlines(0.5, xmin=plt_dict['xmin'], xmax=plt_dict['xmax'])
     p_lvl_str = 'p < .' + str(p_lvl).split('.')[-1]
@@ -341,7 +337,7 @@ def plot_score_per_factor(factor, data, scoring='roc_auc', sign_clusters=[], p_l
             xmin = sc[0]
             xmax = sc[-1]
             ax.hlines(ytick_range[0] + 0.05*np.ptp(ytick_range), xmin=xmin, xmax=xmax, color='purple', 
-                    label=p_lvl_str)
+                      label=p_lvl_str)
     handles, labels = ax.get_legend_handles_labels()
     print(labels)
     n_sgn_clu = None if len(sign_clusters) <= 1 else -(len(sign_clusters)-1)
