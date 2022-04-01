@@ -412,7 +412,7 @@ decod_results_load = defaultdict(dict)
 
 ########### WATCH OUT
 sub_list_str = [sub_list_str[job_nr]]
-shuf_labs = False
+shuf_labs = True
 
 for picks_str in ['All']: # ['Right', 'Left']: 
     conditions = ['LoadLow', 'LoadHigh']
