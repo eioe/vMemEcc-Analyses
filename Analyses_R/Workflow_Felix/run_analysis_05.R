@@ -7,7 +7,8 @@
 #--------------------------------------------------------------------------
 # ... confidence interval for repeated measures design - based on Coussineau Morey
 
-func_analysis_05 <- function() {
+func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
+  
   
   condition <- "experiment"  #Only EEG data for VSTM task. 
   
@@ -15,7 +16,7 @@ func_analysis_05 <- function() {
     mutate(c_Ecc = as_factor(c_Ecc)) %>% 
     filter(BlockStyle == condition) %>% 
     group_by(ppid, c_StimN, c_Ecc) %>%   
-    summarise(meanCDA = mean(CDA_amp, na.rm = T)) %>% 
+    summarise(across(dep_variable, ~ mean(.x, na.rm = T), .names = c('meanCDA'))) %>% 
     ungroup() %>% 
     select("meanCDA", "c_StimN", "c_Ecc", "ppid") 
   
@@ -58,7 +59,20 @@ func_analysis_05 <- function() {
     )
   
   print_header(str_c('Results post-hoc t test\ntask: ', condition))
+  print('Contrast between the eccentricity conditions:\n')
   print(res_ttest)
+    
+  res_ttest_perEcc <- c1.aov %>% 
+    group_by(ppid, c_Ecc, c_StimN) %>%
+    summarise(meanCDA = mean(meanCDA)) %>% 
+
+    group_by(c_Ecc) %>% 
+    pairwise_t_test(
+      meanCDA ~ c_StimN, paired = TRUE, 
+      p.adjust.method = "bonferroni"
+    )
+  print('Contrast between MemoryLoad conditions per Eccentricity:\n')
+  print(res_ttest_perEcc)
   #--------------------------------------------------------------------------
   ## Plot
   

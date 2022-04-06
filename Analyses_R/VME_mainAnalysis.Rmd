@@ -32,8 +32,8 @@ Data is made availbale in the workspace as data frame `data_behav`.
 * **c_ResponseCorrect** (logi): correctness of response in this trial  
 * **c_ResponseTime** (num): RT  
 * **BlockStyle** (chr): denotes if trial was in "perception" or vSTM ("experiment") block  
-* **CDA_amp** (num): avg. CDA amplitude in this trial (see paper for spec. of ROI and time window)
-* **PNP_amp** (num): avg. PNP amplitude in this trial (see paper for spec. of ROI and time window)
+* **CDA_amp_<cluster/fixed>times** (num): avg. CDA amplitude in this trial (see paper for spec. of ROI and time window). 
+* **PNP_amp_<cluster/fixed>times** (num): avg. PNP amplitude in this trial (see paper for spec. of ROI and time window)
 * **alphapwr_diff_retent** (num): avg. lateralized alpha power in this trial (see paper for spec. of freq. band, ROI and time window)
   
 
@@ -120,7 +120,7 @@ data_behav_per_task[['exp']] <- data_behav %>%
   drop_na() 
 data_behav_per_task[['perc']] <- data_behav %>% 
   filter(BlockStyle == 'perception') %>%  
-  select(!c(CDA_amp, PNP_amp, alphapwr_diff_retent)) %>% 
+  select(!contains(c('CDA_amp', 'PNP_amp', 'alphapwr_diff_retent'))) %>% 
   drop_na() 
 
 
@@ -339,7 +339,7 @@ func_analysis_03('perception')
 
 ### CDA amplitude (rmANOVA):
 ```{r, message=FALSE, warning=FALSE}
-func_analysis_05()
+func_analysis_05(dep_variable = "CDA_amp_clustertimes")
 ```
 
 _show source:_ 
@@ -355,7 +355,7 @@ insert_fun("func_analysis_05")
 A multilevel model confirms the results of the rmANOVA:
 
 ```{r, message=FALSE, warning=FALSE}
-func_analysis_07('experiment', dep_variable = 'CDA_amp')
+func_analysis_07('experiment', dep_variable = 'CDA_amp_clustertimes')
 ```
 
 _show source:_ 
@@ -370,7 +370,7 @@ insert_fun("func_analysis_07")
 Testing the effects of _memory load_ and _eccentricity_ on the mean **PNP amplitude** (see [Papaioannou & Luck, 2020](https://onlinelibrary.wiley.com/doi/abs/10.1111/psyp.13532))
 
 ```{r, message=FALSE, warning=FALSE}
-func_analysis_09()
+func_analysis_09(dep_variable = "PNP_amp_clustertimes")
 ```
 
 
@@ -399,6 +399,50 @@ A multilevel model confirms the results of the rmANOVA:
 ```{r, message=FALSE, warning=FALSE}
 func_analysis_10('experiment', dep_variable = 'alpha_pwr')
 ```
+
+
+Write out the full data frame:
+
+```{r}
+
+saveRDS(data_behav,file = file.path(path_r_data, "VME_trialdata.rds"))
+
+variable_doc <- list()
+
+variable_doc[["ppid"]] <- 
+  "subject identifier"
+variable_doc[["trial_num"]] <- 
+  "trial number (1-10 & 83-92: training, 11-72: perception task, 93-812: vSTM task)"
+variable_doc[["block_num"]] <- 
+  "number of experimental block (1 & 3: training, 2: perception task, 4-13: vSTM task)"
+variable_doc[["c_StimN"]] <- 
+  "Memory Load (aka. number of memory stimuli)"
+variable_doc[["c_Ecc"]] <- 
+  "Eccentricity of the stimulus arrays (in dva)"
+variable_doc[["c_ResponseCorrect"]] <- 
+  "Correctness of response"
+variable_doc[["c_ResponseTime"]] <- 
+  "Response time"
+variable_doc[["BlockStyle"]] <- 
+  "Type of the block (perception task or vSTM task [experiment])"
+variable_doc[["CDA_amp_clustertimes"]] <- 
+  "Mean CDA amplitude, averaged across 5 ROI electrodes and timepoints when overall CDA was sign. different from 0 (as assessed by a CBP test)"
+variable_doc[["PNP_amp_clustertimes"]] <- 
+  "Mean PNP amplitude, averaged across 5 ROI electrodes and timepoints when overall PNP was sign. different from 0 (as assessed by a CBP test)"
+variable_doc[["CDA_amp_fixedtimes"]] <- 
+  "Mean CDA amplitude, averaged across 5 ROI electrodes and timepoints during the time window [0.4-1.45s] used by Hakim et al. (2019)"
+variable_doc[["PNP_amp_fixedtimes"]] <- 
+  "Mean CDA amplitude, averaged across 5 ROI electrodes and timepoints during the time window [0.3–0.444s] used by Papaioannou et al. (2020)"
+variable_doc[["alphapwr_diff_retent"]] <- 
+  "Mean induced alpha power difference (between hemispheres), averaged across 5 ROI electrodes and timepoints when overall alpha power lateralization was sign. different from 0 (as assessed by a CBP test)"
+variable_doc[["alphapwr_diff_retent"]] <- 
+  "Mean induced alpha power difference (between hemispheres), averaged across 5 ROI electrodes and timepoints when overall alpha power lateralization was sign. different from 0 (as assessed by a CBP test)"
+
+if ((length(names(variable_doc)) != length(colnames(data_behav))) | any(sort(names(variable_doc)) != sort(colnames(data_behav)))) {
+  warning("The docu of the variables ('VME_trialdata__variables.json') might be incomplete or wrong.")
+}
+
+jsonlite::write_json(variable_doc, file.path(path_r_data, "VME_trialdata__variables.json"), pretty=TRUE)
 
 
 

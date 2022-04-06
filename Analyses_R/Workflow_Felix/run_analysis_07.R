@@ -23,7 +23,7 @@ func_analysis_07 <- function(condition, dep_variable) {
   ## Select relevant data:
   data_filtered <- data_behav %>% 
     filter(BlockStyle == condition) %>% 
-    select(ppid, c_StimN, c_Ecc, CDA_amp) %>% 
+    select(contains(c("ppid", "c_StimN", "c_Ecc", dep_variable))) %>% 
     mutate(c_Ecc = as_factor(c_Ecc))
   
   # Define contrast - baseline is Eccentricity = 9° and MemLoad = 2
@@ -36,8 +36,8 @@ func_analysis_07 <- function(condition, dep_variable) {
   glmer.family = ifelse(dep_variable == 'c_ResponseCorrect', 
                         'binomial', 
                         'gaussian')
-  
-  m1 <- lmer(CDA_amp ~ load_contrast*c_Ecc + (1|ppid), 
+  formula <- as.formula(str_c(dep_variable, '~ load_contrast*c_Ecc + (1|ppid)'))
+  m1 <- lmer(formula, 
                 data = data_filtered)
   
   print_header(str_c('Summary glmer\n', 

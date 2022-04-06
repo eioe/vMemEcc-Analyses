@@ -5,7 +5,7 @@
 
 # excluded subjects:
 excl_subs <- c('VME_S11', 'VME_S14', 'VME_S19', # incomplete data
-               'VME_S22', 'VME_S07', 'VME_S12')  # bad EEG
+               'VME_S12', 'VME_S13', 'VME_S22') # bad EEG
 
 fname <- file.path(path_r_data, 'fulldat_behav.rds')
 data_full <- readRDS(fname) %>% 
@@ -88,7 +88,7 @@ fname <- file.path(path_r_data, 'data_CDA.rds')
 data_CDA <- readRDS(fname)
 # convert to uV:
 data_CDA <- data_CDA %>% 
-  mutate(CDA_amp = CDA_amp * 1e6)
+  dplyr::mutate(across(contains("CDA_amp"),  ~ .x * 1e6))
 rm(fname)
 
 # Bind to behavioral data: 
@@ -105,7 +105,7 @@ data_behav <- left_join(data_behav,
 n_tot_trials_rej_EEG <- data_behav %>% 
   filter(!ppid %in% excl_subs, 
          BlockStyle == 'experiment',
-         is.na(CDA_amp)) %>% 
+         is.na(CDA_amp_clustertimes)) %>% 
   group_by(ppid) %>% summarise(n = n(), 
                                perc = n*100/720)
   
@@ -118,7 +118,7 @@ fname <- file.path(path_r_data, 'data_PNP.rds')
 data_PNP <- readRDS(fname)
 # convert to uV:
 data_PNP <- data_PNP %>% 
-  mutate(PNP_amp = PNP_amp * 1e6)
+  mutate(across(contains("PNP_amp"), ~.x * 1e6))
 rm(fname)
 
 # Bind to behavioral data: 

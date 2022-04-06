@@ -7,7 +7,7 @@
 #--------------------------------------------------------------------------
 # ... confidence interval for repeated measures design - based on Coussineau Morey
 
-func_analysis_09 <- function() {
+func_analysis_09 <- function(dep_variable = "PNP_amp_clustertimes") {
   
   condition <- "experiment"  #Only EEG data for VSTM task. 
   
@@ -15,7 +15,7 @@ func_analysis_09 <- function() {
     mutate(c_Ecc = as_factor(c_Ecc)) %>% 
     filter(BlockStyle == condition) %>% 
     group_by(ppid, c_StimN, c_Ecc) %>%   
-    summarise(meanPNP = mean(PNP_amp, na.rm = T)) %>% 
+    summarise(across(dep_variable, ~ mean(.x, na.rm = T), .names = c('meanPNP'))) %>% 
     ungroup() %>% 
     select("meanPNP", "c_StimN", "c_Ecc", "ppid") 
   

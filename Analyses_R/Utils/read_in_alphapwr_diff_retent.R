@@ -2,12 +2,17 @@
 # Read in mean differences in alpha power from MNE export and save as .RDS: 
 
 library(tidyverse)
+library(here)
+
+# Define pathes
+path_global 	    <- here('../..')
+path_r_data       <- file.path(path_global, 'Data2022/DataR')
 
 path_in = file.path(path_global, 
-                    'Data', 
+                    'Data2022', 
                     'DataMNE', 
                     'EEG', 
-                    '08_tfr', 
+                    '05_tfrs', 
                     'summaries', 
                     'induced', 
                     'retention', 
