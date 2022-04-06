@@ -30,7 +30,7 @@ else:
     # running interactively:
     path_study = Path(os.getcwd()).parents[1]
     paths['study'] = path_study
-    
+
 
 
 
@@ -67,8 +67,8 @@ for p in paths:
 # Add paths to files:
 paths['extracted_vars_file'] = op.join(paths['extracted_vars_dir'],
                                        'VME_extracted_vars.json')
-        
-        
+
+
 # path_postICA = op.join(path_data, 'DataMNE', 'EEG', '05.3_rejICA')
 # path_rejepo = op.join(path_data, 'DataMNE', 'EEG', '05.1_rejepo')
 # path_reject_epos_extern = op.join(path_rejepo, 'CSV_rejEpos_ET')
@@ -127,7 +127,7 @@ ids_excluded_subjects =  [12, 13, 22]   # [7, 12, 22]<<< with old preprocessing
 plt_label_size = 12
 
 # colors: 
-#"#66C2A5" "#3288BD"
+# "#66C2A5" "#3288BD"
 
 colors = dict()
 colors['LoadHigh'] = "#F1942E"
