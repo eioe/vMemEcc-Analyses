@@ -94,5 +94,6 @@ func_analysis_09 <- function(dep_variable = "PNP_amp_clustertimes") {
   figa
   
   #--------------------------------------------------------------------------
+  return(aov.srt)
 }
 
