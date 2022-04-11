@@ -20,7 +20,7 @@
 #SBATCH --mail-type=all 
 #SBATCH --mail-user=klotzsche@cbs.mpg.de 
 
-#SBATCH --time=00:50:10
+#SBATCH --time=01:00:10
 # -
 
 module load anaconda/3/2021.05

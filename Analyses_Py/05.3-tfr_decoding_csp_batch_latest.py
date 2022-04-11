@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
+# %%
 
-# In[1]:
+# %%
 
 
 import os
@@ -27,14 +28,6 @@ import mne
 from mne.stats import permutation_cluster_1samp_test, f_mway_rm, f_threshold_mway_rm
 from mne.decoding import CSP, cross_val_multiscore, GeneralizingEstimator
 from library import helpers, config
-
-
-
-# Get SLURM job number:
-job_nr = int(float(sys.argv[1]))
-
-old_log_level = mne.set_log_level('WARNING', return_old_level=True)
-
 
 
 def get_epos(subID, part_epo, signaltype, condition, event_dict, picks_str=None):
@@ -64,18 +57,22 @@ def get_epos(subID, part_epo, signaltype, condition, event_dict, picks_str=None)
     """
     
     if signaltype == 'uncollapsed':
-        fname = op.join(config.path_rejepo, subID + '-' + part_epo +
-                        '-postica-rejepo' + '-epo.fif')
+        fname = op.join(config.paths['03_preproc-rejectET'],
+                        part_epo,
+                        'cleaneddata',
+                        f'{subID}-{part_epo}-rejepo-epo.fif')
     elif signaltype in ['collapsed']:
-        fname = op.join(config.path_epos_sorted, part_epo, signaltype,
-                        subID + '-epo.fif')
+        fname = op.join(config.paths['03_preproc-pooled'],
+                        part_epo,
+                        signaltype,
+                        f'{subID}-{part_epo}-{signaltype}-epo.fif')
     else:
         raise ValueError(f'Invalid value for "signaltype": {signaltype}')
     epos = mne.read_epochs(fname, verbose=False)
     epos = epos.pick_types(eeg=True)
     
     # pick channel selection:
-    if (picks_str is not None) and (picks_str is not 'All'):
+    if (picks_str != None) and (picks_str != 'All'):
         roi_dict = mne.channels.make_1020_channel_selections(epos.info)
         picks = [epos.ch_names[idx] for idx in roi_dict[picks_str]]
         epos.pick_channels(picks, ordered=True)
@@ -210,7 +207,7 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc',
 
     cv_folds = 5
     n_components = 6
-    reg = 0.4 # 'ledoit_wolf'
+    reg = 'ledoit_wolf' # 0.4 # 
     
     csp = CSP(n_components=n_components, reg=reg, log=True, norm_trace=False, component_order='alternate')
     clf = make_pipeline(csp, LinearDiscriminantAnalysis())
@@ -299,9 +296,14 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc',
                         np.random.seed(rand_state)
                         np.random.shuffle(y)
                     # Save mean scores over folds for each frequency and time window for this repetition
-                    tf_scores_tmp[rep, freq, t] = np.mean(cross_val_score(estimator=clf, X=X, y=y,
-                                                                          scoring=scoring, cv=cv,
-                                                                          n_jobs=-2), axis=0)
+                    tf_scores_tmp[rep, freq, t] = np.mean(cross_val_score(estimator=clf,
+                                                                          X=X,
+                                                                          y=y,
+                                                                          scoring=scoring,
+                                                                          cv=cv,
+                                                                          n_jobs=-2,
+                                                                         verbose=False),
+                                                           axis=0)
                 if save_csp_patterns:
                     # get CSP patterns - fitted to all data:
                     csp.fit(X, y)
@@ -356,10 +358,27 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc',
             else:
                 picks_str_folder = ''
             
-            fpath = op.join(config.path_decod_tfr, pwr_style, part_epo, signaltype, contrast_str, scoring, reg_str, picks_str_folder, shuf_labs, sub_folder)
+            fpath = op.join(config.paths["06_decoding-csp"],
+                            pwr_style,
+                            part_epo,
+                            signaltype,
+                            contrast_str,
+                            scoring,
+                            reg_str,
+                            picks_str_folder,
+                            shuf_labs,
+                            sub_folder)
             if (op.exists(fpath) and not overwrite):
-                path_save = op.join(config.path_decod_tfr, pwr_style, part_epo, signaltype, contrast_str + datetime_str, scoring, reg_str, picks_str_folder, shuf_labs, 
-                                   sub_folder + datetime_str)
+                path_save = op.join(config.paths["06_decoding-csp"],
+                                    pwr_style,
+                                    part_epo,
+                                    signaltype,
+                                    contrast_str + datetime_str,
+                                    scoring,
+                                    reg_str,
+                                    picks_str_folder,
+                                    shuf_labs, 
+                                    sub_folder + datetime_str)
             else:
                 path_save = fpath
             helpers.chkmk_dir(path_save)
@@ -518,35 +537,41 @@ old_log_level = mne.set_log_level('WARNING', return_old_level=True)
 print(old_log_level)
 
 
-# In[4]:
+# %%
 
 
 sub_list = np.setdiff1d(np.arange(1, 28), config.ids_missing_subjects +
                         config.ids_excluded_subjects)               
 sub_list_str = ['VME_S%02d' % sub for sub in sub_list]
-# sub_list_str = ['VME_S01', 'VME_S02']
-sub_list_str = [sub_list_str[job_nr]]
+
+# when running on the cluster we want parallelization along the subject dimension
+if not helpers.is_interactive(): 
+    helpers.print_msg('Running Job Nr. ' + sys.argv[1])
+    job_nr = int(float(sys.argv[1]))
+    sub_list_str = [sub_list_str[job_nr]]  
+
+sub_list_str = [sub_list_str[0]]
 
 cond_dict = {'Load': ['LoadLow', 'LoadHigh'], 
              'Ecc': ['EccS', 'EccM', 'EccL']}
 
 
-# In[5]:
+# %%
 
 
 import warnings
 warnings.filterwarnings('ignore')
 
-# for shuf_labels_bool in [False]: # , True]:
+for shuf_labels_bool in [False, True]:  # ]: # 
 
-#     _ = decode(sub_list_str, ['LoadLowEccL', 'LoadHighEccL'], config.event_dict, reps=50, scoring='roc_auc', 
-#                shuffle_labels=shuf_labels_bool, overwrite=True)
-#     _ = decode(sub_list_str, ['LoadLowEccS', 'LoadHighEccS'], config.event_dict, reps=50, scoring='roc_auc', 
-#                shuffle_labels=shuf_labels_bool, overwrite=True)
-#     _ = decode(sub_list_str, ['LoadLowEccM', 'LoadHighEccM'], config.event_dict, reps=50, scoring='roc_auc', 
-#                shuffle_labels=shuf_labels_bool, overwrite=True)
-#     _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
-#            shuffle_labels=shuf_labels_bool, overwrite=True)
+    _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
+               shuffle_labels=shuf_labels_bool, overwrite=True)
+    _ = decode(sub_list_str, ['LoadLowEccL', 'LoadHighEccL'], config.event_dict, reps=50, scoring='roc_auc', 
+               shuffle_labels=shuf_labels_bool, overwrite=True)
+    _ = decode(sub_list_str, ['LoadLowEccS', 'LoadHighEccS'], config.event_dict, reps=50, scoring='roc_auc', 
+               shuffle_labels=shuf_labels_bool, overwrite=True)
+    _ = decode(sub_list_str, ['LoadLowEccM', 'LoadHighEccM'], config.event_dict, reps=50, scoring='roc_auc', 
+               shuffle_labels=shuf_labels_bool, overwrite=True)
 #     _ = decode(sub_list_str, ['EccS', 'EccL'], config.event_dict, reps=100, scoring='roc_auc', 
 #                shuffle_labels=shuf_labels_bool, overwrite=True)
 #     _ = decode(sub_list_str, ['EccM', 'EccL'], config.event_dict, reps=100, scoring='roc_auc', 
@@ -560,8 +585,13 @@ warnings.filterwarnings('ignore')
 
 
 ## Decode 
-_ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, pwr_style = 'induced', reps=50, scoring='roc_auc', 
-           shuffle_labels=False, overwrite=False)
+# _ = decode(sub_list_str,
+#            ['LoadLow', 'LoadHigh'],
+#            config.event_dict,
+#            pwr_style='induced',
+#            reps=50,
+#            scoring='roc_auc',
+#            shuffle_labels=False, overwrite=False)
 
 
 ## Decode from single hemispheres:
@@ -571,3 +601,5 @@ _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, pwr_style =
 
 # _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
 #            shuffle_labels=False, overwrite=True, picks_str='Right', min_freq=8, max_freq=14, n_freqs=1)
+
+# %%
