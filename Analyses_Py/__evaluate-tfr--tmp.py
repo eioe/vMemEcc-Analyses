@@ -444,7 +444,7 @@ fig.savefig(fname, bbox_inches="tight")
 
 ##############################################################################################
 #%% Make single subject plots:
-fig, ax = plt.subplots(7,3, figsize=(15,15))
+fig, ax = plt.subplots(7,3, figsize=(25,25))
 for tfr_, ax_ in zip(diffs_avgtfr_all, ax.reshape(-1)):
     plot_tfr_side(ax_, tfr_, picks='all', 
             tmin=-1.1, tmax=2.3, title='Contra - Ipsi', cbar=False, 
@@ -460,10 +460,10 @@ ax[3,0].yaxis.label.set_visible(True)
 ax[6,1].xaxis.label.set_visible(True)
 
 # Save it: 
-# fpath = op.join(config.paths["plots"], 'TFR', part_epo)
-# helpers.chkmk_dir(fpath)
-# fname = op.join(fpath, 'singlesubs_avgTFR_Difference.png')
-# fig.savefig(fname, bbox_inches="tight")
+fpath = op.join(config.paths["plots"], 'TFR', part_epo)
+helpers.chkmk_dir(fpath)
+fname = op.join(fpath, 'singlesubs_avgTFR_Difference.png')
+fig.savefig(fname, bbox_inches="tight")
 # -
 
 # Now we plot the difference (in lateralized power) between the two memory load conditions (high  vs low load). According to Sauseng et al. (2009) we should see stronger (more negative) alpha lateralization for the higher memory load:
@@ -565,6 +565,27 @@ fpath = op.join(config.paths["plots"], 'TFR', part_epo)
 helpers.chkmk_dir(fpath)
 fname = op.join(fpath, 'classAlpha_Difference.png')
 fig.savefig(fname, bbox_inches="tight")
+
+# +
+# # Extract the values:
+cbp_times = times[mask_time[0]]
+sign_cluster_times = {}
+# retention interval: 2nd cluster
+cluster_times = cbp_times[clusters[1][0]]
+sign_cluster_times['retention'] = cluster_times
+# cue interval: 1st cluster
+cluster_times = cbp_times[clusters[0][0]]
+sign_cluster_times['cue'] = cluster_times
+
+
+helpers.extract_var("tfr_alphalat_retention_sign_cluster_t_start", sign_cluster_times['retention'][0], 
+                    exp_format=".3f")
+helpers.extract_var("tfr_alphalat_retention_sign_cluster_t_end", sign_cluster_times['retention'][-1], 
+                    exp_format=".3f")
+helpers.extract_var("tfr_alphalat_cue_sign_cluster_t_start", sign_cluster_times['cue'][0], 
+                    exp_format=".3f")
+helpers.extract_var("tfr_alphalat_cue_sign_cluster_t_end", sign_cluster_times['cue'][-1], 
+                    exp_format=".3f")
 # -
 
 # We write out CSV files with the mean lateralized alpha power per trial so we can read it into R and run our stats there:
@@ -691,8 +712,8 @@ subtfr_mway_data = subtfr_mway_data.swapaxes(0, 1)
 
 fvals, pvals = f_mway_rm(subtfr_mway_data, factor_levels, effects=effects)
 effect_labels = ['Load', 'Ecc', 'Load x Ecc']
+# -
 
-# +
 # Plot result:
 for effect, sig, effect_label in zip(fvals, pvals, effect_labels):
     f = plt.figure()
