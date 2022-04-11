@@ -29,9 +29,9 @@ if hasattr(main, '__file__'):
     paths['analyses'] = Path(os.path.abspath(__file__)).parents[2]
 else: 
     # running interactively:
-    path_study = Path(os.getcwd()).parents[2]
+    path_study = Path(os.getcwd()).parents[1]
     paths['study'] = path_study
-    paths['analyses'] = Path(os.getcwd()).parents[1]
+    paths['analyses'] = Path(os.getcwd()).parents[0]
 
 path_data = os.path.join(path_study, 'Data2022')
 paths['00_raw'] = os.path.join(path_data, 'DataMNE', 'EEG', '00_raw')
