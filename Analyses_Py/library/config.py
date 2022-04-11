@@ -26,13 +26,12 @@ if hasattr(main, '__file__'):
     # running from shell
     path_study = Path(os.path.abspath(__file__)).parents[3]
     paths['study'] = path_study
+    paths['analyses'] = Path(os.path.abspath(__file__)).parents[2]
 else: 
     # running interactively:
-    path_study = Path(os.getcwd()).parents[1]
+    path_study = Path(os.getcwd()).parents[2]
     paths['study'] = path_study
-
-
-
+    paths['analyses'] = Path(os.getcwd()).parents[1]
 
 path_data = os.path.join(path_study, 'Data2022')
 paths['00_raw'] = os.path.join(path_data, 'DataMNE', 'EEG', '00_raw')
@@ -55,9 +54,10 @@ paths['05_tfrs'] = op.join(path_data, 'DataMNE', 'EEG', '05_tfrs')
 paths['05_tfrs-summaries'] = op.join(paths['05_tfrs'], 'summaries')
 paths['06_decoding'] = op.join(path_data, 'DataMNE', 'EEG', '06_decoding')
 paths['06_decoding-sensorspace'] = op.join(paths['06_decoding'], 'sensorspace')
+paths['06_decoding-csp'] = op.join(paths['06_decoding'], 'csp')
 
 paths['plots'] = op.join(path_study, 'Plots2022')
-paths['extracted_vars_dir'] = op.join(path_study, 'Writing', 'Other', 'ExtractedVariables2022')
+paths['extracted_vars_dir'] = op.join(paths['analyses'])
 
 for p in paths:
     if not op.exists(paths[p]):
