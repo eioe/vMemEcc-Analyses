@@ -49,7 +49,11 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
     summarise(across(CDA_amp_clustertimes, ~ mean(.x, na.rm = T), .names = c('meanCDA'))) %>%
     group_by(c_StimN) %>% 
     summarise(meanCDA_mean = mean(meanCDA), meanCDA_sd = sd(meanCDA))
-  
+  print(cda_summary_stimN)
+  extract_var("cda_sign_cluster_meanamp_StimN_2_mean", cda_summary_stimN$meanCDA_mean[cda_summary_stimN$c_StimN == 2])
+  extract_var("cda_sign_cluster_meanamp_StimN_2_sd", cda_summary_stimN$meanCDA_sd[cda_summary_stimN$c_StimN == 2])
+  extract_var("cda_sign_cluster_meanamp_StimN_4_mean", cda_summary_stimN$meanCDA_mean[cda_summary_stimN$c_StimN == 4])
+  extract_var("cda_sign_cluster_meanamp_StimN_4_sd", cda_summary_stimN$meanCDA_sd[cda_summary_stimN$c_StimN == 4])
   
   #--------------------------------------------------------------------------
   ## Run ANOVA
