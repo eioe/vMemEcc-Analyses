@@ -254,7 +254,42 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc',
         part_epo = part_epo
 
         print(f'Running {subID}')
+        
+        ###################WARNING: this section is only temporary and should be removed.
+        sub_folder = subID
 
+        if shuffle_labels:
+            shuf_labs = 'labels_shuffled'
+        else: 
+            shuf_labs = ''
+
+        if reg is not None:
+            if isinstance(reg, float):
+                reg_str = 'shrinkage'+str(reg)
+            else: 
+                reg_str = reg
+        else:
+            reg_str = ''
+
+        if picks_str is not None:
+            picks_str_folder = picks_str
+        else:
+            picks_str_folder = ''
+        if not overwrite:
+            subject_dir = op.join(config.paths['06_decoding-csp'],
+                       part_epo,
+                       signaltype,
+                       contrast_str,
+                       scoring,
+                       reg_str,
+                       shuf_labs,
+                       sub_folder)
+            if op.exists(subject_dir):
+                print("Output directory already exists; skipping this subject.")
+                return
+
+        ###############################################################################################
+            
         X_epos, y, t = get_sensordata(subID, part_epo, signaltype, conditions, event_dict, picks_str)
         
         if pwr_style == 'induced':
@@ -562,16 +597,16 @@ cond_dict = {'Load': ['LoadLow', 'LoadHigh'],
 import warnings
 warnings.filterwarnings('ignore')
 
-for shuf_labels_bool in [False, True]:  # ]: # 
+for shuf_labels_bool in [True]:  # ]: # False, 
 
     _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
-               shuffle_labels=shuf_labels_bool, overwrite=True)
+               shuffle_labels=shuf_labels_bool, overwrite=False)
     _ = decode(sub_list_str, ['LoadLowEccL', 'LoadHighEccL'], config.event_dict, reps=50, scoring='roc_auc', 
-               shuffle_labels=shuf_labels_bool, overwrite=True)
+               shuffle_labels=shuf_labels_bool, overwrite=False)
     _ = decode(sub_list_str, ['LoadLowEccS', 'LoadHighEccS'], config.event_dict, reps=50, scoring='roc_auc', 
-               shuffle_labels=shuf_labels_bool, overwrite=True)
+               shuffle_labels=shuf_labels_bool, overwrite=False)
     _ = decode(sub_list_str, ['LoadLowEccM', 'LoadHighEccM'], config.event_dict, reps=50, scoring='roc_auc', 
-               shuffle_labels=shuf_labels_bool, overwrite=True)
+               shuffle_labels=shuf_labels_bool, overwrite=False)
 #     _ = decode(sub_list_str, ['EccS', 'EccL'], config.event_dict, reps=100, scoring='roc_auc', 
 #                shuffle_labels=shuf_labels_bool, overwrite=True)
 #     _ = decode(sub_list_str, ['EccM', 'EccL'], config.event_dict, reps=100, scoring='roc_auc', 
