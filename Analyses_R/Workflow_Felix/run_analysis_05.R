@@ -31,6 +31,26 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
                  conf.level=2*(pnorm(1,0,1)-0.5),
                  difference=TRUE) #1sem or 1.96sem
   
+  cda_overall_summary <- data_behav %>% 
+                            mutate(c_Ecc = as_factor(c_Ecc)) %>% 
+                            filter(BlockStyle == condition) %>% 
+                            group_by(ppid) %>% 
+                            summarise(across(CDA_amp_clustertimes, ~ mean(.x, na.rm = T), .names = c('meanCDA'))) %>%
+                            ungroup() %>% 
+                            summarise(meanCDA_mean = mean(meanCDA), meanCDA_sd = sd(meanCDA))
+  
+  extract_var("cda_sign_cluster_meanamp_mean", cda_overall_summary$meanCDA_mean)
+  extract_var("cda_sign_cluster_meanamp_sd", cda_overall_summary$meanCDA_sd)
+  
+  cda_summary_stimN <- data_behav %>% 
+    mutate(c_Ecc = as_factor(c_Ecc)) %>% 
+    filter(BlockStyle == condition) %>% 
+    group_by(ppid, c_StimN) %>% 
+    summarise(across(CDA_amp_clustertimes, ~ mean(.x, na.rm = T), .names = c('meanCDA'))) %>%
+    group_by(c_StimN) %>% 
+    summarise(meanCDA_mean = mean(meanCDA), meanCDA_sd = sd(meanCDA))
+  
+  
   #--------------------------------------------------------------------------
   ## Run ANOVA
   aov.srt <- aov(meanCDA ~ c_StimN*c_Ecc + Error(ppid/(c_StimN* c_Ecc)),data=c1.aov)
@@ -108,5 +128,7 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
   figa
   
   #--------------------------------------------------------------------------
+  
+  return(aov.srt)
 }
 
