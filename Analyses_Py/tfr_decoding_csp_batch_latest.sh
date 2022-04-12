@@ -14,13 +14,13 @@
 # Number of nodes and MPI tasks per node: 
 #SBATCH --nodes=1 
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=50
+#SBATCH --cpus-per-task=70
 #SBATCH --mem=20000
 
 #SBATCH --mail-type=all 
 #SBATCH --mail-user=klotzsche@cbs.mpg.de 
 
-#SBATCH --time=06:00:00
+#SBATCH --time=14:00:00
 # -
 
 module load anaconda/3/2021.05
