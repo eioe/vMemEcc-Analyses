@@ -137,7 +137,7 @@ def extract_var(var, val, path_ev=config.paths['extracted_vars_file'], overwrite
     exp_vars_dict[var] = val_str
 
     with open(path_ev, 'w') as f:
-        json.dump(exp_vars_dict, f)
+        json.dump(exp_vars_dict, f, indent=4)
 
 
 def is_interactive():
