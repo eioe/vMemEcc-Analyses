@@ -151,6 +151,7 @@ colors['Load'] = "#72DDED"
 colors['Diff'] = "black"
 colors['Ipsi'] = '#FAC748'
 colors['Contra'] = '#8390FA'
+colors['All'] = "#3288BD"
 
 # labels
 labels = dict()
