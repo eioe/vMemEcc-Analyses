@@ -56,9 +56,10 @@ path_r_data       <- file.path(path_global, 'Data/DataR')
 path_scripts_sven <- file.path(here('Workflow_Sven', 
                                     'osf_experiment1', 
                                     '_RScripts'))
-path_extracted_vars <- file.path(path_global, 'Writing', 
-                             'Other', 
-                             'VME_extracted_vars.json')
+path_extracted_vars <- file.path(here('../VME_extracted_vars.json'))
+  # path_global, 'Writing', 
+  #                            'Other', 
+  #                            'VME_extracted_vars.json')
 
 #--------------------------------------------------------------------------
 ## load packages & custom utils:
@@ -339,7 +340,7 @@ func_analysis_03('perception')
 
 ### CDA amplitude (rmANOVA):
 ```{r, message=FALSE, warning=FALSE}
-func_analysis_05(dep_variable = "CDA_amp_clustertimes")
+results_anova_cda <- func_analysis_05(dep_variable = "CDA_amp_clustertimes")
 ```
 
 _show source:_ 
@@ -348,6 +349,24 @@ _show source:_
 insert_fun("func_analysis_05")
 ```
 ```{r func_analysis_05-source, eval = FALSE}
+```
+
+_extract variables:_ 
+```{r, echo=FALSE}
+for (eff in c("c_StimN", "c_Ecc", "c_StimN:c_Ecc")) {
+  eff_print <- eff %>% 
+    str_replace_all("c_", "") %>% 
+    str_replace_all(":", "x") 
+    
+  extract_var(str_c("anova_cda_eff_", eff_print, "_F"), summary(results_anova_cda)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_cda_eff_", eff_print, "_df_within"), summary(results_anova_cda)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_cda_eff_", eff_print, "_df_resid"), summary(results_anova_cda)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_cda_eff_", eff_print, "_p"), summary(results_anova_cda)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+              is_pval = TRUE, 
+              exp_format = "%.3f")
+}
 ```
 
 
@@ -370,7 +389,24 @@ insert_fun("func_analysis_07")
 Testing the effects of _memory load_ and _eccentricity_ on the mean **PNP amplitude** (see [Papaioannou & Luck, 2020](https://onlinelibrary.wiley.com/doi/abs/10.1111/psyp.13532))
 
 ```{r, message=FALSE, warning=FALSE}
-func_analysis_09(dep_variable = "PNP_amp_clustertimes")
+results_anova_pnp <- func_analysis_09(dep_variable = "PNP_amp_clustertimes")
+```
+
+```{r, echo=FALSE}
+for (eff in c("c_StimN", "c_Ecc", "c_StimN:c_Ecc")) {
+  eff_print <- eff %>% 
+    str_replace_all("c_", "") %>% 
+    str_replace_all(":", "x") 
+    
+  extract_var(str_c("anova_pnp_eff_", eff_print, "_F"), summary(results_anova_pnp)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_pnp_eff_", eff_print, "_df_within"), summary(results_anova_pnp)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_pnp_eff_", eff_print, "_df_resid"), summary(results_anova_pnp)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_pnp_eff_", eff_print, "_p"), summary(results_anova_pnp)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+              is_pval = TRUE, 
+              exp_format = "%.3f")
+}
 ```
 
 
@@ -382,7 +418,7 @@ See paper for specifics of parameters re. frequency band, ROI, and time window t
 
 ### lat. alpha power (rmANOVA):
 ```{r, message=FALSE, warning=FALSE}
-func_analysis_06()
+results_anova_alphalat <- func_analysis_06()
 ```
 
 _show source:_ 
@@ -391,6 +427,23 @@ _show source:_
 insert_fun("func_analysis_06")
 ```
 ```{r func_analysis_06-source, eval = FALSE}
+```
+
+```{r, echo=FALSE}
+for (eff in c("c_StimN", "c_Ecc", "c_StimN:c_Ecc")) {
+  eff_print <- eff %>% 
+    str_replace_all("c_", "") %>% 
+    str_replace_all(":", "x") 
+    
+  extract_var(str_c("anova_alphalat_eff_", eff_print, "_F"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_alphalat_eff_", eff_print, "_df_within"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_alphalat_eff_", eff_print, "_df_resid"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_alphalat_eff_", eff_print, "_p"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+              is_pval = TRUE, 
+              exp_format = "%.3f")
+}
 ```
 
 ### Analysis 03 - Supplement 1: lat. alpha power (lmer):
