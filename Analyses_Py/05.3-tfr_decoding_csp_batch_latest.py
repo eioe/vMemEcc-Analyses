@@ -207,7 +207,7 @@ def decode(sub_list_str, conditions, event_dict, reps = 1, scoring = 'roc_auc',
 
     cv_folds = 5
     n_components = 6
-    reg = 'ledoit_wolf' # 0.4 # 
+    reg = 0.4  # 'ledoit_wolf' # 0.4 # 
     
     csp = CSP(n_components=n_components, reg=reg, log=True, norm_trace=False, component_order='alternate')
     clf = make_pipeline(csp, LinearDiscriminantAnalysis())
@@ -597,10 +597,10 @@ cond_dict = {'Load': ['LoadLow', 'LoadHigh'],
 import warnings
 warnings.filterwarnings('ignore')
 
-for shuf_labels_bool in [True]:  # ]: # False, 
+for shuf_labels_bool in [True, False]:  # ]: # False, 
 
-    _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
-               shuffle_labels=shuf_labels_bool, overwrite=False)
+#     _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict, reps=50, scoring='roc_auc', 
+#                shuffle_labels=shuf_labels_bool, overwrite=True)
     _ = decode(sub_list_str, ['LoadLowEccL', 'LoadHighEccL'], config.event_dict, reps=50, scoring='roc_auc', 
                shuffle_labels=shuf_labels_bool, overwrite=False)
     _ = decode(sub_list_str, ['LoadLowEccS', 'LoadHighEccS'], config.event_dict, reps=50, scoring='roc_auc', 
