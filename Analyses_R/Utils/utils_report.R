@@ -44,6 +44,6 @@ extract_var <- function(var, val, path_ev=path_extracted_vars, overwrite=TRUE,
   exp_vars[[var]] <- val_str
   
   # Save:
-  jsonData <- toJSON(exp_vars)
+  jsonData <- toJSON(exp_vars, indent=4)
   write(jsonData, path_ev)
 }

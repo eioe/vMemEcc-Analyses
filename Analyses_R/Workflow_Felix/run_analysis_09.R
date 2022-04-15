@@ -30,6 +30,30 @@ func_analysis_09 <- function(dep_variable = "PNP_amp_clustertimes") {
                  conf.level=2*(pnorm(1,0,1)-0.5),
                  difference=TRUE) #1sem or 1.96sem
   
+  pnp_overall_summary <- data_behav %>% 
+    mutate(c_Ecc = as_factor(c_Ecc)) %>% 
+    filter(BlockStyle == condition) %>% 
+    group_by(ppid) %>% 
+    summarise(across(PNP_amp_clustertimes, ~ mean(.x, na.rm = T), .names = c('meanPNP'))) %>%
+    ungroup() %>% 
+    summarise(meanPNP_mean = mean(meanPNP), meanPNP_sd = sd(meanPNP))
+  
+  extract_var("pnp_sign_cluster_meanamp_mean", pnp_overall_summary$meanPNP_mean)
+  extract_var("pnp_sign_cluster_meanamp_sd", pnp_overall_summary$meanPNP_sd)
+  
+  pnp_summary_stimN <- data_behav %>% 
+    mutate(c_Ecc = as_factor(c_Ecc)) %>% 
+    filter(BlockStyle == condition) %>% 
+    group_by(ppid, c_StimN) %>% 
+    summarise(across(PNP_amp_clustertimes, ~ mean(.x, na.rm = T), .names = c('meanPNP'))) %>%
+    group_by(c_StimN) %>% 
+    summarise(meanPNP_mean = mean(meanPNP), meanPNP_sd = sd(meanPNP))
+  print(pnp_summary_stimN)
+  extract_var("pnp_sign_cluster_meanamp_StimN_2_mean", pnp_summary_stimN$meanPNP_mean[pnp_summary_stimN$c_StimN == 2])
+  extract_var("pnp_sign_cluster_meanamp_StimN_2_sd", pnp_summary_stimN$meanPNP_sd[pnp_summary_stimN$c_StimN == 2])
+  extract_var("pnp_sign_cluster_meanamp_StimN_4_mean", pnp_summary_stimN$meanPNP_mean[pnp_summary_stimN$c_StimN == 4])
+  extract_var("pnp_sign_cluster_meanamp_StimN_4_sd", pnp_summary_stimN$meanPNP_sd[pnp_summary_stimN$c_StimN == 4])
+  
   #--------------------------------------------------------------------------
   ## Run ANOVA
   aov.srt <- aov(meanPNP ~ c_StimN*c_Ecc + Error(ppid/(c_StimN* c_Ecc)),data=c1.aov)
