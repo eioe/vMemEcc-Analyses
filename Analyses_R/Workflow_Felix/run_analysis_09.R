@@ -52,7 +52,7 @@ func_analysis_09 <- function(dep_variable = "PNP_amp_clustertimes") {
   extract_var("pnp_sign_cluster_meanamp_StimN_2_mean", pnp_summary_stimN$meanPNP_mean[pnp_summary_stimN$c_StimN == 2])
   extract_var("pnp_sign_cluster_meanamp_StimN_2_sd", pnp_summary_stimN$meanPNP_sd[pnp_summary_stimN$c_StimN == 2])
   extract_var("pnp_sign_cluster_meanamp_StimN_4_mean", pnp_summary_stimN$meanPNP_mean[pnp_summary_stimN$c_StimN == 4])
-  extract_var("pnp_sign_cluster_meanamp_StimN_4_sd", pnp_summary_stimN$meanPNP_sd[pnp_summary_stimN$c_StimN == 4])
+  extract_var("pnp_sign_cluster_meanamp_StimN_4_sd", pnp_summary_stimN$meanPNP_sd[pnp_summary_stimN$c_StimN == 4]) 
   
   
   #--------------------------------------------------------------------------
