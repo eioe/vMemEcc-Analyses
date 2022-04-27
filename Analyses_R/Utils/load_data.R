@@ -5,7 +5,7 @@
 
 # excluded subjects:
 excl_subs <- c('VME_S11', 'VME_S14', 'VME_S19', # incomplete data
-               'VME_S12', 'VME_S13', 'VME_S22') # bad EEG
+               'VME_S12', 'VME_S13', 'VME_S22') # bad EEG or too many saccades
 
 fname <- file.path(path_r_data, 'fulldat_behav.rds')
 data_full <- readRDS(fname) %>% 

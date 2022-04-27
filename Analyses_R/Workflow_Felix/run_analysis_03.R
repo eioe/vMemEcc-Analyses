@@ -8,7 +8,15 @@
 
 func_analysis_03 <- function(condition) {
   
-  c1.aov <- data_behav %>% 
+  # Drop trials where we do not have EEG data:
+  if (condition == "experiment") {
+    data2analyze <- data_behav %>% 
+      drop_na()
+  } else {
+    data2analyze <- data_behav
+  }
+  
+  c1.aov <- data2analyze %>% 
     filter(BlockStyle == condition, 
            c_ResponseTime < 3) %>%  #TODO: Implement proper outlier correction!
     group_by(ppid, c_StimN, c_Ecc) %>%   

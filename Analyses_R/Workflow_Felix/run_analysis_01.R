@@ -8,7 +8,15 @@
 
 func_analysis_01 <- function(condition) {
 
-  c1.aov <- data_behav %>% 
+  # Drop trials where we do not have EEG data:
+  if (condition == "experiment") {
+    data2analyze <- data_behav %>% 
+      drop_na()
+  } else {
+    data2analyze <- data_behav
+  }
+  
+  c1.aov <- data2analyze %>% 
     filter(BlockStyle == condition) %>% 
     group_by(ppid, c_StimN, c_Ecc) %>%   
     summarise(meanAcc = mean(c_ResponseCorrect)) %>% 
@@ -106,9 +114,16 @@ func_analysis_01 <- function(condition) {
 
 func_analysis_01a <- function(dep_variable) {
   
+  # Drop trials where we do not have EEG data:
+  if (condition == "experiment") {
+    data2analyze <- data_behav %>% 
+      drop_na()
+  } else {
+    data2analyze <- data_behav
+  }
   
   ## Select relevant data:
-  data_filtered <- data_behav %>% 
+  data_filtered <- data2analyze %>% 
     select(ppid, c_StimN, c_Ecc, c_ResponseCorrect, BlockStyle) %>% 
     mutate(c_Ecc = as_factor(c_Ecc), 
            c_BlockStyle = as_factor(BlockStyle)) 
@@ -141,7 +156,7 @@ func_analysis_01a <- function(dep_variable) {
   
   ## Plot it:
   
-  c1.aov <- data_behav %>% 
+  c1.aov <- data2analyze %>% 
     mutate(BlockStyle = recode(BlockStyle, 'experiment' = 'memory')) %>% 
     group_by(ppid, c_StimN, c_Ecc, BlockStyle) %>%   
     summarise(meanAcc = mean(c_ResponseCorrect)) %>% 
