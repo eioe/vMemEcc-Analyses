@@ -43,7 +43,7 @@ def extract_epochs(raw_data, events, event_id_, tmin, tmax, l_freq, h_freq, base
     filtered = raw_data.load_data().filter(l_freq=l_freq,
                                            h_freq=h_freq,
                                            n_jobs=n_jobs,
-                                           verbose=False)
+                                           verbose=True)
     epos_ = mne.Epochs(filtered, 
                         events, 
                         event_id=event_id_, 
@@ -59,12 +59,11 @@ def extract_epochs(raw_data, events, event_id_, tmin, tmax, l_freq, h_freq, base
 
 
 # parse args:
-if len(sys.argv) > 1:
+# when running on the cluster we want parallelization along the subject dimension
+if not helpers.is_interactive(): 
     helpers.print_msg('Running Job Nr. ' + sys.argv[1])
-    helpers.print_msg('Study path set to ' + str(path_study))
     job_nr = int(float(sys.argv[1]))
-else:
-    job_nr = None
+    sub_list_str = [sub_list_str[job_nr]]   
 
 
 
@@ -72,12 +71,12 @@ else:
 sub_list = np.setdiff1d(np.arange(1,config.n_subjects_total+1), config.ids_missing_subjects)
 sub_list_str = ['VME_S%02d' % sub for sub in sub_list]
 
-if job_nr is not None:
-    sub_list_str = [sub_list_str[job_nr]]
+# # to run a single subject, modify and uncomment one of the following lines:
+#
 
-## to run a single subject, modify and uncomment one of the following lines:
+
+# +
 # sub_list_str = ['VME_S01']
-
 
 for idx, subID in enumerate(sub_list_str):
     helpers.print_msg('Processing subject ' + subID + '.')
@@ -105,7 +104,7 @@ for idx, subID in enumerate(sub_list_str):
                               bad_epos=None,
                               n_jobs = config.n_jobs)
     
-    for l_freq in [0.01, 0.05, 0.1, 0.5]:
+    for l_freq in [0.1]:  # [0.01, 0.05, 0.1, 0.5]:
     
         epos["stimon"] = extract_epochs(raw.copy(), 
                                   events_stimon, 
@@ -145,6 +144,7 @@ for idx, subID in enumerate(sub_list_str):
                               subID + '-' + part,
                               op.join(config.paths["02_epochs"], str(l_freq), part), 
                               '-epo')
+# -
 
 
-    
+

@@ -1,0 +1,13 @@
+setup.py
+library/__init__.py
+library/check_eogcorrs.py
+library/config.py
+library/copy_file_pattern.py
+library/helpers.py
+library/preprocess.py
+library/repair_missing_tfr_files.py
+library/upload_files_seafile.py
+library.egg-info/PKG-INFO
+library.egg-info/SOURCES.txt
+library.egg-info/dependency_links.txt
+library.egg-info/top_level.txt

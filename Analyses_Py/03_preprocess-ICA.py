@@ -1,4 +1,3 @@
-
 from os import path as op
 import sys
 import pandas as pd
@@ -107,7 +106,7 @@ sub_list_str = ['VME_S%02d' % sub for sub in sub_list]
 if job_nr is not None:
     sub_list_str = [sub_list_str[job_nr]]
 
-## to run a single subject, modify and uncomment one of the following lines:
+# # to run a single subject, modify and uncomment one of the following lines:
 # sub_list_str = ['VME_S20']
 
 
