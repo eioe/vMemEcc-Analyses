@@ -40,6 +40,7 @@ path_outp = op.join(path_data, 'DataMNE', 'EEG', '00_raw')
 if not op.exists(path_outp):
     os.makedirs(path_outp)
 
+
 def load_data_raw(subID):
     # Get data:
     path_sub = path_eegdata % subID
@@ -47,10 +48,12 @@ def load_data_raw(subID):
     raw = mne.io.concatenate_raws([mne.io.read_raw_brainvision(f, preload=False) for f in raw_files])
     return raw
 
+
 def save_data(data, filename, path, append=''):
     ff = op.join(path, filename + append + '.fif')
-    #print("Saving %s ..." % ff)
+    # print("Saving %s ..." % ff)
     data.save(fname=ff, overwrite=True)
+
 
 ######################################################################################################
 
