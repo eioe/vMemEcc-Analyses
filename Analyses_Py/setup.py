@@ -1,3 +1,7 @@
+"""
+For setting up as a module.
+"""
+
 from setuptools import find_packages, setup
 
 setup(
