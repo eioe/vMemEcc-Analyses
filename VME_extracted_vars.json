@@ -173,5 +173,6 @@
     "avg_perc_trials_per_sub_postrej": "88.52",
     "cda_cbp_global_thresh_init": "0.05",
     "cda_cbp_global_nperms": "10000.00",
-    "cda_cbp_2ndlvl_pval": "0.05"
+    "cda_cbp_2ndlvl_pval": "0.05",
+    "latalpha_cbp_2ndlvl_pval": "0.05"
 }
