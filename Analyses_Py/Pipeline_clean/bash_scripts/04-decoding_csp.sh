@@ -27,4 +27,4 @@ module load anaconda/3/2021.05
 conda activate mne
 
 # Run the program: 
-srun python ./vme_analysis/Analyses_Py/04.3-decoding_csp.py $SLURM_ARRAY_TASK_ID
+srun python ./vme_analysis/Analyses_Py/04.2-decoding_csp.py $SLURM_ARRAY_TASK_ID
