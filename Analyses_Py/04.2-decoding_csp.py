@@ -17,17 +17,30 @@ from scipy.ndimage import measurements
 import warnings
 
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.model_selection import StratifiedKFold, cross_val_score, GridSearchCV
+from sklearn.model_selection import (
+    cross_val_score,
+    GridSearchCV,
+    StratifiedKFold
+)
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import LabelEncoder
 
 import mne
-from mne.stats import permutation_cluster_1samp_test, f_mway_rm, f_threshold_mway_rm
-from mne.decoding import CSP, cross_val_multiscore, GeneralizingEstimator
+from mne.stats import (
+    f_mway_rm,
+    f_threshold_mway_rm,
+    permutation_cluster_1samp_test
+)
+from mne.decoding import (
+    cross_val_multiscore,
+    CSP,
+    GeneralizingEstimator
+)
 from library import helpers, config
 
 
-def get_epos(subID, part_epo, signaltype, condition, event_dict, picks_str=None):
+def get_epos(subID, part_epo, signaltype, condition, event_dict,
+             picks_str=None):
     """Load a set of specified epochs.
     
      Parameters
@@ -37,22 +50,26 @@ def get_epos(subID, part_epo, signaltype, condition, event_dict, picks_str=None)
     part_epo : str
         Part of the epoch. One of: 'fulllength', 'cue', 'stimon'
     signaltype: str
-        Processing state of the sensor signal. One of: 'collapsed': electrode positions flipped for cue left trials
-                                                       'uncollapsed': normal electrode positions,
-                                                       'difference': difference signal: contra minus ipsilateral
+        Processing state of the sensor signal. One of:
+            'collapsed': electrode positions flipped for cue left trials
+            'uncollapsed': normal electrode positions,
+            'difference': difference signal: contra minus ipsilateral
     condition: str
-        Experimental condition. Combination of 'Ecc' and 'Load' (eg, 'LoadLow' or 'LoadLowEccS')
+        Experimental condition. Combination of 'Ecc' and 'Load' (eg, 'LoadLow'
+        or 'LoadLowEccS')
     event_dict: dict
-        Dictionnary explaining the event codes. Normally this can be grabbed from config.event_dict
+        Dictionnary explaining the event codes. Normally this can be grabbed
+        from config.event_dict
     picks_str: str
-        Predefined selection, has to be either 'Left', 'Right', 'Midline' or 'All'; None (default) is thesame as 'All'
-        
+        Predefined selection, has to be either 'Left', 'Right', 'Midline' or
+        'All'; None (default) is thesame as 'All'
+
     Returns
     -------
     mne.Epochs
         Array of selected epochs.
     """
-    
+
     if signaltype == 'uncollapsed':
         fname = op.join(config.paths['03_preproc-rejectET'],
                         part_epo,
@@ -67,9 +84,9 @@ def get_epos(subID, part_epo, signaltype, condition, event_dict, picks_str=None)
         raise ValueError(f'Invalid value for "signaltype": {signaltype}')
     epos = mne.read_epochs(fname, verbose=False)
     epos = epos.pick_types(eeg=True)
-    
+
     # pick channel selection:
-    if (picks_str != None) and (picks_str != 'All'):
+    if (picks_str is not None) and (picks_str != 'All'):
         roi_dict = mne.channels.make_1020_channel_selections(epos.info)
         picks = [epos.ch_names[idx] for idx in roi_dict[picks_str]]
         epos.pick_channels(picks, ordered=True)
@@ -100,11 +117,14 @@ def get_sensordata(subID, part_epo, signaltype, conditions, event_dict,
             'uncollapsed': normal electrode positions,
             'difference': difference signal: contra minus ipsilateral
     conditions: list
-        List of experimental conditions. Combination of 'Ecc' and 'Load' (eg, 'LoadLow' or 'LoadLowEccS')
+        List of experimental conditions. Combination of 'Ecc' and 'Load'
+        (eg, 'LoadLow' or 'LoadLowEccS')
     event_dict: dict
-        Dictionnary explaining the event codes. Normally this can be grabbed from config.event_dict
+        Dictionnary explaining the event codes. Normally this can be grabbed
+        from config.event_dict
     picks_str: str
-        Predefined selection, has to be either 'Left', 'Right', 'Midline' or 'All'; None (default) is thesame as 'All'
+        Predefined selection, has to be either 'Left', 'Right', 'Midline' or
+        'All'; None (default) is thesame as 'All'
 
     Returns
     -------
@@ -244,13 +264,13 @@ def decode(sub_list_str, conditions, event_dict, reps=1, scoring='roc_auc',
     reg = reg_csp  # 0.4  # 'ledoit_wolf'
 
     csp = CSP(n_components=n_components,
-              #reg=reg, 
+              # reg=reg,
               log=True, norm_trace=False,
               component_order='alternate')
     clf = make_pipeline(csp, LinearDiscriminantAnalysis())
 
     parameters = {
-        "csp__reg": reg_csp  # np.logspace(-3, 0, 10)  
+        "csp__reg": reg_csp  # np.logspace(-3, 0, 10)
     }
 
     # Classification & time-frequency parameters
@@ -275,7 +295,8 @@ def decode(sub_list_str, conditions, event_dict, reps=1, scoring='roc_auc',
         window_spacing = (n_cycles / np.max(freqs) / 2.)
         centered_w_times = np.arange(tmin, tmax, window_spacing)[1:]
     elif (((w_size is not None)) and (n_cycles is None)):
-        assert 0 <= float(w_overlap or -1) < 1, f'Invalid value for w_overlap: {w_overlap}'
+        assert 0 <= float(w_overlap or -1) < 1, f'Invalid value for \
+                                                  w_overlap: {w_overlap}'
         step_size = w_size * (1 - w_overlap)
         centered_w_times = np.arange(tmin + (w_size / 2.),
                                      tmax - (w_size / 2) + 0.001,
@@ -495,125 +516,7 @@ def decode(sub_list_str, conditions, event_dict, reps=1, scoring='roc_auc',
     return tf_scores_list, centered_w_times
 
 
-def load_scores_decod_tfr(conditions, part_epo='stimon', signaltype='collapsed'):
-    """Load decoding results from disc.
-    
-    Parameters
-    ----------
-    conditions : list
-        List of strings containing the classes of the classification. 
-    part_epo : str, optional
-        Part of the epoch. One of: 'fulllength', 'cue', 'stimon' (default is 'stimon').
-    signaltype: str
-        Processing state of the sensor signal. One of: 'collapsed': electrode positions flipped for cue left trials
-                                                       'uncollapsed': normal electrode positions,
-                                                       'difference': difference signal: contra minus ipsilateral
-                                                       (default is 'collapsed'.)
-
-    Returns
-    -------
-    results: ndarray 
-        Array with decoding results (subjects x freqs x times)
-    times: array, 1d
-    freqs: array, 1d
-    """
-    
-    contrast_str = '_vs_'.join(conditions)
-    fpath = op.join(config.path_decod_tfr, part_epo, signaltype, contrast_str, 'scores')
-    fname = op.join(fpath, 'scores_per_sub.npy')
-    res = np.load(fname)
-    times = np.load(fname[:-4] + '__times.npy')
-    freqs = np.load(fname[:-4] + '__freqs.npy')
-    return(res, times, freqs)
-
-
-def plot_decod_image_tfr(scores, conditions, times, freqs, ax=None):
-    """Plot a heatmap with decoding accuracy over time and frequency. 
-    
-    Parameters
-    ----------
-    scores : ndarray, 2d
-        2d array with decoding results (freqs x timepoints)
-    conditions : list
-        List of strings containing the classes of the classification. 
-    times: array, 1d
-        Timepoints
-    freqs: array, 1d
-        Frequencies 
-    ax: axis, optional
-        Axis to plot into.
-
-    Returns
-    -------
-    image
-        AxisImage
-    """
-    
-    if ax is None:
-        fig, ax = plt.subplots(1,1)
-    dx = np.diff(times)[0] / 2
-    dy = 0 #np.diff(freqs)[0] / 2
-    extent = [times.min()-dx, times.max()+dx,
-              freqs.min()-dy, freqs.max()+dy]             
-    image = ax.imshow(scores, origin='lower', cmap='Greens', aspect='auto', extent=extent)
-    ax.set_yticks([f for frange in freqs for f in frange])
-    ax.set_ylabel('frequency (Hz)')
-    return(image)
-
-
-def plot_score_ts(scores_df, plt_dict, color, ax=None, n_boot=1000):
-    """Plot the decoding scores as timeseries line plot.
-    
-    Parameters
-    ----------
-    scores_df : DataFrame 
-        Data frame containing accuracies per time point in epoch. Long format. 
-        Needed columns: 'time',
-                        'score'
-    plt_dict: dict
-        Dict containing info relevant for plotting. 
-        Entries needed: 't_stimon': relative time of stimulus onset
-                        'xmin': minimal time to be plotted
-                        'xmax': maximal time to be plotted
-    color: str
-        A single color string referred to by name, RGB or RGBA code,
-        for instance ‘red’ or ‘#a98d19’.    
-    ax: axis, optional
-        Axis to plot into.
-    n_boot: int
-        Number of bootstrapping iterations for the CI.
-
-    Returns
-    -------
-    image
-        AxisImage
-    
-    """
-    
-    if ax is None:
-        fig, ax = plt.subplots(1,1)
-    image = sns.lineplot(x='time', 
-                 y='score', 
-                 color = color,
-                 data=scores_df, 
-                 n_boot=n_boot,  
-                 ax=ax)
-    ytick_range = ax.get_ylim()
-    ax.set(xlim=(plt_dict['xmin'], plt_dict['xmax']), ylim=ytick_range)
-    ax.set_ylabel('accuracy')
-    ax.set_xlabel('Time (s)')
-    ax.axvspan(plt_dict['t_stimon'], plt_dict['t_stimon']+0.2, color='grey', alpha=0.3)
-    ax.axvspan(plt_dict['t_stimon']+ 2.2, plt_dict['t_stimon'] + 2.5, color='grey', alpha=0.3)
-    ax.vlines((plt_dict['t_stimon'], plt_dict['t_stimon']+0.2, plt_dict['t_stimon']+2.2),
-              ymin=ytick_range[0], ymax=ytick_range[1], 
-              linestyles='dashed')
-    ax.hlines(0.5, xmin=plt_dict['xmin'], xmax=plt_dict['xmax'])
-    return(image)
-
-
 # %%
-#get_ipython().run_line_magic('matplotlib', 'notebook')
-
 warnings.filterwarnings('ignore')
 old_log_level = mne.set_log_level('WARNING', return_old_level=True)
 print(old_log_level)
