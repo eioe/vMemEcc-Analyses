@@ -175,9 +175,9 @@
     "cda_cbp_global_nperms": "10000.00",
     "cda_cbp_2ndlvl_pval": "0.05",
     "latalpha_cbp_2ndlvl_pval": "0.05",
-    "decod_sensorspace_batch_size": "10.00",
-    "decod_sensorspace_smooth_winsize": "10.00",
-    "decod_sensorspace_cv_folds": "5.00",
-    "decod_sensorspace_n_rep_sub": "100.00",
-    "decod_sensorspace_cv_folds_train_perc": "20.00"
+    "decod_sensorspace_batch_size": "10",
+    "decod_sensorspace_smooth_winsize": "10",
+    "decod_sensorspace_cv_folds": "5",
+    "decod_sensorspace_n_rep_sub": "100",
+    "decod_sensorspace_cv_folds_train_perc": "20"
 }
