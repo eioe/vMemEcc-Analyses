@@ -1,10 +1,10 @@
 {
     "cda_sign_cluster_t_start": "0.388",
     "cda_sign_cluster_t_end": "1.088",
-    "cda_sign_cluster_pval": "0.001",
+    "cda_sign_cluster_pval": ".001",
     "pnp_sign_cluster_t_start": "0.200",
     "pnp_sign_cluster_t_end": "0.344",
-    "pnp_sign_cluster_pval": "0.011",
+    "pnp_sign_cluster_pval": ".011",
     "decod_sensorspace_ sign_cluster_t_start": "0.069",
     "decod_sensorspace_ sign_cluster_t_end": "2.169",
     "tfr_alphalat_retention_sign_cluster_t_start": "0.506",
@@ -172,12 +172,13 @@
     "n_trials_rejected": "1736",
     "avg_perc_trials_per_sub_postrej": "88.52",
     "cda_cbp_global_thresh_init": "0.05",
-    "cda_cbp_global_nperms": "10000.00",
+    "cda_cbp_global_nperms": "10000",
     "cda_cbp_2ndlvl_pval": "0.05",
     "latalpha_cbp_2ndlvl_pval": "0.05",
     "decod_sensorspace_batch_size": "10",
     "decod_sensorspace_smooth_winsize": "10",
     "decod_sensorspace_cv_folds": "5",
     "decod_sensorspace_n_rep_sub": "100",
-    "decod_sensorspace_cv_folds_train_perc": "20"
+    "decod_sensorspace_cv_folds_train_perc": "80",
+    "decod_sensorspace_cv_folds_test_perc": "20"
 }
