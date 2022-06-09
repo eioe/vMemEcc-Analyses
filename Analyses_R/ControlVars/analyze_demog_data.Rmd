@@ -49,6 +49,8 @@ if (data_from_seafile) {
                      'Pics')
 }
 
+path_extracted_vars <- file.path(here('../VME_extracted_vars.json'))
+
 
 ```
 

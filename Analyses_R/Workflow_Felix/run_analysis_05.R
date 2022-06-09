@@ -11,7 +11,7 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
   
   
   condition <- "experiment"  #Only EEG data for VSTM task. 
-  
+
   c1.aov <- data_behav %>% 
     mutate(c_Ecc = as_factor(c_Ecc)) %>% 
     filter(BlockStyle == condition) %>% 
@@ -46,10 +46,10 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
     mutate(c_Ecc = as_factor(c_Ecc)) %>% 
     filter(BlockStyle == condition) %>% 
     group_by(ppid, c_StimN) %>% 
-    summarise(across(CDA_amp_clustertimes, ~ mean(.x, na.rm = T), .names = c('meanCDA'))) %>%
+    summarise(across(dep_variable, ~ mean(.x, na.rm = T), .names = c('meanCDA'))) %>%
     group_by(c_StimN) %>% 
     summarise(meanCDA_mean = mean(meanCDA), meanCDA_sd = sd(meanCDA))
-  print(cda_summary_stimN)
+  
   extract_var("cda_sign_cluster_meanamp_StimN_2_mean", cda_summary_stimN$meanCDA_mean[cda_summary_stimN$c_StimN == 2])
   extract_var("cda_sign_cluster_meanamp_StimN_2_sd", cda_summary_stimN$meanCDA_sd[cda_summary_stimN$c_StimN == 2])
   extract_var("cda_sign_cluster_meanamp_StimN_4_mean", cda_summary_stimN$meanCDA_mean[cda_summary_stimN$c_StimN == 4])
@@ -61,6 +61,8 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
   
   print_header(str_c('Summary ANOVA \ntask: ', condition))
   print(summary(aov.srt))
+  
+  
   
   # # rstatix alternative (identical results:)
   # aov.res <- anova_test(data = c1.aov,
@@ -132,7 +134,6 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
   figa
   
   #--------------------------------------------------------------------------
-  
   return(aov.srt)
 }
 

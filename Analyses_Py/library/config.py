@@ -16,22 +16,27 @@ import numpy as np
 from pathlib import Path
 import __main__ as main
 
-study_path = '../../'
-
 # Paths:
 
 paths = dict()
 
-if hasattr(main, '__file__'): 
-    # running from shell
-    path_study = Path(os.path.abspath(__file__)).parents[3]
-    paths['study'] = path_study
-    paths['analyses'] = Path(os.path.abspath(__file__)).parents[2]
-else: 
-    # running interactively:
-    path_study = Path(os.getcwd()).parents[1]
-    paths['study'] = path_study
-    paths['analyses'] = Path(os.getcwd()).parents[0]
+# +
+# if hasattr(main, '__file__'): 
+#     # running from shell
+#     path_study = Path(os.path.abspath(__file__)).parents[3]
+#     paths['study'] = path_study
+#     paths['analyses'] = Path(os.path.abspath(__file__)).parents[2]
+# else: 
+#     # running interactively:
+#     path_study = Path(os.getcwd()).parents[1]
+#     paths['study'] = path_study
+#     paths['analyses'] = Path(os.getcwd()).parents[0]
+# -
+
+path_study = Path(os.path.abspath(__file__)).parents[3]
+print(f"Study path is set to: {path_study}")
+paths['study'] = path_study
+paths['analyses'] = Path(os.path.abspath(__file__)).parents[2]
 
 path_data = os.path.join(path_study, 'Data2022')
 paths['00_raw'] = os.path.join(path_data, 'DataMNE', 'EEG', '00_raw')
@@ -50,7 +55,7 @@ paths['04_evokeds'] = op.join(path_data, 'DataMNE', 'EEG', '04_evokeds')
 paths['04_evokeds-pooled'] = op.join(paths['04_evokeds'], 'pooled')
 paths['04_evokeds-CDA'] = op.join(paths['04_evokeds'], 'CDA')
 paths['04_evokeds-PNP'] = op.join(paths['04_evokeds'], 'PNP')
-paths['05_tfrs'] = op.join(path_data, 'DataMNE', 'EEG', '05_tfrs')
+paths['05_tfrs'] = op.join(path_data, 'DataMNE', 'EEG', '05_tfrs_clean')
 paths['05_tfrs-summaries'] = op.join(paths['05_tfrs'], 'summaries')
 paths['06_decoding'] = op.join(path_data, 'DataMNE', 'EEG', '06_decoding')
 paths['06_decoding-sensorspace'] = op.join(paths['06_decoding'], 'sensorspace')
