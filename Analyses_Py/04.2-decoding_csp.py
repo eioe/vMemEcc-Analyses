@@ -526,7 +526,7 @@ print(old_log_level)
 
 # set up parameters
 decod_params = dict(
-    reps=1,
+    reps=10,
     scoring='roc_auc',
     t_min=-0.5,
     t_max=2.5,
@@ -537,7 +537,7 @@ decod_params = dict(
     n_cycles=None,
     w_overlap=0.5,
     pwr_style='induced',
-    reg_csp=list(np.logspace(-3, 0, 10)),
+    reg_csp=[0.4],  # list(np.logspace(-3, 0, 10)),
     n_components=6,
     n_cv_folds=5,
     part_epo='stimon',
@@ -584,7 +584,9 @@ warnings.filterwarnings('ignore')
 
 for shuf_labels_bool in [True, False]:  # [False]:  #
 
-    _ = decode(sub_list_str, ['LoadLow', 'LoadHigh'], config.event_dict,
+    _ = decode(sub_list_str, 
+               ['LoadLow', 'LoadHigh'],
+               config.event_dict,
                shuffle_labels=shuf_labels_bool, **decod_params)
     _ = decode(sub_list_str, ['LoadLowEccL', 'LoadHighEccL'],
                config.event_dict,
