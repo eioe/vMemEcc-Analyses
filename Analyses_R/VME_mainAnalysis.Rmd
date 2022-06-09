@@ -67,6 +67,7 @@ source(here("Utils", "load_packages.R"))
 source(file.path(path_scripts_sven,"loadPackages.R"))
 source(here('Utils', 'print_output.R'))
 source(here('Utils', 'utils_report.R'))
+source(here('Utils', 'calc_conf_intervalls.R'))
 
 
 #--------------------------------------------------------------------------
@@ -146,81 +147,195 @@ acc_per_ecc <- vector(mode = "list", length = 2)
 stats_ecc <- vector(mode = "list", length = 2)
 
 
-for (task in c('exp', 'perc')) {
+for (task in c('perc', 'exp')) {
   
-  task_print <- if_else(task == "exp", "vSTM", "perception")
-  print("#####################################################")
-  print(str_glue("####  TASK: {task_print}"))
-  print("#####################################################")
+  if (task == "exp") {
+    outvars <- list("c_ResponseCorrect", "CDA_amp_clustertimes", "PNP_amp_clustertimes", "alphapwr_diff_retent")
+  } else {
+    outvars <- list("c_ResponseCorrect")
+  }
   
-  
-  # Summary accuracy overall:
-  acc_overall[[task]] <- data_behav_per_task[[task]] %>% 
-    group_by(ppid) %>% 
-    summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100, 
-              .groups = "drop"
-              ) %>% 
-    ungroup() %>% 
-    select(!ppid) %>% 
-    summarise_all(list (mean = mean, sd = sd, min = min, max = max))
-  
-  stats_overall[[task]] <- list(
-    name = "overall", 
-    printName = "overall", 
-    levels = c(""),
-    stats = acc_overall[[task]]
-  )
-  
-  
-  # Summary per Memory Load:
-  acc_per_memLoad[[task]] <- data_behav_per_task[[task]] %>% 
-    group_by(ppid, c_StimN) %>% 
-    summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100, 
-              .groups = "drop") %>% 
-    pivot_wider(names_from = c_StimN, 
-                values_from = perc_resp_corr, 
-                names_prefix = "StimN_") %>% 
-    ungroup() %>% 
-    select(!ppid) %>% 
-    summarise_all(list (mean = mean, sd = sd, min = min, max = max))
-  
-  stats_memLoad[[task]] <- list(
-    name = "StimN", 
-    printName = "memLoad", 
-    levels = str_c("StimN_", unique(data_behav_per_task[[task]]$c_StimN), '_'),
-    stats = acc_per_memLoad[[task]]
-  )
-  
-  
-  # Summary per Ecc:
-  acc_per_ecc[[task]] <- data_behav_per_task[[task]] %>% 
-    group_by(ppid, c_Ecc) %>% 
-    summarise(perc_resp_corr = mean(c_ResponseCorrect) * 100,
-              .groups = "drop") %>% 
-    pivot_wider(names_from = c_Ecc, 
-                values_from = perc_resp_corr, 
-                names_prefix = "Ecc_") %>% 
-    ungroup() %>% 
-    select(!ppid) %>% 
-    summarise_all(list (mean = mean, sd = sd, min = min, max = max))
-  
-  stats_ecc[[task]] <- list(
-    name = "ecc", 
-    printName = "Ecc", 
-    levels = str_c("Ecc_", sort(unique(data_behav_per_task[[task]]$c_Ecc)), '_'), 
-    stats = acc_per_ecc[[task]]
-  )
-
-  for (tmp in list(stats_overall[[task]], stats_memLoad[[task]], stats_ecc[[task]])) {
-  
-    print(str_glue("Memory performance ({if_else(str_detect(tmp$printName, 'overall'), '', 'by ')}{tmp$printName}):\n"))
-    for (lvl in tmp$levels) {
-      if (length(tmp$levels) > 1) print(str_glue("{tmp$printName} == {parse_number(lvl)}:"))
-      print(str_glue("    mean (%): {tmp$stats[str_c(lvl, 'mean')]}"))
-      print(str_glue("    SD   (%): {tmp$stats[str_c(lvl, 'sd')]}"))
-      print(str_glue("    min  (%): {tmp$stats[str_c(lvl, 'min')]}"))
-      print(str_glue("    max  (%): {tmp$stats[str_c(lvl, 'max')]}"))
+  for (outvar in outvars) {
+    
+    scaler = switch (outvar,
+                     "c_ResponseCorrect" = 100,
+                     "alphapwr_diff_retent" = 1e12,
+                     1
+                    )
+    dv_str = switch (outvar,
+                 "c_ResponseCorrect" = "mem_acc",
+                 "alphapwr_diff_retent" = "alphalat",
+                 "CDA_amp_clustertimes" = "cda",
+                 "PNP_amp_clustertimes" = "pnp"
+                )
+      
+    
+    task_print <- if_else(task == "exp", "vSTM", "perception")
+    print("#####################################################")
+    print(str_glue("####  TASK: {task_print}"))
+    print("#####################################################")
+    
+    
+    # Summary accuracy overall:
+    tmp <- data_behav_per_task[[task]] %>% 
+      group_by(ppid) %>% 
+      summarise(perc_resp_corr = mean(get(outvar)) * scaler, 
+                .groups = "drop"
+                ) %>% 
+      ungroup() %>% 
+      select(!ppid) 
+    
+    # Here we cannot calculate Cousineau-Morey CIs, so we take normal CIs:
+    acc_overall[[task]][[outvar]] <- tmp %>% 
+      summarise_all(list (mean = mean, sd = sd, min = min, max = max, ci95lower = ci95lower, ci95upper = ci95upper))
+    
+    rm(tmp)
+    
+    stats_overall[[task]][[outvar]] <- list(
+      name = "overall", 
+      printName = "overall", 
+      levels = c(""),
+      stats = acc_overall[[task]][[outvar]]
+    )
+    
+    
+    # Summary per Memory Load:
+    tmp <- data_behav_per_task[[task]] %>% 
+      group_by(ppid, c_StimN) %>% 
+      summarise(perc_resp_corr = mean(get(outvar)) * scaler, 
+                .groups = "drop") %>% 
+      pivot_wider(names_from = c_StimN, 
+                  values_from = perc_resp_corr, 
+                  names_prefix = "StimN_") %>% 
+      ungroup() %>% 
+      select(!ppid) 
+    
+    acc_per_memLoad[[task]][[outvar]] <- tmp %>% 
+      summarise_all(list (mean = mean, sd = sd, min = min, max = max, ci95lower = ci95lower, ci95upper = ci95upper))
+    
+    # Add Cousineau-Morey CIs:
+    cm.ci95 <- cm.ci(tmp, difference = TRUE, conf.level = 0.95)
+    
+    for (l in colnames(tmp)) {
+      for (bound in c("lower", "upper")) {
+        acc_per_memLoad[[task]][[outvar]][1, str_c(l, '_cm.ci95', bound)] <- cm.ci95[rownames(cm.ci95)==l, colnames(cm.ci95)==bound]
+      }
     }
+    
+    rm(cm.ci95, tmp)
+    
+    stats_memLoad[[task]][[outvar]] <- list(
+      name = "StimN", 
+      printName = "memLoad", 
+      levels = str_c("StimN_", unique(data_behav_per_task[[task]]$c_StimN), '_'),
+      stats = acc_per_memLoad[[task]][[outvar]]
+    )
+    
+    
+    # Summary per Ecc:
+    tmp <- data_behav_per_task[[task]] %>% 
+      group_by(ppid, c_Ecc) %>% 
+      summarise(perc_resp_corr = mean(get(outvar)) * scaler,
+                .groups = "drop") %>% 
+      pivot_wider(names_from = c_Ecc, 
+                  values_from = perc_resp_corr, 
+                  names_prefix = "Ecc_") %>% 
+      ungroup() %>% 
+      select(!ppid) 
+    
+    acc_per_ecc[[task]][[outvar]] <- tmp %>% 
+      summarise_all(list (mean = mean, sd = sd, min = min, max = max, ci95lower = ci95lower, ci95upper = ci95upper))
+    
+    # Add Cousineau-Morey CIs:
+    cm.ci95 <- cm.ci(tmp, difference = TRUE, conf.level = 0.95)
+    
+    for (l in colnames(tmp)) {
+      for (bound in c("lower", "upper")) {
+        acc_per_ecc[[task]][[outvar]][1, str_c(l, '_cm.ci95', bound)] <- cm.ci95[rownames(cm.ci95)==l, colnames(cm.ci95)==bound]
+      }
+    }
+    
+    rm(cm.ci95, tmp)
+    
+    stats_ecc[[task]][[outvar]] <- list(
+      name = "ecc", 
+      printName = "Ecc", 
+      levels = str_c("Ecc_", sort(unique(data_behav_per_task[[task]]$c_Ecc)), '_'), 
+      stats = acc_per_ecc[[task]][[outvar]]
+    )
+  
+    print("       **********************************************")
+    print(str_glue("       ******  Dep. varibale: {outvar}"))
+    print("       **********************************************")
+    
+    
+    
+    for (tmp in list(stats_overall[[task]][[outvar]], stats_memLoad[[task]][[outvar]], stats_ecc[[task]][[outvar]])) {
+    
+      print(str_glue("DV ({if_else(str_detect(tmp$printName, 'overall'), '', 'by ')}{tmp$printName}):\n"))
+      for (lvl in tmp$levels) {
+        if (length(tmp$levels) > 1) print(str_glue("{tmp$printName} == {parse_number(lvl)}:"))
+        print(str_glue("    mean  (%): {tmp$stats[str_c(lvl, 'mean')]}"))
+        print(str_glue("    SD    (%): {tmp$stats[str_c(lvl, 'sd')]}"))
+        print(str_glue("    min   (%): {tmp$stats[str_c(lvl, 'min')]}"))
+        print(str_glue("    max   (%): {tmp$stats[str_c(lvl, 'max')]}"))
+        print(str_glue("    95% CI(%): {tmp$stats[str_c(lvl, 'ci95lower')]} - {tmp$stats[str_c(lvl, 'ci95upper')]}"))
+        if (tmp$name != "overall") {
+          print(str_glue("    95% Cousineau-Morey CI(%): {tmp$stats[str_c(lvl, 'cm.ci95lower')]} - {tmp$stats[str_c(lvl, 'cm.ci95upper')]}"))
+        }
+        
+      }
+      cat("\n\n")
+    }
+    
+    ## Pairwise differences of the mean (with CIs):
+    
+    tmp_df <- data_behav_per_task[[task]] %>% 
+      group_by(ppid, c_StimN) %>% 
+      summarise(perc_resp_corr = mean(get(outvar)) * scaler, 
+                .groups = "drop") %>% 
+      pivot_wider(names_from = c_StimN, 
+                 values_from = perc_resp_corr, 
+                 names_prefix = "StimN_") %>% 
+      ungroup() %>% 
+     select(!ppid)
+    
+    meanDiff <- mean(tmp_df$StimN_2 - tmp_df$StimN_4)
+    ci_diff <- ci95_meandiff(tmp_df$StimN_2, tmp_df$StimN_4)
+    print("Difference between Memory Load conditions:")
+    print(str_glue("  Mean (CI):     {format(meanDiff, digits=3)} ({format(ci_diff$lower, digits=3)} - {format(ci_diff$upper, digits=3)})"))
+    
+    extract_var(str_glue("{dv_str}_{task}_delta_StimN2vsStimN4_mean"), meanDiff, exp_format="%.2f")
+    extract_var(str_glue("{dv_str}_{task}_delta_StimN2vsStimN4_cilower"), ci_diff$lower, exp_format="%.2f")
+    extract_var(str_glue("{dv_str}_{task}_delta_StimN2vsStimN4_ciupper"), ci_diff$upper, exp_format="%.2f")
+    
+    cat("\n\n")
+    
+    
+    tmp_df <- data_behav_per_task[[task]] %>% 
+      group_by(ppid, c_Ecc) %>% 
+      summarise(perc_resp_corr = mean(get(outvar)) * scaler, 
+                .groups = "drop") %>% 
+      pivot_wider(names_from = c_Ecc, 
+                 values_from = perc_resp_corr, 
+                 names_prefix = "Ecc_") %>% 
+      ungroup() %>% 
+     select(!ppid)
+    
+    print("Difference between Eccentricity conditions:")
+    contrast_pairs <- list(c("4", "9"), c("4", "14"), c("9", "14"))
+    for (cp in contrast_pairs) {
+      
+      meanDiff <- mean(tmp_df[[str_glue("Ecc_{cp[1]}")]] - tmp_df[[str_glue("Ecc_{cp[2]}")]])
+      ci_diff <- ci95_meandiff(tmp_df[[str_glue("Ecc_{cp[1]}")]], tmp_df[[str_glue("Ecc_{cp[2]}")]])
+      print(str_glue("  Contrast: {cp[1]} - {cp[2]}"))
+      print(str_glue("    Mean (CI):     {format(meanDiff, digits=3)} ({format(ci_diff$lower, digits=3)} - {format(ci_diff$upper, digits=3)})"))
+      
+      extract_var(str_glue("{dv_str}_{task}_delta_Ecc{cp[1]}vsEcc{cp[2]}_mean"), meanDiff, exp_format="%.2f")
+      extract_var(str_glue("{dv_str}_{task}_delta_Ecc{cp[1]}vsEcc{cp[2]}_cilower"), ci_diff$lower, exp_format="%.2f")
+      extract_var(str_glue("{dv_str}_{task}_delta_Ecc{cp[1]}vsEcc{cp[2]}_ciupper"), ci_diff$upper, exp_format="%.2f")
+    }
+    
     cat("\n\n")
   }
 }         
@@ -239,10 +354,27 @@ extract_var("min_perc_trials_per_sub_postrej", min(summary_rem_trials_per_sub$pe
 extract_var("max_perc_trials_per_sub_postrej", max(summary_rem_trials_per_sub$perc_trials_remaining), exp_format="%.2f")
 
 for(task in c("exp", "perc")) {
-  for (tmp in list(stats_overall[[task]], stats_memLoad[[task]], stats_ecc[[task]])) {
-    for (lvl in tmp$levels) {
-      for (stat in c("mean", "sd", "min", "max")) {
-        extract_var(str_glue("mem_acc_{task}_{lvl}{stat}"), tmp$stats[str_c(lvl, stat)], exp_format="%.2f")
+  if (task == "exp") {
+    outvars <- list("c_ResponseCorrect", "CDA_amp_clustertimes", "PNP_amp_clustertimes", "alphapwr_diff_retent")
+  } else {
+    outvars <- list("c_ResponseCorrect")
+  }
+  for (outvar in outvars) {
+    dv_str = switch (outvar,
+             "c_ResponseCorrect" = "mem_acc",
+             "alphapwr_diff_retent" = "alphalat",
+             "CDA_amp_clustertimes" = "cda",
+             "PNP_amp_clustertimes" = "pnp"
+            )
+    for (tmp in list(stats_overall[[task]][[outvar]], stats_memLoad[[task]][[outvar]], stats_ecc[[task]][[outvar]])) {
+      for (lvl in tmp$levels) {
+        for (stat in c("mean", "sd", "min", "max", "ci95lower", "ci95upper", "cm.ci95lower", "cm.ci95upper")) {
+          # for the grand average, we skip the Cousineau-Morey CIs (as we could not calculate them):
+          if (tmp$name == "overall" && str_detect(stat, "cm.ci")) {
+            next
+          }
+          extract_var(str_glue("{dv_str}_{task}_{lvl}{stat}"), tmp$stats[str_c(lvl, stat)], exp_format="%.2f")
+        }
       }
     }
   }

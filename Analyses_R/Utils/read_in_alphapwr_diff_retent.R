@@ -6,7 +6,7 @@ library(here)
 
 # Define pathes
 path_global 	    <- here('../..')
-path_r_data       <- file.path(path_global, 'Data2022/DataR')
+path_r_data       <- file.path(path_global, 'Data/DataR')
 
 path_in = file.path(path_global, 
                     'Data2022', 

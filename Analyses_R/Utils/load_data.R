@@ -22,7 +22,11 @@ data_behav <- data_full %>%
          c_Ecc, 
          c_ResponseCorrect, 
          c_ResponseTime, 
-         BlockStyle)
+         BlockStyle) %>% 
+  mutate(ppid = as_factor(ppid),
+         c_StimN = as_factor(c_StimN),
+         c_Ecc = as_factor(c_Ecc),
+         BlockStyle = as_factor(BlockStyle)) 
 
 
 # Filter out trials in which a (large) saccade was detected:
@@ -49,7 +53,9 @@ for (block_style in c('perception', 'experiment')) {
       mutate(trial_num = trial_num + trial_num_offset)
     rej_epos_per_sub[[sub_id]] <- rej_epos
   }
-  rej_epos_df <- bind_rows(rej_epos_per_sub, .id='ppid') %>% mutate(BlockStyle = block_style) 
+  rej_epos_df <- bind_rows(rej_epos_per_sub, .id='ppid') %>% 
+    mutate(BlockStyle = block_style,
+           ppid = as_factor(ppid)) 
   
   data_behav <- anti_join(data_behav, rej_epos_df, by = c('ppid', 'trial_num', 'BlockStyle'))
   
@@ -83,12 +89,16 @@ for (block_style in c('perception', 'experiment')) {
 
 ##-----------------------------------------------------------------------
 # Read in CDA mean amplitudes:
+source(here('Utils', 'read_in_cda.R'))
 
 fname <- file.path(path_r_data, 'data_CDA.rds')
 data_CDA <- readRDS(fname)
 # convert to uV:
 data_CDA <- data_CDA %>% 
-  dplyr::mutate(across(contains("CDA_amp"),  ~ .x * 1e6))
+  dplyr::mutate(across(contains("CDA_amp"),  ~ .x * 1e6)) %>% 
+  mutate(ppid = as_factor(ppid),
+         c_StimN = as_factor(c_StimN),
+         c_Ecc = as_factor(c_Ecc)) 
 rm(fname)
 
 # Bind to behavioral data: 
@@ -114,11 +124,16 @@ n_tot_trials_rej_EEG <- data_behav %>%
 ##-----------------------------------------------------------------------
 # Read in PNP mean amplitudes:
 
+source(here('Utils', 'read_in_pnp.R'))
+
 fname <- file.path(path_r_data, 'data_PNP.rds')
 data_PNP <- readRDS(fname)
 # convert to uV:
 data_PNP <- data_PNP %>% 
-  mutate(across(contains("PNP_amp"), ~.x * 1e6))
+  mutate(across(contains("PNP_amp"), ~.x * 1e6)) %>% 
+  mutate(ppid = as_factor(ppid),
+         c_StimN = as_factor(c_StimN),
+         c_Ecc = as_factor(c_Ecc)) 
 rm(fname)
 
 # Bind to behavioral data: 
@@ -135,8 +150,13 @@ data_behav <- left_join(data_behav,
 
 # retention intervall (CDA ROI):
 
+source(here('Utils', 'read_in_alphapwr_diff_retent.R'))
+
 fname <- file.path(path_r_data, 'data_alphapwr_diff_retent_CDAroi.rds')
-data_apwr_retent <- readRDS(fname)
+data_apwr_retent <- readRDS(fname) %>% 
+  mutate(ppid = as_factor(ppid),
+         c_StimN = as_factor(c_StimN),
+         c_Ecc = as_factor(c_Ecc)) 
 rm(fname)
 
 # Bind to behavioral data: 
