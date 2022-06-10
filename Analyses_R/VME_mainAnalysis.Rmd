@@ -296,18 +296,20 @@ for (task in c('perc', 'exp')) {
                 .groups = "drop") %>% 
       pivot_wider(names_from = c_StimN, 
                  values_from = perc_resp_corr, 
-                 names_prefix = "StimN_") %>% 
+                 names_prefix = "StimN_",
+                 id_cols = ppid) %>%
+      mutate(diff = StimN_2 - StimN_4) %>% 
       ungroup() %>% 
-     select(!ppid)
+      select(!ppid) %>% 
+      summarise_all(.funs = c(mean=mean, sd=sd, ci95lower=ci95lower, ci95upper=ci95upper))
     
-    meanDiff <- mean(tmp_df$StimN_2 - tmp_df$StimN_4)
-    ci_diff <- ci95_meandiff(tmp_df$StimN_2, tmp_df$StimN_4)
+    
     print("Difference between Memory Load conditions:")
-    print(str_glue("  Mean (CI):     {format(meanDiff, digits=3)} ({format(ci_diff$lower, digits=3)} - {format(ci_diff$upper, digits=3)})"))
+    print(str_glue("  Mean (CI):     {format(tmp_df$diff_mean, digits=3)} ({format(tmp_df$diff_ci95lower, digits=3)} - {format(tmp_df$diff_ci95upper, digits=3)})"))
     
-    extract_var(str_glue("{dv_str}_{task}_delta_StimN2vsStimN4_mean"), meanDiff, exp_format="%.2f")
-    extract_var(str_glue("{dv_str}_{task}_delta_StimN2vsStimN4_cilower"), ci_diff$lower, exp_format="%.2f")
-    extract_var(str_glue("{dv_str}_{task}_delta_StimN2vsStimN4_ciupper"), ci_diff$upper, exp_format="%.2f")
+    extract_var(str_glue("{dv_str}_{task}_delta_StimN2vsStimN4_mean"), tmp_df$diff_mean, exp_format="%.2f")
+    extract_var(str_glue("{dv_str}_{task}_delta_StimN2vsStimN4_cilower"), tmp_df$diff_ci95lower, exp_format="%.2f")
+    extract_var(str_glue("{dv_str}_{task}_delta_StimN2vsStimN4_ciupper"), tmp_df$diff_ci95upper, exp_format="%.2f")
     
     cat("\n\n")
     
@@ -318,22 +320,27 @@ for (task in c('perc', 'exp')) {
                 .groups = "drop") %>% 
       pivot_wider(names_from = c_Ecc, 
                  values_from = perc_resp_corr, 
-                 names_prefix = "Ecc_") %>% 
+                 names_prefix = "Ecc_",
+                 id_cols = ppid) %>% 
+      mutate(diff_Ecc4vsEcc9 = Ecc_4 - Ecc_9,
+             diff_Ecc4vsEcc14 = Ecc_4 - Ecc_14,
+             diff_Ecc9vsEcc14 = Ecc_9 - Ecc_14) %>% 
       ungroup() %>% 
-     select(!ppid)
+      select(!ppid) %>% 
+      summarise_all(.funs = c(mean=mean, sd=sd, ci95lower=ci95lower, ci95upper=ci95upper))
     
     print("Difference between Eccentricity conditions:")
     contrast_pairs <- list(c("4", "9"), c("4", "14"), c("9", "14"))
     for (cp in contrast_pairs) {
       
-      meanDiff <- mean(tmp_df[[str_glue("Ecc_{cp[1]}")]] - tmp_df[[str_glue("Ecc_{cp[2]}")]])
-      ci_diff <- ci95_meandiff(tmp_df[[str_glue("Ecc_{cp[1]}")]], tmp_df[[str_glue("Ecc_{cp[2]}")]])
+
       print(str_glue("  Contrast: {cp[1]} - {cp[2]}"))
-      print(str_glue("    Mean (CI):     {format(meanDiff, digits=3)} ({format(ci_diff$lower, digits=3)} - {format(ci_diff$upper, digits=3)})"))
+      print(str_glue(".    Mean (%):     {format(tmp_df[[str_glue('diff_Ecc', cp[1], 'vsEcc', cp[2], '_mean')]], digits=3)}
+                      .    CI (%):       ({format(tmp_df[[str_glue('diff_Ecc', cp[1], 'vsEcc', cp[2], '_ci95lower')]], digits=3)} - {format(tmp_df[[str_glue('diff_Ecc', cp[1], 'vsEcc', cp[2], '_ci95upper')]], digits=3)})"))
       
-      extract_var(str_glue("{dv_str}_{task}_delta_Ecc{cp[1]}vsEcc{cp[2]}_mean"), meanDiff, exp_format="%.2f")
-      extract_var(str_glue("{dv_str}_{task}_delta_Ecc{cp[1]}vsEcc{cp[2]}_cilower"), ci_diff$lower, exp_format="%.2f")
-      extract_var(str_glue("{dv_str}_{task}_delta_Ecc{cp[1]}vsEcc{cp[2]}_ciupper"), ci_diff$upper, exp_format="%.2f")
+      extract_var(str_glue("{dv_str}_{task}_delta_Ecc{cp[1]}vsEcc{cp[2]}_mean"), tmp_df[[str_glue('diff_Ecc', cp[1], 'vsEcc', cp[2], '_mean')]], exp_format="%.2f")
+      extract_var(str_glue("{dv_str}_{task}_delta_Ecc{cp[1]}vsEcc{cp[2]}_cilower"), tmp_df[[str_glue('diff_Ecc', cp[1], 'vsEcc', cp[2], '_ci95lower')]], exp_format="%.2f")
+      extract_var(str_glue("{dv_str}_{task}_delta_Ecc{cp[1]}vsEcc{cp[2]}_ciupper"), tmp_df[[str_glue('diff_Ecc', cp[1], 'vsEcc', cp[2], '_ci95upper')]], exp_format="%.2f")
     }
     
     cat("\n\n")
@@ -408,15 +415,17 @@ for (eff in c("c_StimN", "c_Ecc", "c_StimN:c_Ecc")) {
     str_replace_all("c_", "") %>% 
     str_replace_all(":", "x") 
     
-  extract_var(str_c("anova_behav_exp_eff_", eff_print, "_F"), summary(results_anova_behav_exp)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
-  extract_var(str_c("anova_behav_exp_eff_", eff_print, "_df_within"), summary(results_anova_behav_exp)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+  extract_var(str_c("anova_behav_exp_eff_", eff_print, "_F"), summary(results_anova_behav_exp$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_behav_exp_eff_", eff_print, "_df_within"), summary(results_anova_behav_exp$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
               exp_format = "%i")
-  extract_var(str_c("anova_behav_exp_eff_", eff_print, "_df_resid"), summary(results_anova_behav_exp)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]],
+  extract_var(str_c("anova_behav_exp_eff_", eff_print, "_df_resid"), summary(results_anova_behav_exp$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]],
               exp_format = "%i")
-  extract_var(str_c("anova_behav_exp_eff_", eff_print, "_p"), summary(results_anova_behav_exp)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+  extract_var(str_c("anova_behav_exp_eff_", eff_print, "_p"), summary(results_anova_behav_exp$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
               is_pval = TRUE, 
               exp_format = "%.3f")
 }
+
+
 ```
 
 
@@ -437,12 +446,12 @@ for (eff in c("c_StimN", "c_Ecc", "c_StimN:c_Ecc")) {
     str_replace_all("c_", "") %>% 
     str_replace_all(":", "x") 
     
-  extract_var(str_c("anova_behav_perc_eff_", eff_print, "_F"), summary(results_anova_behav_perc)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
-  extract_var(str_c("anova_behav_perc_eff_", eff_print, "_df_within"), summary(results_anova_behav_perc)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+  extract_var(str_c("anova_behav_perc_eff_", eff_print, "_F"), summary(results_anova_behav_perc$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_behav_perc_eff_", eff_print, "_df_within"), summary(results_anova_behav_perc$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
               exp_format = "%i")
-  extract_var(str_c("anova_behav_perc_eff_", eff_print, "_df_resid"), summary(results_anova_behav_perc)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
+  extract_var(str_c("anova_behav_perc_eff_", eff_print, "_df_resid"), summary(results_anova_behav_perc$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
               exp_format = "%i")
-  extract_var(str_c("anova_behav_perc_eff_", eff_print, "_p"), summary(results_anova_behav_perc)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+  extract_var(str_c("anova_behav_perc_eff_", eff_print, "_p"), summary(results_anova_behav_perc$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
               is_pval = TRUE, 
               exp_format = "%.3f")
 }

@@ -37,6 +37,9 @@ func_analysis_01 <- function(condition) {
   ## Run ANOVA
   aov.srt <- aov(meanAcc ~ c_StimN*c_Ecc + Error(ppid/(c_StimN* c_Ecc)),data=c1.aov)
   
+  results = list()
+  results[["aov.srt"]] <- aov.srt
+  
   print_header(str_c('Summary ANOVA \ntask: ', condition))
   print(summary(aov.srt))
   
@@ -51,17 +54,31 @@ func_analysis_01 <- function(condition) {
   ## Run post-hoc t tests:
   
   # main effect Eccentricity:
-  res_ttest <- c1.aov %>% 
+  res_ttest <- data2analyze %>% 
+    filter(BlockStyle == condition) %>% 
     group_by(ppid, c_Ecc) %>% 
-    summarise(meanAcc = mean(meanAcc)) %>% 
+    summarise(meanAcc = mean(c_ResponseCorrect)) %>% 
     ungroup() %>% 
     pairwise_t_test(
       meanAcc ~ c_Ecc, paired = TRUE, 
-      p.adjust.method = "bonferroni"
+      p.adjust.method = "bonferroni",
+      detailed = TRUE
     )
 
   print_header(str_c('Results post-hoc t test\ntask: ', condition))
   print(res_ttest)
+  results[["res_ttest"]] <- res_ttest
+  
+  means <- data2analyze %>% 
+    filter(BlockStyle == condition) %>% 
+    select(c_Ecc, ppid, c_ResponseCorrect) %>% 
+    group_by(c_Ecc, ppid) %>%
+    pivot_wider(id_cols =  ppid, names_from = c_Ecc, values_from = c_ResponseCorrect, values_fn = mean) %>% 
+    ungroup() %>% 
+    select(!ppid) %>% 
+    summarise_all(.funs = c(mean))
+  print(means)
+  
   #--------------------------------------------------------------------------
   ## Plot
   
@@ -101,7 +118,7 @@ func_analysis_01 <- function(condition) {
 
   #--------------------------------------------------------------------------
   
-  return(aov.srt)
+  return(results)
 }
 
 
