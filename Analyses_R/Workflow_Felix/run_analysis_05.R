@@ -34,13 +34,16 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
   cda_overall_summary <- data_behav %>% 
                             mutate(c_Ecc = as_factor(c_Ecc)) %>% 
                             filter(BlockStyle == condition) %>% 
+                            drop_na() %>% 
                             group_by(ppid) %>% 
                             summarise(across(CDA_amp_clustertimes, ~ mean(.x, na.rm = T), .names = c('meanCDA'))) %>%
                             ungroup() %>% 
-                            summarise(meanCDA_mean = mean(meanCDA), meanCDA_sd = sd(meanCDA))
+                            summarise(meanCDA_mean = mean(meanCDA), meanCDA_sd = sd(meanCDA), meanCDA_ci95lower = ci95lower(meanCDA), meanCDA_ci95upper = ci95upper(meanCDA))
   
   extract_var("cda_sign_cluster_meanamp_mean", cda_overall_summary$meanCDA_mean)
   extract_var("cda_sign_cluster_meanamp_sd", cda_overall_summary$meanCDA_sd)
+  extract_var("cda_sign_cluster_meanamp_cilower", cda_overall_summary$meanCDA_ci95lower)
+  extract_var("cda_sign_cluster_meanamp_ciupper", cda_overall_summary$meanCDA_ci95upper)
   
   cda_summary_stimN <- data_behav %>% 
     mutate(c_Ecc = as_factor(c_Ecc)) %>% 

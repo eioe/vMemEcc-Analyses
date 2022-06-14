@@ -106,8 +106,8 @@
     "anova_behav_perc_eff_StimNxEcc_df_within":"2",
     "anova_behav_perc_eff_StimNxEcc_df_resid":"40",
     "anova_behav_perc_eff_StimNxEcc_p":".338",
-    "cda_sign_cluster_meanamp_mean":"-0.55",
-    "cda_sign_cluster_meanamp_sd":"0.55",
+    "cda_sign_cluster_meanamp_mean":"-0.54",
+    "cda_sign_cluster_meanamp_sd":"0.56",
     "anova_cda_eff_StimN_F":"19.84",
     "anova_cda_eff_StimN_df_within":"1",
     "anova_cda_eff_StimN_df_resid":"20",
@@ -452,5 +452,7 @@
     "alphalat_exp_delta_Ecc4vsEcc14_t":"-0.27",
     "alphalat_exp_delta_Ecc4vsEcc14_p":".788",
     "alphalat_exp_delta_Ecc9vsEcc14_t":"0.48",
-    "alphalat_exp_delta_Ecc9vsEcc14_p":".635"
+    "alphalat_exp_delta_Ecc9vsEcc14_p":".635",
+    "cda_sign_cluster_meanamp_cilower":"-0.80",
+    "cda_sign_cluster_meanamp_ciupper":"-0.29"
 }
