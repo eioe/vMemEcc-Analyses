@@ -74,3 +74,17 @@ ci95_meandiff <- function(x, y, distribution = "t", dependent = TRUE) {
   ci$upper = mean_diff + ci_margin
   return (ci)
 }
+
+
+summarize_ttest <- function(x, returnval="p") {
+  
+  res <- t.test(x)
+  if (returnval == "t") {
+    returnThis = res$statistic
+  } 
+  else if (returnval == "p") {
+    returnThis = res$p.value
+  }
+  
+  return (returnThis)
+}
