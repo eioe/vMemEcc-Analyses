@@ -15,6 +15,8 @@ source(file.path(here('Workflow_Felix', 'run_analysis_08.R')))
 source(file.path(here('Workflow_Felix', 'run_analysis_09.R')))
 source(file.path(here('Workflow_Felix', 'run_analysis_10.R')))
 source(file.path(here('Workflow_Felix', 'run_analysis_11.R')))
+source(file.path(here('Workflow_Felix', 'run_analysis_12.R')))
+source(file.path(here('Workflow_Felix', 'run_analysis_13.R')))
 
 
   
