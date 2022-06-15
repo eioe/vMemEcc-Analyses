@@ -87,7 +87,7 @@ func_analysis_12 <- function() {
 #   figa <- figa + labs(title = txt_title, color = "Size Memory Array")
   figa <- figa + theme(legend.position = c(0.85, 1))
   
-  figa
+  plot(figa)
   
   #--------------------------------------------------------------------------
 }

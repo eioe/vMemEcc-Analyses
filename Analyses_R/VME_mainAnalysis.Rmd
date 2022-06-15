@@ -48,7 +48,6 @@ library(here)
 library(knitr)
 
 
-
 #--------------------------------------------------------------------------
 # Define pathes
 path_global 	    <- here('../..')
@@ -151,7 +150,14 @@ stats_ecc <- vector(mode = "list", length = 2)
 for (task in c('perc', 'exp')) {
   
   if (task == "exp") {
-    outvars <- list("c_ResponseCorrect", "CDA_amp_clustertimes", "PNP_amp_clustertimes", "alphapwr_diff_retent", "maxDecodScore_sensorspace")
+    outvars <- list("c_ResponseCorrect", 
+                    "CDA_amp_clustertimes", 
+                    "PNP_amp_clustertimes",
+                    "alphapwr_diff_retent",
+                    "maxDecodScore_sensorspace",
+                    "maxDecodScoreTime_sensorspace",
+                    "maxDecodScore_csp",
+                    "maxDecodScoreTime_csp")
   } else {
     outvars <- list("c_ResponseCorrect")
   }
@@ -168,7 +174,10 @@ for (task in c('perc', 'exp')) {
                  "alphapwr_diff_retent" = "alphalat",
                  "CDA_amp_clustertimes" = "cda",
                  "PNP_amp_clustertimes" = "pnp",
-                 "maxDecodScore_sensorspace" = "decod_sensorspace_maxscore"
+                 "maxDecodScore_sensorspace" = "decod_sensorspace_maxscore",
+                 "maxDecodScoreTime_sensorspace" = "decod_sensorspace_maxscoretime",
+                 "maxDecodScore_csp" = "decod_csp_maxscore",
+                 "maxDecodScoreTime_csp" = "decod_csp_maxscoretime",
                 )
       
     
@@ -597,7 +606,7 @@ for (eff in c("c_StimN", "c_Ecc", "c_StimN:c_Ecc")) {
 }
 ```
 
-### Analysis 03 - Supplement 1: lat. alpha power (lmer):
+### Analysis 04 - Supplement 1: lat. alpha power (lmer):
 A multilevel model confirms the results of the rmANOVA:
 
 ```{r, message=FALSE, warning=FALSE}
@@ -605,7 +614,156 @@ func_analysis_10('experiment', dep_variable = 'alpha_pwr')
 ```
 
 
-Write out the full data frame:
+## Analysis 05: 
+**Is there an effect of stimulus eccentricity on the (max) decoding performance? 
+
+### Sensor space decoding (rmANOVA):
+```{r, message=FALSE, warning=FALSE}
+results_anova_decod_ss <- func_analysis_12()
+```
+
+_show source:_ 
+```{r, echo=FALSE}
+# Code to chunk:
+insert_fun("func_analysis_12")
+```
+```{r func_analysis_12-source, eval = FALSE}
+```
+
+```{r, echo=FALSE}
+for (eff in c("c_Ecc")) {
+  eff_print <- eff %>% 
+    str_replace_all("c_", "") %>% 
+    str_replace_all(":", "x") 
+    
+  extract_var(str_c("anova_decod_sensorspace_eff_", eff_print, "_F"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_decod_sensorspace_eff_", eff_print, "_df_within"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_decod_sensorspace_eff_", eff_print, "_df_resid"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_decod_sensorspace_eff_", eff_print, "_p"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+              is_pval = TRUE, 
+              exp_format = "%.3f")
+}
+```
+
+
+
+### CSP decoding (rmANOVA):
+```{r, message=FALSE, warning=FALSE}
+results_anova_decod_csp <- func_analysis_14()
+```
+
+_show source:_ 
+```{r, echo=FALSE}
+# Code to chunk:
+insert_fun("func_analysis_14")
+```
+```{r func_analysis_14-source, eval = FALSE}
+```
+
+```{r, echo=FALSE}
+for (eff in c("c_Ecc")) {
+  eff_print <- eff %>% 
+    str_replace_all("c_", "") %>% 
+    str_replace_all(":", "x") 
+    
+  extract_var(str_c("anova_decod_csp_eff_", eff_print, "_F"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_decod_csp_eff_", eff_print, "_df_within"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_decod_csp_eff_", eff_print, "_df_resid"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_decod_csp_eff_", eff_print, "_p"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+              is_pval = TRUE, 
+              exp_format = "%.3f")
+}
+```
+
+
+## Analysis 05 - supplement: 
+**Is there an effect of stimulus eccentricity on the time of the max. decoding performance? 
+
+### Sensor space decoding (rmANOVA):
+```{r, message=FALSE, warning=FALSE}
+results_anova_decod_ss <- func_analysis_13()
+```
+
+_show source:_ 
+```{r, echo=FALSE}
+# Code to chunk:
+insert_fun("func_analysis_13")
+```
+```{r func_analysis_13-source, eval = FALSE}
+```
+
+```{r, echo=FALSE}
+for (eff in c("c_Ecc")) {
+  eff_print <- eff %>% 
+    str_replace_all("c_", "") %>% 
+    str_replace_all(":", "x") 
+    
+  extract_var(str_c("anova_decod_time_sensorspace_eff_", eff_print, "_F"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_decod_time_sensorspace_eff_", eff_print, "_df_within"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_decod_time_sensorspace_eff_", eff_print, "_df_resid"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_decod_time_sensorspace_eff_", eff_print, "_p"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+              is_pval = TRUE, 
+              exp_format = "%.3f")
+}
+```
+
+
+
+### CSP decoding (rmANOVA):
+```{r, message=FALSE, warning=FALSE}
+results_anova_decod_csp <- func_analysis_15()
+```
+
+_show source:_ 
+```{r, echo=FALSE}
+# Code to chunk:
+insert_fun("func_analysis_15")
+```
+```{r func_analysis_15-source, eval = FALSE}
+```
+
+```{r, echo=FALSE}
+for (eff in c("c_Ecc")) {
+  eff_print <- eff %>% 
+    str_replace_all("c_", "") %>% 
+    str_replace_all(":", "x") 
+    
+  extract_var(str_c("anova_decod_time_csp_eff_", eff_print, "_F"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_decod_time_csp_eff_", eff_print, "_df_within"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_decod_time_csp_eff_", eff_print, "_df_resid"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_decod_time_csp_eff_", eff_print, "_p"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+              is_pval = TRUE, 
+              exp_format = "%.3f")
+}
+```
+
+
+## Plot correlations:
+
+```{r}
+dcor <- data_behav %>% 
+  filter(BlockStyle == 'experiment') %>% 
+  select(-trial_num, -block_num, -c_StimN, -c_Ecc, -BlockStyle) %>% 
+  group_by(ppid) %>% 
+  summarise_all(.funs = c(mean = ~mean(., na.rm=TRUE))) %>% 
+  ungroup() %>% 
+  select(-ppid) %>% 
+  cor()
+         
+corrplot(dcor, type = 'lower')
+```
+
+
+
+# Write out the full data frame:
 
 ```{r}
 
@@ -641,6 +799,16 @@ variable_doc[["alphapwr_diff_retent"]] <-
   "Mean induced alpha power difference (between hemispheres), averaged across 5 ROI electrodes and timepoints when overall alpha power lateralization was sign. different from 0 (as assessed by a CBP test)"
 variable_doc[["alphapwr_diff_retent"]] <- 
   "Mean induced alpha power difference (between hemispheres), averaged across 5 ROI electrodes and timepoints when overall alpha power lateralization was sign. different from 0 (as assessed by a CBP test)"
+variable_doc[["maxDecodScore_sensorspace"]] <- 
+  "Highest decoding score achieved by the sliding classifier run on the voltage data. One score per eccentricity condition and subject (not per trial)."
+variable_doc[["maxDecodScoreTime_sensorspace"]] <- 
+  "Time (relativ to stimulus onset) of the highest decoding score achieved by the sliding classifier run on the voltage data. One score per eccentricity condition and subject (not per trial)."
+variable_doc[["maxDecodScore_csp"]] <- 
+  "Highest decoding score achieved by the sliding CSP classifier (classification in power space). One score per eccentricity condition and subject (not per trial)."
+variable_doc[["maxDecodScore_csp"]] <- 
+  "Time (relativ to stimulus onset) of the highest decoding score achieved by the sliding CSP classifier (classification in power space). One score per eccentricity condition and subject (not per trial)."
+
+
 
 if ((length(names(variable_doc)) != length(colnames(data_behav))) | any(sort(names(variable_doc)) != sort(colnames(data_behav)))) {
   warning("The docu of the variables ('VME_trialdata__variables.json') might be incomplete or wrong.")

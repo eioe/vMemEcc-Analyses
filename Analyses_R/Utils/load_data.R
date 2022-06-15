@@ -195,3 +195,26 @@ data_behav <- left_join(data_behav,
                         by = c('ppid', 
                                'c_Ecc',
                                'BlockStyle'))
+
+##-----------------------------------------------------------------------
+# Read in max decoding scores (CSP):
+
+source(here('Utils', 'read_in_maxdecodscores_csp.R'))
+
+fname = file.path(path_r_data, 'data_maxDecodScore_csp.rds')
+data_maxdecodscore_csp <- readRDS(fname) %>% 
+  mutate(ppid = as_factor(ppid),
+         c_Ecc = as_factor(c_Ecc),
+         BlockStyle = as_factor(BlockStyle)) 
+rm(fname)
+
+# Bind to behavioral data: 
+data_behav <- left_join(data_behav, 
+                        data_maxdecodscore_csp[, c('ppid', 
+                                                   'c_Ecc', 
+                                                   'maxDecodScore_csp',
+                                                   'maxDecodScoreTime_csp',
+                                                   'BlockStyle')], 
+                        by = c('ppid', 
+                               'c_Ecc',
+                               'BlockStyle'))

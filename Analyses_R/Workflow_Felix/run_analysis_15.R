@@ -1,12 +1,12 @@
 #--------------------------------------------------------------------------
 # Analysis 0X:
-# Is there an effect of workload or eccentricity on the time of the max decoding performance (sensor space)?
+# Is there an effect of workload or eccentricity on the time of the max decoding performance (CSP)?
 #
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
 # ... confidence interval for repeated measures design - based on Coussineau Morey
 
-func_analysis_13 <- function() {
+func_analysis_15 <- function() {
   
   condition <- "experiment"  #Only EEG data for VSTM task. 
   
@@ -14,7 +14,7 @@ func_analysis_13 <- function() {
     mutate(c_Ecc = as_factor(c_Ecc)) %>% 
     filter(BlockStyle == condition) %>% 
     group_by(ppid, c_Ecc) %>%   
-    summarise(mean_decodscoretime = mean(maxDecodScoreTime_sensorspace, na.rm = T)) %>% 
+    summarise(mean_decodscoretime = mean(maxDecodScoreTime_csp, na.rm = T)) %>% 
     ungroup() %>% 
     select("mean_decodscoretime", "c_Ecc", "ppid") 
   
@@ -81,7 +81,7 @@ func_analysis_13 <- function() {
   figa <- figa + scale_fill_manual(values=c(defblue,deforange,defgrey))
   figa <- figa + geom_linerange(size=0.2358491)
   figa <- figa + scale_x_continuous(breaks=c(4,9,14))
-  figa <- figa + scale_y_continuous(limits=c(0.0, 1))
+  figa <- figa + scale_y_continuous(limits=c(0.0, 2))
   figa <- figa + mytheme
   figa <- figa + ylab("time of highest decoding score (s)") + xlab("Eccentricity")
 #   figa <- figa + labs(title = txt_title, color = "Size Memory Array")
