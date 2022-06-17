@@ -755,10 +755,12 @@ dcor <- data_behav %>%
   group_by(ppid) %>% 
   summarise_all(.funs = c(mean = ~mean(., na.rm=TRUE))) %>% 
   ungroup() %>% 
-  select(-ppid) %>% 
-  cor()
-         
-corrplot(dcor, type = 'lower')
+  select(-ppid) 
+
+Mcor <- cor(dcor, method="spearman")
+Pcor <- cor.mtest(dcor, conf.level=0.95)
+ 
+corrplot(Mcor, type = 'lower', p.mat = Pcor$p, sig.level = 0.05)
 ```
 
 
