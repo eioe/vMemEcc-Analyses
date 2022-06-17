@@ -167,6 +167,8 @@ for (task in c('perc', 'exp')) {
     scaler = switch (outvar,
                      "c_ResponseCorrect" = 100,
                      "alphapwr_diff_retent" = 1e12,
+                     "maxDecodScoreTime_sensorspace" = 1000,
+                     "maxDecodScoreTime_csp" = 1000,
                      1
                     )
     dv_str = switch (outvar,
@@ -177,7 +179,7 @@ for (task in c('perc', 'exp')) {
                  "maxDecodScore_sensorspace" = "decod_sensorspace_maxscore",
                  "maxDecodScoreTime_sensorspace" = "decod_sensorspace_maxscoretime",
                  "maxDecodScore_csp" = "decod_csp_maxscore",
-                 "maxDecodScoreTime_csp" = "decod_csp_maxscoretime",
+                 "maxDecodScoreTime_csp" = "decod_csp_maxscoretime"
                 )
       
     
@@ -380,7 +382,14 @@ extract_var("max_perc_trials_per_sub_postrej", max(summary_rem_trials_per_sub$pe
 
 for(task in c("exp", "perc")) {
   if (task == "exp") {
-    outvars <- list("c_ResponseCorrect", "CDA_amp_clustertimes", "PNP_amp_clustertimes", "alphapwr_diff_retent")
+    outvars <- list("c_ResponseCorrect", 
+                "CDA_amp_clustertimes", 
+                "PNP_amp_clustertimes",
+                "alphapwr_diff_retent",
+                "maxDecodScore_sensorspace",
+                "maxDecodScoreTime_sensorspace",
+                "maxDecodScore_csp",
+                "maxDecodScoreTime_csp")
   } else {
     outvars <- list("c_ResponseCorrect")
   }
@@ -389,7 +398,11 @@ for(task in c("exp", "perc")) {
              "c_ResponseCorrect" = "mem_acc",
              "alphapwr_diff_retent" = "alphalat",
              "CDA_amp_clustertimes" = "cda",
-             "PNP_amp_clustertimes" = "pnp"
+             "PNP_amp_clustertimes" = "pnp",
+             "maxDecodScore_sensorspace" = "decod_sensorspace_maxscore",
+             "maxDecodScoreTime_sensorspace" = "decod_sensorspace_maxscoretime",
+             "maxDecodScore_csp" = "decod_csp_maxscore",
+             "maxDecodScoreTime_csp" = "decod_csp_maxscoretime"
             )
     for (tmp in list(stats_overall[[task]][[outvar]], stats_memLoad[[task]][[outvar]], stats_ecc[[task]][[outvar]])) {
       for (lvl in tmp$levels) {
@@ -636,12 +649,12 @@ for (eff in c("c_Ecc")) {
     str_replace_all("c_", "") %>% 
     str_replace_all(":", "x") 
     
-  extract_var(str_c("anova_decod_sensorspace_eff_", eff_print, "_F"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
-  extract_var(str_c("anova_decod_sensorspace_eff_", eff_print, "_df_within"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+  extract_var(str_c("anova_decod_sensorspace_eff_", eff_print, "_F"), summary(results_anova_decod_ss)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_decod_sensorspace_eff_", eff_print, "_df_within"), summary(results_anova_decod_ss)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
               exp_format = "%i")
-  extract_var(str_c("anova_decod_sensorspace_eff_", eff_print, "_df_resid"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
+  extract_var(str_c("anova_decod_sensorspace_eff_", eff_print, "_df_resid"), summary(results_anova_decod_ss)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
               exp_format = "%i")
-  extract_var(str_c("anova_decod_sensorspace_eff_", eff_print, "_p"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+  extract_var(str_c("anova_decod_sensorspace_eff_", eff_print, "_p"), summary(results_anova_decod_ss)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
               is_pval = TRUE, 
               exp_format = "%.3f")
 }
@@ -668,12 +681,12 @@ for (eff in c("c_Ecc")) {
     str_replace_all("c_", "") %>% 
     str_replace_all(":", "x") 
     
-  extract_var(str_c("anova_decod_csp_eff_", eff_print, "_F"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
-  extract_var(str_c("anova_decod_csp_eff_", eff_print, "_df_within"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+  extract_var(str_c("anova_decod_csp_eff_", eff_print, "_F"), summary(results_anova_decod_csp)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_decod_csp_eff_", eff_print, "_df_within"), summary(results_anova_decod_csp)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
               exp_format = "%i")
-  extract_var(str_c("anova_decod_csp_eff_", eff_print, "_df_resid"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
+  extract_var(str_c("anova_decod_csp_eff_", eff_print, "_df_resid"), summary(results_anova_decod_csp)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
               exp_format = "%i")
-  extract_var(str_c("anova_decod_csp_eff_", eff_print, "_p"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+  extract_var(str_c("anova_decod_csp_eff_", eff_print, "_p"), summary(results_anova_decod_csp)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
               is_pval = TRUE, 
               exp_format = "%.3f")
 }
@@ -685,7 +698,7 @@ for (eff in c("c_Ecc")) {
 
 ### Sensor space decoding (rmANOVA):
 ```{r, message=FALSE, warning=FALSE}
-results_anova_decod_ss <- func_analysis_13()
+results_anova_decod_ss_time <- func_analysis_13()
 ```
 
 _show source:_ 
@@ -702,12 +715,12 @@ for (eff in c("c_Ecc")) {
     str_replace_all("c_", "") %>% 
     str_replace_all(":", "x") 
     
-  extract_var(str_c("anova_decod_time_sensorspace_eff_", eff_print, "_F"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
-  extract_var(str_c("anova_decod_time_sensorspace_eff_", eff_print, "_df_within"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+  extract_var(str_c("anova_decod_time_sensorspace_eff_", eff_print, "_F"), summary(results_anova_decod_ss_time)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_decod_time_sensorspace_eff_", eff_print, "_df_within"), summary(results_anova_decod_ss_time)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
               exp_format = "%i")
-  extract_var(str_c("anova_decod_time_sensorspace_eff_", eff_print, "_df_resid"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
+  extract_var(str_c("anova_decod_time_sensorspace_eff_", eff_print, "_df_resid"), summary(results_anova_decod_ss_time)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
               exp_format = "%i")
-  extract_var(str_c("anova_decod_time_sensorspace_eff_", eff_print, "_p"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+  extract_var(str_c("anova_decod_time_sensorspace_eff_", eff_print, "_p"), summary(results_anova_decod_ss_time)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
               is_pval = TRUE, 
               exp_format = "%.3f")
 }
@@ -717,7 +730,7 @@ for (eff in c("c_Ecc")) {
 
 ### CSP decoding (rmANOVA):
 ```{r, message=FALSE, warning=FALSE}
-results_anova_decod_csp <- func_analysis_15()
+results_anova_decod_csp_time <- func_analysis_15()
 ```
 
 _show source:_ 
@@ -734,12 +747,12 @@ for (eff in c("c_Ecc")) {
     str_replace_all("c_", "") %>% 
     str_replace_all(":", "x") 
     
-  extract_var(str_c("anova_decod_time_csp_eff_", eff_print, "_F"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
-  extract_var(str_c("anova_decod_time_csp_eff_", eff_print, "_df_within"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+  extract_var(str_c("anova_decod_time_csp_eff_", eff_print, "_F"), summary(results_anova_decod_csp_time)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_decod_time_csp_eff_", eff_print, "_df_within"), summary(results_anova_decod_csp_time)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
               exp_format = "%i")
-  extract_var(str_c("anova_decod_time_csp_eff_", eff_print, "_df_resid"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
+  extract_var(str_c("anova_decod_time_csp_eff_", eff_print, "_df_resid"), summary(results_anova_decod_csp_time)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
               exp_format = "%i")
-  extract_var(str_c("anova_decod_time_csp_eff_", eff_print, "_p"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+  extract_var(str_c("anova_decod_time_csp_eff_", eff_print, "_p"), summary(results_anova_decod_csp_time)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
               is_pval = TRUE, 
               exp_format = "%.3f")
 }
