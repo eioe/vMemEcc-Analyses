@@ -13,6 +13,7 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
   condition <- "experiment"  #Only EEG data for VSTM task. 
 
   c1.aov <- data_behav %>% 
+    # drop_na() %>% 
     mutate(c_Ecc = as_factor(c_Ecc)) %>% 
     filter(BlockStyle == condition) %>% 
     group_by(ppid, c_StimN, c_Ecc) %>%   
@@ -84,13 +85,15 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
     ungroup() %>% 
     pairwise_t_test(
       meanCDA ~ c_Ecc, paired = TRUE, 
-      p.adjust.method = "bonferroni"
+      p.adjust.method = "bonferroni",
+      detailed = TRUE
     )
   
   print_header(str_c('Results post-hoc t test\ntask: ', condition))
   print('Contrast between the eccentricity conditions:\n')
   print(res_ttest)
-    
+  
+  # interaction
   res_ttest_perEcc <- c1.aov %>% 
     group_by(ppid, c_Ecc, c_StimN) %>%
     summarise(meanCDA = mean(meanCDA)) %>% 
@@ -98,10 +101,31 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
     group_by(c_Ecc) %>% 
     pairwise_t_test(
       meanCDA ~ c_StimN, paired = TRUE, 
-      p.adjust.method = "bonferroni"
+      p.adjust.method = "bonferroni",
+      detailed = TRUE
     )
   print('Contrast between MemoryLoad conditions per Eccentricity:\n')
   print(res_ttest_perEcc)
+  
+  extract_var("cda_exp_Ecc_4_StimN2vsStimN4_t", res_ttest_perEcc$statistic[res_ttest_perEcc$c_Ecc == 4])
+  extract_var("cda_exp_Ecc_9_StimN2vsStimN4_t", res_ttest_perEcc$statistic[res_ttest_perEcc$c_Ecc == 9])
+  extract_var("cda_exp_Ecc_14_StimN2vsStimN4_t", res_ttest_perEcc$statistic[res_ttest_perEcc$c_Ecc == 14])
+  extract_var("cda_exp_Ecc_4_StimN2vsStimN4_p", res_ttest_perEcc$p[res_ttest_perEcc$c_Ecc == 4])
+  extract_var("cda_exp_Ecc_9_StimN2vsStimN4_p", res_ttest_perEcc$p[res_ttest_perEcc$c_Ecc == 9])
+  extract_var("cda_exp_Ecc_14_StimN2vsStimN4_p", res_ttest_perEcc$p[res_ttest_perEcc$c_Ecc == 14])
+  extract_var("cda_exp_Ecc_4_StimN2vsStimN4_df", res_ttest_perEcc$df[res_ttest_perEcc$c_Ecc == 4])
+  extract_var("cda_exp_Ecc_9_StimN2vsStimN4_df", res_ttest_perEcc$df[res_ttest_perEcc$c_Ecc == 9])
+  extract_var("cda_exp_Ecc_14_StimN2vsStimN4_df", res_ttest_perEcc$df[res_ttest_perEcc$c_Ecc == 14])
+  extract_var("cda_exp_Ecc_4_StimN2vsStimN4_diff", res_ttest_perEcc$estimate[res_ttest_perEcc$c_Ecc == 4])
+  extract_var("cda_exp_Ecc_9_StimN2vsStimN4_diff", res_ttest_perEcc$estimate[res_ttest_perEcc$c_Ecc == 9])
+  extract_var("cda_exp_Ecc_14_StimN2vsStimN4_diff", res_ttest_perEcc$estimate[res_ttest_perEcc$c_Ecc == 14])
+  extract_var("cda_exp_Ecc_4_StimN2vsStimN4_ci95upper", res_ttest_perEcc$conf.high[res_ttest_perEcc$c_Ecc == 4])
+  extract_var("cda_exp_Ecc_9_StimN2vsStimN4_ci95upper", res_ttest_perEcc$conf.high[res_ttest_perEcc$c_Ecc == 9])
+  extract_var("cda_exp_Ecc_14_StimN2vsStimN4_ci95upper", res_ttest_perEcc$conf.high[res_ttest_perEcc$c_Ecc == 14])
+  extract_var("cda_exp_Ecc_4_StimN2vsStimN4_ci95lower", res_ttest_perEcc$conf.low[res_ttest_perEcc$c_Ecc == 4])
+  extract_var("cda_exp_Ecc_9_StimN2vsStimN4_ci95lower", res_ttest_perEcc$conf.low[res_ttest_perEcc$c_Ecc == 9])
+  extract_var("cda_exp_Ecc_14_StimN2vsStimN4_ci95lower", res_ttest_perEcc$conf.low[res_ttest_perEcc$c_Ecc == 14])
+  
   #--------------------------------------------------------------------------
   ## Plot
   

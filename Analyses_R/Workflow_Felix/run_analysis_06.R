@@ -12,6 +12,7 @@ func_analysis_06 <- function() {
   condition <- "experiment"  #Only EEG data for VSTM task. 
   
   c1.aov <- data_behav %>% 
+    drop_na() %>% 
     filter(BlockStyle == 'experiment') %>% 
     group_by(ppid, c_StimN, c_Ecc) %>%   
     summarise(meanAlpha = mean(alphapwr_diff_retent, na.rm=TRUE)) %>% 

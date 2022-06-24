@@ -18,6 +18,7 @@
 func_analysis_02 <- function(condition, dep_variable) {
   ## Select relevant data:
   data_filtered <- data_behav %>% 
+    drop_na() %>% 
     filter(BlockStyle == condition) %>% 
     select(ppid, c_StimN, c_Ecc, c_ResponseCorrect) %>% 
     mutate(c_Ecc = as_factor(c_Ecc))
