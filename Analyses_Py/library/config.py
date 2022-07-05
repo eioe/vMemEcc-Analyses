@@ -129,7 +129,8 @@ ids_missing_subjects = [11, 14, 19]
 ids_excluded_subjects =  [12, 13, 22]   # [7, 12, 22]<<< with old preprocessing
 
 # font sizes:
-plt_label_size = 12
+plt_label_size = 7
+plt_fontname = 'Helvetica'  # 'Comic Sans Ms'  # 
 
 # colors: 
 # "#66C2A5" "#3288BD"
