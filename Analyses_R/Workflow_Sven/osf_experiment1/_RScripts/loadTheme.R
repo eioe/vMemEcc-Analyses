@@ -1,5 +1,5 @@
 # Define mytheme
-fontsize = 15
+fontsize = 7
 
 mytheme <-  theme_bw() + theme(legend.position="none") +
 	
@@ -19,8 +19,8 @@ mytheme <-  theme_bw() + theme(legend.position="none") +
 	
 	# Determine font size of axes
 	theme(text = element_text(size=fontsize)) +
-	theme(axis.title.y=element_text(vjust=0.3,size=fontsize, margin=margin(t=0, r=0.5, b=0, l=0, unit='cm'))) +
-	theme(axis.title.x=element_text(vjust=0.3,size=fontsize, margin=margin(t=0.5, r=0, b=0, l=0, unit='cm'))) +	
+	theme(axis.title.y=element_text(vjust=0.3,size=fontsize, margin=margin(t=0, r=0.05, b=0, l=0, unit='cm'))) +
+	theme(axis.title.x=element_text(vjust=0.3,size=fontsize, margin=margin(t=0.05, r=0, b=0, l=0, unit='cm'))) +	
 	theme(axis.text.x = element_text(size= fontsize)) +
 	theme(axis.text.y = element_text(size= fontsize)) +
 	theme(strip.text.x = element_text(size= fontsize)) +

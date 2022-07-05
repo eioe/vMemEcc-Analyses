@@ -156,10 +156,22 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
   figa <- figa + mytheme
   figa <- figa + ylab("mean CDA amplitude (uV)") + xlab("Eccentricity")
   figa <- figa + labs(title = txt_title, color = "Size Memory Array")
-  figa <- figa + theme(legend.position = c(0.85, 0.15))
+  figa <- figa + theme(legend.position = c(0.75, 0.75))
+
+  fname = file.path(path_global, 'Plots2022', 'CDA', 'stimon', 'CDA_anova_plot.pdf')
+  ggsave(plot = figa,   
+         width = 4/2.54,
+         height = 5/2.54,
+         dpi = 300,
+         filename = fname)
+
+  # pdf(file = file.path(path_global, 'Plots2022', 'CDA', 'stimon', 'CDA_anova_plot.pdf'),
+  #     width = 4/2.54,
+  #     height = 5/2.54)
   
-  figa
+  plot(figa)
   
+  # dev.off()
   #--------------------------------------------------------------------------
   return(aov.srt)
 }

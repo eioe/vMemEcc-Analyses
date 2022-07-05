@@ -102,7 +102,7 @@ func_analysis_01 <- function(condition) {
                      ymax = upper, 
                      colour = as_factor(c_StimN))) #+ facet_wrap(~cond)
   #figa <- figa + geom_jitter(position=position_jitter(width=100))
-  figa <- figa + geom_line(size=0.2358491) + geom_point(shape=15,size=0.8)
+  figa <- figa + geom_line(size=0.2358491) + geom_point(shape=15,size=0.1)
   figa <- figa + scale_colour_manual(values=c(defblue,deforange,defgrey))
   figa <- figa + scale_fill_manual(values=c(defblue,deforange,defgrey))
   figa <- figa + geom_linerange(size=0.2358491)
@@ -110,11 +110,18 @@ func_analysis_01 <- function(condition) {
   figa <- figa + scale_y_continuous(limits=c(0.5,1.0))
   figa <- figa + mytheme
   figa <- figa + ylab("Proportion correct") + xlab("Eccentricity")
-  figa <- figa + labs(title = txt_title, color = "Size Memory Array")
-  figa <- figa + theme(legend.position = c(0.85, 0.15))
-  
+  # figa <- figa + labs(title = txt_title, color = "Size Memory Array")
+  figa <- figa + theme(legend.position = c(1.85, 1.15))
   
   plot(figa)
+  
+  fname = file.path(path_global, 'Plots2022', 'Behavior', str_c('behav_perf_anova_', condition, '.pdf'))
+  ggsave(plot = figa,   
+         width = 5/2.54,
+         height = 3.7/2.54,
+         dpi = 300,
+         filename = fname)
+
 
   #--------------------------------------------------------------------------
   
