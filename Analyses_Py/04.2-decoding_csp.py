@@ -568,6 +568,8 @@ cond_dict = {'Load': ['LoadLow', 'LoadHigh'],
 if sub_list_str[0] == 'VME_S01':
     helpers.extract_var("csp_n_freqs", decod_params["n_freqs"],
                         exp_format=".0f")
+    helpers.extract_var("csp_reps", decod_params["reps"],
+                        exp_format=".0f")
     helpers.extract_var("csp_freq_min", decod_params["min_freq"],
                         exp_format=".0f")
     helpers.extract_var("csp_freq_max", decod_params["max_freq"],
