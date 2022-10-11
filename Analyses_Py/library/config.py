@@ -170,6 +170,7 @@ labels['Ecc'] = 'Eccentricity'
 labels['Load'] = 'Size Memory Array'
 labels['Chance'] = 'Random'
 labels['Random'] = 'Random'
+labels[''] = 'All'
 
 event_dict = {'CueL': ['Stimulus/S150',
                        'Stimulus/S152',
