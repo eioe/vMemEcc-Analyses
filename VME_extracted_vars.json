@@ -763,5 +763,6 @@
     "cda_exp_Ecc_14_StimN2vsStimN4_ci95upper":"0.36",
     "cda_exp_Ecc_4_StimN2vsStimN4_ci95lower":"0.27",
     "cda_exp_Ecc_9_StimN2vsStimN4_ci95lower":"0.21",
-    "cda_exp_Ecc_14_StimN2vsStimN4_ci95lower":"-0.04"
+    "cda_exp_Ecc_14_StimN2vsStimN4_ci95lower":"-0.04",
+    "csp_reps":"10"
 }
