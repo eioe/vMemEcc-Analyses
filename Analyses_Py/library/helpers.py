@@ -4,6 +4,7 @@ import os
 import os.path as op
 # from pathlib import Path
 import json
+import numpy as np
 
 import mne
 from library import config
@@ -140,6 +141,97 @@ def extract_var(var, val, path_ev=config.paths['extracted_vars_file'], overwrite
         json.dump(exp_vars_dict, f, indent=4)
 
 
+def import_var(var, path_ev=config.paths['extracted_vars_file']):
+    if op.exists(path_ev): 
+        with open(path_ev) as f:
+            exp_vars_dict = json.load(f)
+        return exp_vars_dict[var]
+    else:
+        raise FileNotFoundError(f'There is no file in the provided path: {path_ev}')
+
+    
+
+
 def is_interactive():
     import __main__ as main
     return not hasattr(main, '__file__')
+
+
+def load_patterns(sub_list_str,
+                  contrast_str,
+                  epo_part='stimon',
+                  signaltype='collapsed',
+                  scoring='roc_auc',
+                  reg='',
+                  picks_str=None,
+                  labels_shuffled=False):
+    """Load the patterns from sensor space decoding.
+    
+    Parameters
+    ----------
+    sub_list_str : list, str
+        List of subject IDs to load patterns from. 
+    epo_part : str
+        Which part the epo was cropped to; defaults to "stimon"
+    contrast_str : str
+        Decoded contrast.
+    signaltype : str
+        "collapsed" or "difference" or "uncollapsed" (not yet implemented). Defaults to "collapsed";
+    scoring: str
+        Scoring metric used during decoding. "roc_auc" (default), accuracy", or "balanced_accuracy";
+    reg: str, float
+        Regularization method used; Ints are interpreted as fixed shrinkage values; defaults to an empty string
+    labels_shuffled : bool
+        Allows to load the data from the run with shuffled labels.
+    picks_str: str
+        Predefined selection, has to be either 'Left', 'Right', 'Midline' or 'All'; None (default) is thesame as 'All'
+
+
+    Returns
+    -------
+    patterns: ndarray
+        Array with the patterns (subs x csp_components x channels x freqs x times)
+    times: array, 1d
+    freqs: array, 1d
+    
+    """
+
+    if isinstance(reg, float):
+        reg_str = 'shrinkage'+str(reg)
+    else:
+        reg_str = reg
+    shuf_labs = 'labels_shuffled' if labels_shuffled else ''
+
+    patterns_list = []
+    times = []
+
+    if (picks_str != None) and (picks_str != 'All'):
+        picks_str_folder = picks_str
+    else:
+        picks_str_folder = 'All'
+        
+    for subID in sub_list_str:
+        fpath = op.join(config.paths['06_decoding-sensorspace'],
+                                     epo_part,
+                                     signaltype,
+                                     contrast_str,
+                                     scoring,
+                                     picks_str_folder,
+                                     'patterns')
+        fname = op.join(fpath, f'{subID}-patterns_per_sub.npy')
+        patterns_ = np.load(fname)
+        patterns_list.append(patterns_)
+        if len(times) == 0:
+            times = np.load(fname[:-4] + '__times' + '.npy')
+        else:
+            assert np.all(times == np.load(fname[:-4] + '__times' + '.npy')), "Times are different between subjects."
+    
+
+    patterns = np.concatenate(patterns_list)
+    return patterns, times
+
+def l2norm(vec, axis=0):
+    if vec.ndim > 2 or axis > 1:
+        raise ValueError('Not implemented for 3 or more dimensional arrays.')
+    out = np.sqrt(np.sum(vec**2, axis=axis))
+    return out
