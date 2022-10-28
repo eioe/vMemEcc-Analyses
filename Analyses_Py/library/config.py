@@ -136,21 +136,26 @@ plt_fontname = 'Helvetica'  # 'Comic Sans Ms'  #
 # "#66C2A5" "#3288BD"
 
 colors = dict()
-colors['LoadHigh'] = "#F1942E"
-colors['LoadLow'] = "#32628A"
-colors['Load High'] = "#F1942E"
-colors['Load Low'] = "#32628A"
-colors['4'] = "#F1942E"
-colors['2'] = "#32628A"
+colors['LoadHigh'] = "#fb8500"  # "#F1942E"
+colors['LoadLow'] = "#023047"  # "#32628A"
+colors['Load High'] = "#fb8500"  #"#F1942E"
+colors['Load Low'] = "#023047"  #"#32628A"
+colors['4'] = "#fb8500"  #"#F1942E"
+colors['2'] = "#023047"  #"#32628A"
 colors['Ipsi'] = 'purple'
 colors['Contra'] = 'pink'
 
-colors['4°'] = "#00A878"
-colors['9°'] = "#FCEC52"
-colors['14°'] = "#FE5E41"
-colors['EccS'] = "#00A878"
-colors['EccM'] = "#FCEC52"
-colors['EccL'] = "#FE5E41"
+# old EccS: "#00A878"
+# old EccM: "#FCEC52"
+# old EccL "#FE5E41"
+## #ceec97, #f4b393, , #7a28cb, #494368
+
+cols = ("#242424","#8b1e3f","#ab81cd")
+colors['4°'], colors['9°'], colors['14°'] = cols
+redsandorange = ("#330f0a", '#ffb703',  "#a26769")
+colors['EccS'] = colors['4°']
+colors['EccM'] = colors['9°']
+colors['EccL'] = colors['14°']
 colors['Chance'] = "#B5B4B3"
 colors['Random'] = "#B5B4B3"
 colors['Load'] = "#72DDED"
@@ -158,6 +163,8 @@ colors['Diff'] = "black"
 colors['Ipsi'] = '#FAC748'
 colors['Contra'] = '#8390FA'
 colors['All'] = "#3288BD"
+colors['CDA'] = '#FAC748'
+colors['PNP'] = '#8390FA'
 
 # labels
 labels = dict()
