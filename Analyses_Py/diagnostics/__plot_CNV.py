@@ -5,23 +5,11 @@ from os import path as op
 import json
 import numpy as np
 import matplotlib.pyplot as plt
-from numpy.lib.npyio import load
 
 import pandas as pd
 import seaborn as sns
 
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import make_pipeline
-from sklearn.linear_model import LogisticRegression
-
-from scipy import stats
-
 import mne
-from mne import EvokedArray
-# from mne.epochs import concatenate_epochs
-from mne.decoding import (SlidingEstimator,  # GeneralizingEstimator,
-                          cross_val_multiscore, LinearModel, get_coef)
-from mne.stats import permutation_cluster_1samp_test, f_mway_rm, f_threshold_mway_rm
 
 from library import config, helpers
 
@@ -33,8 +21,8 @@ def get_epos(subID, epo_part, signaltype, condition, event_dict):
         fname = op.join(config.path_rejepo, subID + '-' + epo_part +
                         '-postica-rejepo' + '-epo.fif')
     elif signaltype in ['collapsed', 'difference']:
-        fname = op.join(config.path_epos_sorted, epo_part, signaltype,
-                        subID + '-epo.fif')
+        fname = op.join(config.paths['03_preproc-pooled'], epo_part, signaltype,
+                        '-'.join([subID, epo_part, signaltype, 'epo.fif']))
     else:
         raise ValueError(f'Invalid value for "signaltype": {signaltype}')
     epos = mne.read_epochs(fname, verbose=False)
@@ -94,6 +82,47 @@ for sub, axs in zip(range(21), ax.reshape(-1)):
 mne.viz.plot_compare_evokeds(evos, combine='mean', 
                                 #colors = {k: config.colors[k] for k in plt_dict.keys()},
                                  vlines=[0, 0.2, 2.2], 
-                                 picks = ['P7'])
+                                 picks = ['PO7'])
 
+# %%
+pps = defaultdict(list)
+pickspps = defaultdict(list)
+for sub in range(21):
+    print(f'running {sub}')
+    for pick in ('Contra', 'Ipsi'):  # ('LoadLow', 'LoadHigh'):
+        for cond in ('LoadLow', 'LoadHigh'):
+            if cond == 'LoadLow':
+                ppsd = mne.time_frequency.psd_welch(ha_low[sub].copy().pick(config.chans_CDA_dict[pick]), fmin=0.01, fmax=45, average='mean', n_fft=512, verbose=False)
+            elif cond == 'LoadHigh':
+                ppsd = mne.time_frequency.psd_welch(ha_high[sub].copy().pick(config.chans_CDA_dict[pick]), fmin=0.01, fmax=45, average='mean', n_fft=512, verbose=False)
+            pps[cond].append(ppsd)
+            pickspps[pick].append(ppsd)
+
+# %%
+m_df = pd.DataFrame()
+for cond in ('Contra', 'Ipsi'):
+    freqs = pickspps[cond][0][1]
+    yy = [p[0].mean(axis=0) for p in pickspps[cond]]
+    y = np.array(yy).mean(axis=(1))
+    df = pd.DataFrame(y).melt(var_name='freq', value_name='pwr')
+    df['subidx'] = np.repeat(range(21), 2*46)
+    df = df.groupby('subidx').mean()
+    #df['freq']=np.repeat(freqs, 21)
+    df['pwr_db'] = 10 * np.log10(df.pwr)
+    df['cond'] = cond
+    m_df = pd.concat([m_df, df])
+fig, ax = plt.subplots()
+sns.lineplot(data=m_df, x='freq', y='pwr_db', hue='cond', errorbar='se', ax=ax)
+ax.set_xlabel('Frequency (Hz)')
+ax.set_ylabel('Power spectar density (dB)')
+
+
+# %%
+plt.plot(freqs, 10 * np.log10(y))
+# %%
+ppsd.shape
+# %%
+len(ppsd)
+# %%
+ppsd(0)
 # %%

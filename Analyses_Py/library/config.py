@@ -135,13 +135,15 @@ plt_fontname = 'Helvetica'  # 'Comic Sans Ms'  #
 # colors: 
 # "#66C2A5" "#3288BD"
 
+orange_blue = ("#fb8500", "#023047" )  # old: ("#F1942E", "#32628A")
+orange_red = ("#fb8500", "#9E0031")
+
 colors = dict()
-colors['LoadHigh'] = "#fb8500"  # "#F1942E"
-colors['LoadLow'] = "#023047"  # "#32628A"
-colors['Load High'] = "#fb8500"  #"#F1942E"
-colors['Load Low'] = "#023047"  #"#32628A"
-colors['4'] = "#fb8500"  #"#F1942E"
-colors['2'] = "#023047"  #"#32628A"
+colors['LoadHigh'], colors['LoadLow'] = orange_red
+colors['Load High'] = colors['LoadHigh']
+colors['Load Low'] = colors['LoadLow']
+colors['4'] = colors['LoadHigh']
+colors['2'] = colors['LoadLow']
 colors['Ipsi'] = 'purple'
 colors['Contra'] = 'pink'
 
@@ -150,7 +152,18 @@ colors['Contra'] = 'pink'
 # old EccL "#FE5E41"
 ## #ceec97, #f4b393, , #7a28cb, #494368
 
-cols = ("#242424","#8b1e3f","#ab81cd")
+black_red_purple = ("#242424","#8b1e3f","#ab81cd")
+light_greens = ("#70A9A1", "#9EC1A3", "#CFE0C3")
+green_blue_red = ("#70C1B3", "#7B8CDE", "#A4778B")
+blue_green_red = ("#30C5FF", "#56E39F", "#899E8B")
+blue_greens = ("#0373CC", "#009485", "#8CCC4D")
+blue_greens2 = ("#1A1A80", "#009485", "#8CCC4D")
+purples = ("#5D2A42", "#FB6376", "#FF9999")
+purples2 = ("#5B2C6F", "#8E44AD", "#BB8FCE")
+greens = ("#0E6655", "#138D75", "#45B39D")
+greys = ("#909497", "#A6ACAF", "#D7DBDD")
+
+cols = blue_greens2  # purples  # 
 colors['4°'], colors['9°'], colors['14°'] = cols
 redsandorange = ("#330f0a", '#ffb703',  "#a26769")
 colors['EccS'] = colors['4°']
@@ -158,11 +171,11 @@ colors['EccM'] = colors['9°']
 colors['EccL'] = colors['14°']
 colors['Chance'] = "#B5B4B3"
 colors['Random'] = "#B5B4B3"
-colors['Load'] = "#72DDED"
+colors['Load'] = "black"  # "#72DDED"
 colors['Diff'] = "black"
 colors['Ipsi'] = '#FAC748'
 colors['Contra'] = '#8390FA'
-colors['All'] = "#3288BD"
+colors['All'] = "black"  # "#3288BD"
 colors['CDA'] = '#FAC748'
 colors['PNP'] = '#8390FA'
 
