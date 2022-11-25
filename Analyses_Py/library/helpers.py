@@ -146,9 +146,12 @@ def extract_var(
     exp_vars_dict[var] = val_str
 
     with open(path_ev, "w") as f:
-        json.dumps(exp_vars_dict, f, indent=4, separators=(',', ':'))
-        # specifying that I don't want a space after the colon for
-        # compatibility with JSON parsers in R (to avoid a mess in git)
+        json_str = json.dumps(exp_vars_dict, indent=4, separators=(',', ':'))
+        f.write(json_str)
+        f.write('\n')
+        # specifying that I don't want a space after the colon and add empty
+        # newline for compatibility with JSON parsers in R (to avoid a mess in
+        # git)
 
 
 def import_var(var, path_ev=config.paths["extracted_vars_file"]):
