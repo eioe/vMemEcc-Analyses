@@ -11,7 +11,8 @@ deforange1<- rgb(255,200,100,alpha=189,maxColorValue=255)
 defbrown1 <- rgb(246,208,153,alpha=100,maxColorValue=255)
 defgreen1 <- rgb(145,208,84,alpha=189,maxColorValue=255)
 
-col_LoadLow <- rgb(2, 48, 71, max=255)  # defblue
+col_LoadLow <- rgb(195, 49, 73, max=255)  # rgb(2, 48, 71, max=255)  # defblue
 col_LoadHigh <- rgb(251, 133, 0, max=255)  # deforange
+
 
 #--------------------------------------------------------------------------

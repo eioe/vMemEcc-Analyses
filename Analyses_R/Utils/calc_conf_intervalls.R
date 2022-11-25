@@ -88,3 +88,7 @@ summarize_ttest <- function(x, returnval="p") {
   
   return (returnThis)
 }
+
+
+  
+  
