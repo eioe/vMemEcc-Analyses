@@ -15,5 +15,6 @@
             72
         ],
         "workbench.editor.restoreViewState": false
-    }
+    },
+    "python.formatting.provider": "black"
 }
