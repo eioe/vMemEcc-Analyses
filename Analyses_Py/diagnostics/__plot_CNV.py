@@ -47,9 +47,9 @@ ha_high = list()
 ha_low = list()
 for sub in sub_list_str:
     print(f'running {sub}')
-    he = get_epos(sub, 'stimon', 'collapsed', 'LoadHigh', config.event_dict)
+    he = get_epos(sub, 'fulllength', 'collapsed', 'LoadHigh', config.event_dict)
     ha_high.append(he)
-    he = get_epos(sub, 'stimon', 'collapsed', 'LoadLow', config.event_dict)
+    he = get_epos(sub, 'fulllength', 'collapsed', 'LoadLow', config.event_dict)
     ha_low.append(he)
 # %%
 evos = dict()
@@ -70,7 +70,7 @@ for sub, axs in zip(range(21), ax.reshape(-1)):
         evos_p[key] = evos[key][sub]
     ff = mne.viz.plot_compare_evokeds(evos_p, combine='mean', 
                                     #colors = {k: config.colors[k] for k in plt_dict.keys()},
-                                    vlines=[0, 0.2, 2.2], 
+                                    vlines=[0, 0.8, 3.0], 
                                     picks = ['PO3'], axes=axs, show=False)
 # mne.viz.plot_compare_evokeds(evos_p, combine='mean', 
 #                                 #colors = {k: config.colors[k] for k in plt_dict.keys()},
