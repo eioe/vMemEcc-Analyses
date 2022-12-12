@@ -11,6 +11,25 @@ insert_fun <- function(name) {
 }
 
 
+print_CI_lmer <- function(m) {
+  # print the CIs for the single effects of a Linear mixed model fit by REML ['lmerModLmerTest']
+  
+  # Paramteres:
+  #
+  # m:  "lmerModLmerTest" (returned by lmer())
+  n_coef = length(fixef(m))
+  df <- data.frame(lower = numeric(n_coef), upper = numeric(n_coef))  
+  colnames(df) <- c("lower", "upper")
+  rownames(df) <- names(fixef(m))
+  for (i in 1:n_coef){
+    L = diag(n_coef)[i, ]
+    o <- contest1D(m, L, confint = T)
+    ci <- c(o$lower, o$upper)
+    df[i, 1:2] <- ci
+  }
+  return(df)
+}
+
 
 # Export vars to JSON file:
 extract_var <- function(var, val, path_ev=path_extracted_vars, overwrite=TRUE, 
