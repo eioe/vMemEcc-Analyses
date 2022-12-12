@@ -29,7 +29,7 @@ func_analysis_07 <- function(condition, dep_variable) {
   
   # Define contrast - baseline is Eccentricity = 9° and MemLoad = 2
   contrasts(data_filtered$c_Ecc) <- contr.treatment(3,base=2)
-  data_filtered$load_contrast <- ifelse(data_filtered$c_StimN==2,1,0)
+  data_filtered$load_contrast <- ifelse(data_filtered$c_StimN==2,0,1)
   
   #--------------------------------------------------------------------------
   ## run glmer
@@ -44,6 +44,7 @@ func_analysis_07 <- function(condition, dep_variable) {
   print_header(str_c('Summary glmer\n', 
                      dep_variable, ' ~ MemLoad * Eccentricity\n', 
                      'task: ', condition))
-  summary(m1)
+  # summary(m1)
+  m1
 }
 
