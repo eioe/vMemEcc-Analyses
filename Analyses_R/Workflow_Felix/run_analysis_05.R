@@ -11,6 +11,17 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
   
   
   condition <- "experiment"  #Only EEG data for VSTM task. 
+  
+  time_win_str = ''  # for default case (cluster window) we drop this. Only for fixed window (Hakim et al., 2019) we write it to the export.
+  
+  if (dep_variable != "CDA_amp_clustertimes") {
+    if (dep_variable == "CDA_amp_fixedtimes") {
+      time_win_str = "fixedtimes_"
+    }
+    else {
+      stop("Invalid dep. variable. Must be 'CDA_amp_clustertimes' or 'CDA_amp_fixedtimes'.")
+    }
+  }
 
   c1.aov <- data_behav %>% 
     # drop_na() %>% 
@@ -37,14 +48,15 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
                             filter(BlockStyle == condition) %>% 
                             drop_na() %>% 
                             group_by(ppid) %>% 
-                            summarise(across(CDA_amp_clustertimes, ~ mean(.x, na.rm = T), .names = c('meanCDA'))) %>%
+                            summarise(across(dep_variable, ~ mean(.x, na.rm = T), .names = c('meanCDA'))) %>%
                             ungroup() %>% 
                             summarise(meanCDA_mean = mean(meanCDA), meanCDA_sd = sd(meanCDA), meanCDA_ci95lower = ci95lower(meanCDA), meanCDA_ci95upper = ci95upper(meanCDA))
   
-  extract_var("cda_sign_cluster_meanamp_mean", cda_overall_summary$meanCDA_mean)
-  extract_var("cda_sign_cluster_meanamp_sd", cda_overall_summary$meanCDA_sd)
-  extract_var("cda_sign_cluster_meanamp_cilower", cda_overall_summary$meanCDA_ci95lower)
-  extract_var("cda_sign_cluster_meanamp_ciupper", cda_overall_summary$meanCDA_ci95upper)
+  # TODO: it's really ugly to split up the exports between here and the main file. I feel bad but will change this only in future projects.
+  extract_var(str_c("cda_", time_win_str, "meanamp_mean"), cda_overall_summary$meanCDA_mean)
+  extract_var(str_c("cda_", time_win_str, "meanamp_sd"), cda_overall_summary$meanCDA_sd)
+  extract_var(str_c("cda_", time_win_str, "meanamp_cilower"), cda_overall_summary$meanCDA_ci95lower)
+  extract_var(str_c("cda_", time_win_str, "meanamp_ciupper"), cda_overall_summary$meanCDA_ci95upper)
   
   cda_summary_stimN <- data_behav %>% 
     mutate(c_Ecc = as_factor(c_Ecc)) %>% 
@@ -54,10 +66,12 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
     group_by(c_StimN) %>% 
     summarise(meanCDA_mean = mean(meanCDA), meanCDA_sd = sd(meanCDA))
   
-  extract_var("cda_sign_cluster_meanamp_StimN_2_mean", cda_summary_stimN$meanCDA_mean[cda_summary_stimN$c_StimN == 2])
-  extract_var("cda_sign_cluster_meanamp_StimN_2_sd", cda_summary_stimN$meanCDA_sd[cda_summary_stimN$c_StimN == 2])
-  extract_var("cda_sign_cluster_meanamp_StimN_4_mean", cda_summary_stimN$meanCDA_mean[cda_summary_stimN$c_StimN == 4])
-  extract_var("cda_sign_cluster_meanamp_StimN_4_sd", cda_summary_stimN$meanCDA_sd[cda_summary_stimN$c_StimN == 4])
+  
+  # TODO: it's really ugly to split up the exports between here and the main file. I feel bad but will change this only in future projects.
+  extract_var(str_c("cda_", time_win_str, "meanamp_StimN_2_mean"), cda_summary_stimN$meanCDA_mean[cda_summary_stimN$c_StimN == 2])
+  extract_var(str_c("cda_", time_win_str, "meanamp_StimN_2_sd"), cda_summary_stimN$meanCDA_sd[cda_summary_stimN$c_StimN == 2])
+  extract_var(str_c("cda_", time_win_str, "meanamp_StimN_4_mean"), cda_summary_stimN$meanCDA_mean[cda_summary_stimN$c_StimN == 4])
+  extract_var(str_c("cda_", time_win_str, "meanamp_StimN_4_sd"), cda_summary_stimN$meanCDA_sd[cda_summary_stimN$c_StimN == 4])
   
   #--------------------------------------------------------------------------
   ## Run ANOVA
@@ -107,24 +121,25 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
   print('Contrast between MemoryLoad conditions per Eccentricity:\n')
   print(res_ttest_perEcc)
   
-  extract_var("cda_exp_Ecc_4_StimN2vsStimN4_t", res_ttest_perEcc$statistic[res_ttest_perEcc$c_Ecc == 4])
-  extract_var("cda_exp_Ecc_9_StimN2vsStimN4_t", res_ttest_perEcc$statistic[res_ttest_perEcc$c_Ecc == 9])
-  extract_var("cda_exp_Ecc_14_StimN2vsStimN4_t", res_ttest_perEcc$statistic[res_ttest_perEcc$c_Ecc == 14])
-  extract_var("cda_exp_Ecc_4_StimN2vsStimN4_p", res_ttest_perEcc$p[res_ttest_perEcc$c_Ecc == 4])
-  extract_var("cda_exp_Ecc_9_StimN2vsStimN4_p", res_ttest_perEcc$p[res_ttest_perEcc$c_Ecc == 9])
-  extract_var("cda_exp_Ecc_14_StimN2vsStimN4_p", res_ttest_perEcc$p[res_ttest_perEcc$c_Ecc == 14])
-  extract_var("cda_exp_Ecc_4_StimN2vsStimN4_df", res_ttest_perEcc$df[res_ttest_perEcc$c_Ecc == 4])
-  extract_var("cda_exp_Ecc_9_StimN2vsStimN4_df", res_ttest_perEcc$df[res_ttest_perEcc$c_Ecc == 9])
-  extract_var("cda_exp_Ecc_14_StimN2vsStimN4_df", res_ttest_perEcc$df[res_ttest_perEcc$c_Ecc == 14])
-  extract_var("cda_exp_Ecc_4_StimN2vsStimN4_diff", res_ttest_perEcc$estimate[res_ttest_perEcc$c_Ecc == 4])
-  extract_var("cda_exp_Ecc_9_StimN2vsStimN4_diff", res_ttest_perEcc$estimate[res_ttest_perEcc$c_Ecc == 9])
-  extract_var("cda_exp_Ecc_14_StimN2vsStimN4_diff", res_ttest_perEcc$estimate[res_ttest_perEcc$c_Ecc == 14])
-  extract_var("cda_exp_Ecc_4_StimN2vsStimN4_ci95upper", res_ttest_perEcc$conf.high[res_ttest_perEcc$c_Ecc == 4])
-  extract_var("cda_exp_Ecc_9_StimN2vsStimN4_ci95upper", res_ttest_perEcc$conf.high[res_ttest_perEcc$c_Ecc == 9])
-  extract_var("cda_exp_Ecc_14_StimN2vsStimN4_ci95upper", res_ttest_perEcc$conf.high[res_ttest_perEcc$c_Ecc == 14])
-  extract_var("cda_exp_Ecc_4_StimN2vsStimN4_ci95lower", res_ttest_perEcc$conf.low[res_ttest_perEcc$c_Ecc == 4])
-  extract_var("cda_exp_Ecc_9_StimN2vsStimN4_ci95lower", res_ttest_perEcc$conf.low[res_ttest_perEcc$c_Ecc == 9])
-  extract_var("cda_exp_Ecc_14_StimN2vsStimN4_ci95lower", res_ttest_perEcc$conf.low[res_ttest_perEcc$c_Ecc == 14])
+  # TODO: it's really ugly to split up the exports between here and the main file. I feel bad but will change this only in future projects.
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_4_StimN2vsStimN4_t"), res_ttest_perEcc$statistic[res_ttest_perEcc$c_Ecc == 4])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_9_StimN2vsStimN4_t"), res_ttest_perEcc$statistic[res_ttest_perEcc$c_Ecc == 9])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_14_StimN2vsStimN4_t"), res_ttest_perEcc$statistic[res_ttest_perEcc$c_Ecc == 14])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_4_StimN2vsStimN4_p"), res_ttest_perEcc$p[res_ttest_perEcc$c_Ecc == 4])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_9_StimN2vsStimN4_p"), res_ttest_perEcc$p[res_ttest_perEcc$c_Ecc == 9])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_14_StimN2vsStimN4_p"), res_ttest_perEcc$p[res_ttest_perEcc$c_Ecc == 14])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_4_StimN2vsStimN4_df"), res_ttest_perEcc$df[res_ttest_perEcc$c_Ecc == 4])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_9_StimN2vsStimN4_df"), res_ttest_perEcc$df[res_ttest_perEcc$c_Ecc == 9])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_14_StimN2vsStimN4_df"), res_ttest_perEcc$df[res_ttest_perEcc$c_Ecc == 14])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_4_StimN2vsStimN4_diff"), res_ttest_perEcc$estimate[res_ttest_perEcc$c_Ecc == 4])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_9_StimN2vsStimN4_diff"), res_ttest_perEcc$estimate[res_ttest_perEcc$c_Ecc == 9])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_14_StimN2vsStimN4_diff"), res_ttest_perEcc$estimate[res_ttest_perEcc$c_Ecc == 14])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_4_StimN2vsStimN4_ci95upper"), res_ttest_perEcc$conf.high[res_ttest_perEcc$c_Ecc == 4])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_9_StimN2vsStimN4_ci95upper"), res_ttest_perEcc$conf.high[res_ttest_perEcc$c_Ecc == 9])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_14_StimN2vsStimN4_ci95upper"), res_ttest_perEcc$conf.high[res_ttest_perEcc$c_Ecc == 14])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_4_StimN2vsStimN4_ci95lower"), res_ttest_perEcc$conf.low[res_ttest_perEcc$c_Ecc == 4])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_9_StimN2vsStimN4_ci95lower"), res_ttest_perEcc$conf.low[res_ttest_perEcc$c_Ecc == 9])
+  extract_var(str_c("cda_exp_", time_win_str, "Ecc_14_StimN2vsStimN4_ci95lower"), res_ttest_perEcc$conf.low[res_ttest_perEcc$c_Ecc == 14])
   
   #--------------------------------------------------------------------------
   ## Plot
@@ -158,7 +173,7 @@ func_analysis_05 <- function(dep_variable = "CDA_amp_clustertimes") {
   figa <- figa + labs(title = txt_title, color = "Size Memory Array")
   figa <- figa + theme(legend.position = c(0.75, 0.75))
 
-  fname = file.path(path_global, 'Plots2022', 'CDA', 'stimon', 'CDA_anova_plot.pdf')
+  fname = file.path(path_global, 'Plots2022', 'CDA', 'stimon', str_c('CDA_anova_', time_win_str, 'plot.pdf'))
   ggsave(plot = figa,   
          width = 4/2.54,
          height = 5/2.54,
