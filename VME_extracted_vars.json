@@ -1,6 +1,6 @@
 {
-    "cda_sign_cluster_t_start":"388.000",
-    "cda_sign_cluster_t_end":"1088.000",
+    "cda_sign_cluster_t_start":"388",
+    "cda_sign_cluster_t_end":"1088",
     "cda_sign_cluster_pval":".001",
     "pnp_sign_cluster_t_start":"200",
     "pnp_sign_cluster_t_end":"344",
