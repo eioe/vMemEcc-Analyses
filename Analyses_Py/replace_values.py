@@ -30,6 +30,11 @@ shutil.copyfile(path_file_in, path_file_copy)
 docc = docxtpl.DocxTemplate(path_file_copy)
 jinja_env = jinja2.Environment(undefined=jinja2.DebugUndefined)
 # alternative: jinja2.StrictUndefined)
+
+# Replace minus sign with en dash:
+for e in rep_dict:
+    rep_dict[e] = str(rep_dict[e]).replace("-", "\u2013")
+
 docc.render(rep_dict, jinja_env=jinja_env)
 
 docc.save(path_file_out)
