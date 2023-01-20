@@ -16,13 +16,13 @@ Combining EEG with virtual reality, we studied how the eccentricity of a memory 
 
 <h2>Methods</h2>
 
-
+WIP
 
 <h3>Versions</h3>
 
 ###### version 1.0
 `2023-01`: Code associated with the preprint:
-* <a href="https://ieeexplore.ieee.org/document/8613645"> Hofmann, Klotzsche, Mariola, Nikulin, Villringer, & Gaebler. <i>IEEE AIVR</i>, 2018</a>
+* <a href="https:<put_arXivlink_here"> Klotzsche, Gaebler, Villringer, Sommer, Nikulin, & Ohl <i>bioarXiv</i>, 2023</a>
 
 <h3>Contributors</h3>
 <a href="https://github.com/eioe">Felix Klotzsche</a><br>
