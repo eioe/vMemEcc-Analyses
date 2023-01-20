@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Intro
-This file prints relevant statistics and plots of the vMemEcc manuscript. Please note, analyses and plots produced in Python are not included here - but in a separate notebook. The most relevant chunkcs of the source code are included in this file as well. For the full code base, please refer to the [repository on GitHub](https://github.com/eioe/vmemecc). 
+This file prints relevant statistics and plots of the vMemEcc manuscript. Please note, analyses and plots produced in Python are not included here - but in a separate notebook. The most relevant chunkcs of the source code are included in this file as well. For the full code base, please refer to the [repository on GitHub](https://github.com/eioe/vMemEcc-Analyses). 
 
 ## Requirements
 We ran these analyses using version 4.1.0 (2021-05-18) in RStudio v1.4.1717. 
