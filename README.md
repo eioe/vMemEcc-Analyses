@@ -1,10 +1,11 @@
 
 
-![VME](./VMECover.png)
+![VME](./VMECover_grey.png)
 
 <h2>Visual short-term memory related EEG components in a virtual reality setup</h2>
-Code base of: <a href="https://elifesciences.org/articles/64812"> Klotzsche, Gaebler, Villringer, Sommer, Nikulin, & Ohl. <i>bioRxiv</i>, 2023</a><br>
-
+Code base of: <a href="https://elifesciences.org/articles/64812"> Klotzsche, Gaebler, Villringer, Sommer, Nikulin, & Ohl. <i>bioRxiv</i>, 2023</a><br>  
+<br/><br/>
+  
 [![Python.pm](https://img.shields.io/badge/python->3.6-brightgreen.svg?maxAge=259200)](#)
 [![R.pm](https://img.shields.io/badge/R->4.1-informational.svg?maxAge=259200)](#)
 [![version](https://img.shields.io/badge/version-1.0-yellow.svg?maxAge=259200)](#)
@@ -14,9 +15,16 @@ Code base of: <a href="https://elifesciences.org/articles/64812"> Klotzsche, Gae
 Combining EEG with virtual reality, we studied how the eccentricity of a memory array during encoding affects well-known neural markers of visual short-term memory. We reveal that previously reported EEG-markers of visual memory can be replicated in such a setup. These EEG-markers were differently affected by eccentricity, hence providing valuable constraints for future experimental designs.
 
 
-<h2>Methods</h2>
+<h2>Instructions</h2>
 
-WIP
+If you want to reproduce the statistics (or the [pre]processing steps) reported in the paper, we suggest that you follow these steps: 
+
+1. Download the data set from [Edmond – The Open Research Data Repository of the Max Planck Society](https://edmond.mpdl.mpg.de/dataset.xhtml?persistentId=doi:10.17617/3.WRDUGO)  
+    There are data-readme files on Edmond which explain which files you might want to work with (the entire data set is quite spacious).
+2. Clone this repository to a clean (ideally empty) local directory. 
+
+
+
 
 <h3>Versions</h3>
 
