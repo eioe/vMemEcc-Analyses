@@ -23,7 +23,7 @@ print(f"Study path is set to: {path_study}")
 paths["study"] = path_study
 paths["analyses"] = Path(os.path.abspath(__file__)).parents[2]
 
-path_data = os.path.join(path_study, 'Data2022')
+path_data = os.path.join(path_study, 'Data')
 paths['00_raw'] = os.path.join(path_data, 'DataMNE', 'EEG', '00_raw')
 paths['01_prepared'] = os.path.join(path_data, 'DataMNE', 'EEG', '01_prepared')
 paths['01_prepared-events'] = os.path.join(path_data, 'DataMNE', 'EEG', '01_prepared-events')
