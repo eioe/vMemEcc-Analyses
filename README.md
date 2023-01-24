@@ -21,7 +21,7 @@ If you want to reproduce the statistics (or the [pre]processing steps) reported 
 
 > **tl;dr**  
 Code relevant for the EEG (pre)processing can be found in the `.ipynb` notebooks in [Analyses_Py/Pipeline_clean](Analyses_Py/Pipeline_clean).  
-Most of the statistical analysis are performed in [Analyses_R/VME_mainAnalysis.Rmd](Analyses_R/VME_mainAnalysis.html).  
+Most of the statistical analysis are performed in [Analyses_R/VME_mainAnalysis.Rmd](Analyses_R/VME_mainAnalysis.Rmd).  
 The code for the eye tracking analysis is in [Analyses_R/EyeTracking/analyze_gaze.R](Analyses_R/EyeTracking/analyze_gaze.R).  
 
 > **Most important:** 
