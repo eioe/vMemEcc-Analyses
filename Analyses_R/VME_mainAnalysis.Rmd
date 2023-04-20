@@ -839,6 +839,12 @@ dev.off()
 
 
 ```
+### Rejected trials per eccentricity
+```{r}
+
+res <- func_analysis_16()
+
+```
 
 
 
