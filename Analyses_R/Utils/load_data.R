@@ -15,12 +15,17 @@ rm(fname)
 
 data_behav <- data_full %>% 
   filter(BlockStyle %in% c('perception', 'experiment')) %>% 
+  mutate(Hit = (c_Response & c_Change),
+         CorrRej = (!c_Response & !c_Change),
+         FalseAlarm = (c_Response & !c_Change),
+         Miss = (!c_Response & c_Change)) %>% 
   select(ppid, 
          trial_num, 
          block_num, 
          c_StimN, 
          c_Ecc, 
-         c_ResponseCorrect, 
+         c_ResponseCorrect,
+         Hit, CorrRej, FalseAlarm, Miss,
          c_ResponseTime, 
          BlockStyle) %>% 
   mutate(ppid = as_factor(ppid),

@@ -5,6 +5,7 @@
 #TODO: check that you're not sourcing unneeded stuff
 
 source(file.path(here('Workflow_Felix', 'run_analysis_01.R')))
+source(file.path(here('Workflow_Felix', 'run_analysis_01.1.R')))
 source(file.path(here('Workflow_Felix', 'run_analysis_02.R')))
 source(file.path(here('Workflow_Felix', 'run_analysis_03.R')))
 source(file.path(here('Workflow_Felix', 'run_analysis_04.R')))

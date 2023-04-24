@@ -117,12 +117,21 @@ print(str_glue("Total number of trials after rejection: {n_tot_trials_postrej} (
 data_behav_per_task <- vector(mode = "list", length = 2)
 data_behav_per_task[['exp']] <- data_behav %>% 
   filter(BlockStyle == 'experiment') %>%  
-  drop_na() 
+  drop_na() %>% 
+  group_by(ppid) %>%  
+  mutate(dprime = qnorm(mean(Hit)) - qnorm(mean(FalseAlarm))) %>% 
+  ungroup()
+
+
+
 data_behav_per_task[['perc']] <- data_behav %>% 
   filter(BlockStyle == 'perception') %>%  
   # select(!contains(c('CDA_amp', 'PNP_amp', 'alphapwr_diff_retent'))) %>% 
-  select(ppid, trial_num, block_num, c_StimN, c_Ecc, c_ResponseCorrect, c_ResponseTime, BlockStyle) %>% 
-  drop_na() 
+  select(ppid, trial_num, block_num, c_StimN, c_Ecc, c_ResponseCorrect, c_ResponseTime, BlockStyle, Hit, FalseAlarm, CorrRej, Miss) %>% 
+  drop_na() %>% 
+  group_by(ppid) %>%  
+  mutate(dprime = qnorm(mean(Hit)) - qnorm(mean(FalseAlarm))) %>% 
+  ungroup()
 
 
 # Summary remaining trials:
@@ -150,6 +159,7 @@ for (task in c('perc', 'exp')) {
   
   if (task == "exp") {
     outvars <- list("c_ResponseCorrect", 
+                    "dprime",
                     "CDA_amp_clustertimes", 
                     "PNP_amp_clustertimes",
                     "alphapwr_diff_retent",
@@ -158,7 +168,8 @@ for (task in c('perc', 'exp')) {
                     "maxDecodScore_csp",
                     "maxDecodScoreTime_csp")
   } else {
-    outvars <- list("c_ResponseCorrect")
+    outvars <- list("c_ResponseCorrect",
+                    "dprime")
   }
   
   for (outvar in outvars) {
@@ -172,6 +183,7 @@ for (task in c('perc', 'exp')) {
                     )
     dv_str = switch (outvar,
                  "c_ResponseCorrect" = "mem_acc",
+                 "dprime" = "dprime",
                  "alphapwr_diff_retent" = "alphalat",
                  "CDA_amp_clustertimes" = "cda",
                  "PNP_amp_clustertimes" = "pnp",
@@ -487,10 +499,22 @@ for (eff in c("c_StimN", "c_Ecc", "c_StimN:c_Ecc")) {
 }
 ```
 
+## Analysis 01 - supplement I:
+**Are the effects different, if we use a bias-corrected measure of change detection performance (here: d')?**
+### VSTM Task:
+```{r, message=FALSE, warning=FALSE}
+# VSTM task:
+results_anova_behav_dprime_exp <- func_analysis_01.1('experiment')
+```
+
+### Perception Task:
+```{r, message=FALSE, warning=FALSE}
+# Perception task:
+results_anova_behav_dprime_perc <- func_analysis_01.1('perception')
+```
 
 
-
-## Analysis 01 - supplement: 
+## Analysis 01 - supplement II: 
 **Is there an effect of workload or eccentricity on RT in the VSTM task and in the perception task?**  
 This analysis was only conducted to exclude that a speed-acc trade-off is taking place. As we did not instruct participants to answer as fast as possible and due to imprecise temporal measurements of RTs with the VR hard- and software, we do not report this analysis in the paper. 
 
