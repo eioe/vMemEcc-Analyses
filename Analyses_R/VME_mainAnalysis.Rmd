@@ -118,8 +118,8 @@ data_behav_per_task <- vector(mode = "list", length = 2)
 data_behav_per_task[['exp']] <- data_behav %>% 
   filter(BlockStyle == 'experiment') %>%  
   drop_na() %>% 
-  group_by(ppid) %>%  
-  mutate(dprime = qnorm(mean(Hit)) - qnorm(mean(FalseAlarm))) %>% 
+  group_by(ppid, c_StimN, c_Ecc) %>%  
+  mutate(dprime = qnorm(mean(c(Hit, 0.5))) - qnorm(mean(c(FalseAlarm, 0.5)))) %>% 
   ungroup()
 
 
@@ -129,8 +129,8 @@ data_behav_per_task[['perc']] <- data_behav %>%
   # select(!contains(c('CDA_amp', 'PNP_amp', 'alphapwr_diff_retent'))) %>% 
   select(ppid, trial_num, block_num, c_StimN, c_Ecc, c_ResponseCorrect, c_ResponseTime, BlockStyle, Hit, FalseAlarm, CorrRej, Miss) %>% 
   drop_na() %>% 
-  group_by(ppid) %>%  
-  mutate(dprime = qnorm(mean(Hit)) - qnorm(mean(FalseAlarm))) %>% 
+  group_by(ppid, c_StimN, c_Ecc) %>%  
+  mutate(dprime = qnorm(mean(c(Hit, 0.5))) - qnorm(mean(c(FalseAlarm, 0.5)))) %>% 
   ungroup()
 
 
@@ -168,8 +168,7 @@ for (task in c('perc', 'exp')) {
                     "maxDecodScore_csp",
                     "maxDecodScoreTime_csp")
   } else {
-    outvars <- list("c_ResponseCorrect",
-                    "dprime")
+    outvars <- list("c_ResponseCorrect", "dprime")
   }
   
   for (outvar in outvars) {
@@ -393,7 +392,8 @@ extract_var("max_perc_trials_per_sub_postrej", max(summary_rem_trials_per_sub$pe
 
 for(task in c("exp", "perc")) {
   if (task == "exp") {
-    outvars <- list("c_ResponseCorrect", 
+    outvars <- list("c_ResponseCorrect",
+                    "dprime",
                 "CDA_amp_clustertimes", 
                 "PNP_amp_clustertimes",
                 "alphapwr_diff_retent",
@@ -402,11 +402,12 @@ for(task in c("exp", "perc")) {
                 "maxDecodScore_csp",
                 "maxDecodScoreTime_csp")
   } else {
-    outvars <- list("c_ResponseCorrect")
+    outvars <- list("c_ResponseCorrect", "dprime")
   }
   for (outvar in outvars) {
     dv_str = switch (outvar,
              "c_ResponseCorrect" = "mem_acc",
+             "dprime" = "dprime",
              "alphapwr_diff_retent" = "alphalat",
              "CDA_amp_clustertimes" = "cda",
              "PNP_amp_clustertimes" = "pnp",
@@ -507,11 +508,49 @@ for (eff in c("c_StimN", "c_Ecc", "c_StimN:c_Ecc")) {
 results_anova_behav_dprime_exp <- func_analysis_01.1('experiment')
 ```
 
+_extract variables:_ 
+```{r, echo=FALSE}
+for (eff in c("c_StimN", "c_Ecc", "c_StimN:c_Ecc")) {
+  eff_print <- eff %>% 
+    str_replace_all("c_", "") %>% 
+    str_replace_all(":", "x") 
+    
+  extract_var(str_c("anova_behav_dprime_exp_eff_", eff_print, "_F"), summary(results_anova_behav_dprime_exp$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_behav_dprime_exp_eff_", eff_print, "_df_within"), summary(results_anova_behav_dprime_exp$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_behav_dprime_exp_eff_", eff_print, "_df_resid"), summary(results_anova_behav_dprime_exp$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]],
+              exp_format = "%i")
+  extract_var(str_c("anova_behav_dprime_exp_eff_", eff_print, "_p"), summary(results_anova_behav_dprime_exp$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+              is_pval = TRUE, 
+              exp_format = "%.3f")
+}
+
+
+```
+
 ### Perception Task:
 ```{r, message=FALSE, warning=FALSE}
 # Perception task:
 results_anova_behav_dprime_perc <- func_analysis_01.1('perception')
 ```
+_extract variables:_ 
+```{r, echo=FALSE}
+for (eff in c("c_StimN", "c_Ecc", "c_StimN:c_Ecc")) {
+  eff_print <- eff %>% 
+    str_replace_all("c_", "") %>% 
+    str_replace_all(":", "x") 
+    
+  extract_var(str_c("anova_behav_dprime_perc_eff_", eff_print, "_F"), summary(results_anova_behav_dprime_perc$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_behav_dprime_perc_eff_", eff_print, "_df_within"), summary(results_anova_behav_dprime_perc$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_behav_dprime_perc_eff_", eff_print, "_df_resid"), summary(results_anova_behav_dprime_perc$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_behav_dprime_perc_eff_", eff_print, "_p"), summary(results_anova_behav_dprime_perc$aov.srt)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+              is_pval = TRUE, 
+              exp_format = "%.3f")
+}
+```
+
 
 
 ## Analysis 01 - supplement II: 

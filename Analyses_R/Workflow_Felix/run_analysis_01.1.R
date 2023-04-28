@@ -72,13 +72,24 @@ func_analysis_01.1 <- function(condition) {
 
   means <- data2analyze %>%
     filter(BlockStyle == condition) %>%
-    select(c_Ecc, ppid, Hit, FalseAlarm) %>%
-    group_by(c_Ecc, ppid) %>%
+    select(c_Ecc, c_StimN, ppid, Hit, FalseAlarm) %>%
+    group_by(c_Ecc, c_StimN, ppid) %>%
     summarise(dprime = qnorm(mean(c(Hit, 0.5))) - qnorm(mean(c(FalseAlarm, 0.5)))) %>%
     pivot_wider(id_cols =  ppid, names_from = c_Ecc, values_from = dprime, values_fn = mean) %>%
     ungroup() %>%
     select(!ppid) %>%
-    summarise_all(.funs = c(mean))
+    summarise_all(.funs = list(mean = mean, sd = sd))
+  print(means)
+  
+  means <- data2analyze %>%
+    filter(BlockStyle == condition) %>%
+    select(c_Ecc, c_StimN, ppid, Hit, FalseAlarm) %>%
+    group_by(c_StimN, c_Ecc, ppid) %>%
+    summarise(dprime = qnorm(mean(c(Hit, 0.5))) - qnorm(mean(c(FalseAlarm, 0.5)))) %>%
+    pivot_wider(id_cols =  ppid, names_from = c_StimN, values_from = dprime, values_fn = mean) %>%
+    ungroup() %>%
+    select(!ppid) %>%
+    summarise_all(.funs = list(mean = mean, sd = sd)) 
   print(means)
   
   #--------------------------------------------------------------------------
@@ -119,8 +130,8 @@ func_analysis_01.1 <- function(condition) {
   
   fname = file.path(path_global, 'Plots2022', 'Behavior', str_c('behav_dprime_perf_anova_', condition, '.pdf'))
   ggsave(plot = figa,   
-         width = 5/2.54,
-         height = 3.7/2.54,
+         width = 7.7/2.54,
+         height = 6.9/2.54,
          dpi = 300,
          filename = fname)
 
