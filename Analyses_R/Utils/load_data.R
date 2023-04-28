@@ -177,6 +177,33 @@ data_behav <- left_join(data_behav,
                                'c_Ecc'))
 
 
+##-----------------------------------------------------------------------
+# Read in mean global alpha power (i.e., non-lateralized):
+
+# cluster with sign load effect (POz):
+
+source(here('Utils', 'read_in_alphapwr_global_sigloadcluster.R'))
+
+fname <- file.path(path_r_data, 'data_alphapwr_global_sigloadcluster_POz.rds')
+data_apwr_sigload <- readRDS(fname) %>% 
+  mutate(ppid = as_factor(ppid),
+         c_StimN = as_factor(c_StimN),
+         c_Ecc = as_factor(c_Ecc)) 
+rm(fname)
+
+# Bind to behavioral data: 
+data_behav <- left_join(data_behav, 
+                        data_apwr_sigload[, c('ppid', 
+                                             'trial_num', 
+                                             'c_StimN', 
+                                             'c_Ecc', 
+                                             'alphapwr_global_sigloadcluster')], 
+                        by = c('ppid', 
+                               'trial_num', 
+                               'c_StimN', 
+                               'c_Ecc'))
+
+
 
 ##-----------------------------------------------------------------------
 # Read in max decoding scores (sensorspace):
