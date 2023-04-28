@@ -741,6 +741,30 @@ A multilevel model confirms the results of the rmANOVA:
 ```{r, message=FALSE, warning=FALSE}
 func_analysis_10('experiment', dep_variable = 'alpha_pwr')
 ```
+### Analysis 04 - Supplement 2: global alpha power:
+
+Effects of Memory Load and Eccentricity on non-lateralized alpha power.
+```{r, message=FALSE, warning=FALSE}
+results_anova_globalpha <- func_analysis_06.1()
+```
+
+
+```{r, echo=FALSE}
+for (eff in c("c_StimN", "c_Ecc", "c_StimN:c_Ecc")) {
+  eff_print <- eff %>% 
+    str_replace_all("c_", "") %>% 
+    str_replace_all(":", "x") 
+    
+  extract_var(str_c("anova_globalpha_eff_", eff_print, "_F"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "F value"]])
+  extract_var(str_c("anova_globalpha_eff_", eff_print, "_df_within"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_globalpha_eff_", eff_print, "_df_resid"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][["Residuals", "Df"]], 
+              exp_format = "%i")
+  extract_var(str_c("anova_globalpha_eff_", eff_print, "_p"), summary(results_anova_alphalat)[[str_c("Error: ppid:", eff)]][[1]][[eff, "Pr(>F)"]], 
+              is_pval = TRUE, 
+              exp_format = "%.3f")
+}
+```
 
 
 ## Analysis 05: 
