@@ -1,10 +1,10 @@
 {
     "cda_sign_cluster_t_start":"388",
     "cda_sign_cluster_t_end":"1088",
-    "cda_sign_cluster_pval":".001",
-    "pnp_sign_cluster_t_start":"200",
+    "cda_sign_cluster_pval":".008",
+    "pnp_sign_cluster_t_start":"154",
     "pnp_sign_cluster_t_end":"344",
-    "pnp_sign_cluster_pval":".011",
+    "pnp_sign_cluster_pval":".018",
     "decod_sensorspace_ sign_cluster_t_start":"0.069",
     "decod_sensorspace_ sign_cluster_t_end":"2.169",
     "tfr_alphalat_retention_sign_cluster_t_start":"506",
