@@ -932,7 +932,7 @@ for (eff in c("c_Ecc")) {
 ```{r}
 dcor <- data_behav %>% 
   filter(BlockStyle == 'experiment') %>% 
-  select(-trial_num, -block_num, -c_StimN, -c_Ecc, -BlockStyle) %>% 
+  select(-trial_num, -block_num, -c_StimN, -c_Ecc, -BlockStyle, -Hit, -CorrRej, -FalseAlarm, -Miss) %>% 
   group_by(ppid) %>% 
   summarise_all(.funs = c(mean = ~mean(., na.rm=TRUE))) %>% 
   ungroup() %>% 
@@ -943,7 +943,7 @@ Pcor <- cor.mtest(dcor, conf.level=0.95)
 
 
 colnames(Mcor) = c("Mem. perf.", "RT", "CDA (our window)", "CDA (a priori window)", "PNP (our window)", "PNP (a priori window)",
-                   "Lat. alpha pwr", "max. decod. perf. (broadband)", "Time of ^^^", "max. decod. perf. (alpha pwr)", "Time of ^^^")
+                   "Lat. alpha pwr", "Unlat. alpha pwr (POz)", "max. decod. perf. (broadband)", "Time of ^^^", "max. decod. perf. (alpha pwr)", "Time of ^^^")
 rownames(Mcor) = colnames(Mcor)
 
 fname = file.path(path_global, 'Plots2022', 'Else', 'CorrPlot_AllMeasures.pdf')
@@ -983,6 +983,14 @@ variable_doc[["c_Ecc"]] <-
   "Eccentricity of the stimulus arrays (in dva)"
 variable_doc[["c_ResponseCorrect"]] <- 
   "Correctness of response"
+variable_doc[["Hit"]] <- 
+  "Hit (Signal detection theory)"
+variable_doc[["CorrRej"]] <- 
+  "Correct rejection (Signal detection theory)"
+variable_doc[["FalseAlarm"]] <- 
+  "FalseAlarm (Signal detection theory)"
+variable_doc[["Miss"]] <- 
+  "Miss (Signal detection theory)"
 variable_doc[["c_ResponseTime"]] <- 
   "Response time"
 variable_doc[["BlockStyle"]] <- 
@@ -997,15 +1005,15 @@ variable_doc[["PNP_amp_fixedtimes"]] <-
   "Mean CDA amplitude, averaged across 5 ROI electrodes and timepoints during the time window [0.3–0.444s] used by Papaioannou et al. (2020)"
 variable_doc[["alphapwr_diff_retent"]] <- 
   "Mean induced alpha power difference (between hemispheres), averaged across 5 ROI electrodes and timepoints when overall alpha power lateralization was sign. different from 0 (as assessed by a CBP test)"
-variable_doc[["alphapwr_diff_retent"]] <- 
-  "Mean induced alpha power difference (between hemispheres), averaged across 5 ROI electrodes and timepoints when overall alpha power lateralization was sign. different from 0 (as assessed by a CBP test)"
+variable_doc[["alphapwr_global_sigloadcluster"]] <- 
+  "Mean induced alpha power (non-lateralized) in electrode POz; averaged across timepoints for whcih we found a sign. difference between the memory conditions (as assessed by a CBP test)"
 variable_doc[["maxDecodScore_sensorspace"]] <- 
   "Highest decoding score achieved by the sliding classifier run on the voltage data. One score per eccentricity condition and subject (not per trial)."
 variable_doc[["maxDecodScoreTime_sensorspace"]] <- 
   "Time (relativ to stimulus onset) of the highest decoding score achieved by the sliding classifier run on the voltage data. One score per eccentricity condition and subject (not per trial)."
 variable_doc[["maxDecodScore_csp"]] <- 
   "Highest decoding score achieved by the sliding CSP classifier (classification in power space). One score per eccentricity condition and subject (not per trial)."
-variable_doc[["maxDecodScore_csp"]] <- 
+variable_doc[["maxDecodScoreTime_csp"]] <- 
   "Time (relativ to stimulus onset) of the highest decoding score achieved by the sliding CSP classifier (classification in power space). One score per eccentricity condition and subject (not per trial)."
 
 
