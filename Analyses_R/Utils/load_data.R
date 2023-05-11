@@ -3,6 +3,11 @@
 #
 #--------------------------------------------------------------------------
 
+# Do you want to read in the exports from the python scripts (e.g., CDA amplitude, alpha pwr, ...) instead of just loading the .rds data?
+# In case, you did not export these files yourself, you should not need or want to set this to TRUE. The .rds files can be downloaded. 
+# I did not share the .csv files (which just have the same information) to keep things somewhat tidy. 
+read_py_exports_from_csv = FALSE
+
 # excluded subjects:
 excl_subs <- c('VME_S11', 'VME_S14', 'VME_S19', # incomplete data
                'VME_S12', 'VME_S13', 'VME_S22') # bad EEG or too many saccades
@@ -94,7 +99,10 @@ for (block_style in c('perception', 'experiment')) {
 
 ##-----------------------------------------------------------------------
 # Read in CDA mean amplitudes:
-source(here('Utils', 'read_in_cda.R'))
+
+if (read_py_exports_from_csv) {
+  source(here('Utils', 'read_in_cda.R'))
+}
 
 fname <- file.path(path_r_data, 'data_CDA.rds')
 data_CDA <- readRDS(fname)
@@ -128,8 +136,9 @@ n_tot_trials_rej_EEG <- data_behav %>%
 
 ##-----------------------------------------------------------------------
 # Read in PNP mean amplitudes:
-
-source(here('Utils', 'read_in_pnp.R'))
+if (read_py_exports_from_csv) {
+  source(here('Utils', 'read_in_pnp.R'))
+}
 
 fname <- file.path(path_r_data, 'data_PNP.rds')
 data_PNP <- readRDS(fname)
@@ -155,8 +164,10 @@ data_behav <- left_join(data_behav,
 
 # retention intervall (CDA ROI):
 
-source(here('Utils', 'read_in_alphapwr_diff_retent.R'))
-
+if (read_py_exports_from_csv) {
+  source(here('Utils', 'read_in_alphapwr_diff_retent.R'))
+}
+  
 fname <- file.path(path_r_data, 'data_alphapwr_diff_retent_CDAroi.rds')
 data_apwr_retent <- readRDS(fname) %>% 
   mutate(ppid = as_factor(ppid),
@@ -181,8 +192,9 @@ data_behav <- left_join(data_behav,
 # Read in mean global alpha power (i.e., non-lateralized):
 
 # cluster with sign load effect (POz):
-
-source(here('Utils', 'read_in_alphapwr_global_sigloadcluster.R'))
+if (read_py_exports_from_csv) {
+  source(here('Utils', 'read_in_alphapwr_global_sigloadcluster.R'))
+}
 
 fname <- file.path(path_r_data, 'data_alphapwr_global_sigloadcluster_POz.rds')
 data_apwr_sigload <- readRDS(fname) %>% 
@@ -208,7 +220,9 @@ data_behav <- left_join(data_behav,
 ##-----------------------------------------------------------------------
 # Read in max decoding scores (sensorspace):
 
-source(here('Utils', 'read_in_maxdecodscores_sensorspace.R'))
+if (read_py_exports_from_csv) {
+  source(here('Utils', 'read_in_maxdecodscores_sensorspace.R'))
+}
 
 fname = file.path(path_r_data, 'data_maxDecodScore_sensorspace.rds')
 data_maxdecodscore_sensorspace <- readRDS(fname) %>% 
@@ -231,7 +245,9 @@ data_behav <- left_join(data_behav,
 ##-----------------------------------------------------------------------
 # Read in max decoding scores (CSP):
 
-source(here('Utils', 'read_in_maxdecodscores_csp.R'))
+if (read_py_exports_from_csv) {
+  source(here('Utils', 'read_in_maxdecodscores_csp.R'))
+}
 
 fname = file.path(path_r_data, 'data_maxDecodScore_csp.rds')
 data_maxdecodscore_csp <- readRDS(fname) %>% 
