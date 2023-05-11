@@ -962,5 +962,21 @@
     "dprime_perc_Ecc_14_ci95lower":"1.41",
     "dprime_perc_Ecc_14_ci95upper":"1.58",
     "dprime_perc_Ecc_14_cmci95lower":"1.44",
-    "dprime_perc_Ecc_14_cmci95upper":"1.54"
+    "dprime_perc_Ecc_14_cmci95upper":"1.54",
+    "anova_globalpha_eff_StimN_F":"1.25",
+    "anova_globalpha_eff_StimN_df_within":"1",
+    "anova_globalpha_eff_StimN_df_resid":"20",
+    "anova_globalpha_eff_StimN_p":".277",
+    "anova_globalpha_eff_Ecc_F":"0.40",
+    "anova_globalpha_eff_Ecc_df_within":"2",
+    "anova_globalpha_eff_Ecc_df_resid":"40",
+    "anova_globalpha_eff_Ecc_p":".672",
+    "anova_globalpha_eff_StimNxEcc_F":"0.68",
+    "anova_globalpha_eff_StimNxEcc_df_within":"2",
+    "anova_globalpha_eff_StimNxEcc_df_resid":"40",
+    "anova_globalpha_eff_StimNxEcc_p":".515",
+    "anova_rejtrials_eff_Ecc_F":"2.14",
+    "anova_rejtrials_eff_Ecc_df_within":"2",
+    "anova_rejtrials_eff_Ecc_df_resid":"40",
+    "anova_rejtrials_eff_Ecc_p":".131"
 }

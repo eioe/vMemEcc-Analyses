@@ -92,7 +92,7 @@ func_analysis_06.1 <- function() {
   figa <- figa + labs(title = txt_title, color = "Size Memory Array")
   figa <- figa + theme(legend.position = 'right')
 
-  figa
+  plot(figa)
   
   #--------------------------------------------------------------------------
   return(aov.srt)

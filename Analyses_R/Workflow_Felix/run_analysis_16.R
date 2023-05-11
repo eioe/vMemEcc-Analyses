@@ -57,6 +57,19 @@ func_analysis_16<- function() {
   
   means <- data_behav %>% 
     filter(BlockStyle == 'experiment', !is.na(CDA_amp_clustertimes)) %>% 
+    group_by(ppid, c_StimN) %>% 
+    summarise(prop_trials_rej = (360-n())/360,
+              n_trials_rej = 360 - n()) %>%
+    select(c_StimN, ppid, prop_trials_rej) %>% 
+    group_by(c_StimN, ppid) %>%
+    pivot_wider(id_cols =  ppid, names_from = c_StimN, values_from = prop_trials_rej) %>% 
+    ungroup() %>% 
+    select(!ppid) %>% 
+    summarise_all(.funs = c(mean))
+  print(means)
+  
+  means <- data_behav %>% 
+    filter(BlockStyle == 'experiment', !is.na(CDA_amp_clustertimes)) %>% 
     group_by(ppid, c_Ecc) %>% 
     summarise(prop_trials_rej = (240-n())/240,
               n_trials_rej = 240 - n()) %>%
