@@ -66,9 +66,17 @@ So if you want to work with the code, I am happy to support you in getting it to
 
 
 
-<h2>Versions</h2>
+<h2>Versions</h2>  
 
-###### version 1.0
+> You can use the `tags` in the repo to identify the according commits.
+
+###### v1.1
+`2023-07`: Code associated with the peer-reviewed paper:
+* Klotzsche, Gaebler, Villringer, Sommer, Nikulin, & Ohl (2023). <i>Psychophysiology</i>, 00, e14378.  
+<a href="https://doi.org/10.1111/psyp.14378">https://doi.org/10.1111/psyp.14378</a>  
+[ Code now reflects additions made over the course of the revision. ]
+
+###### v1.0
 `2023-01`: Code associated with the preprint:
 * <a href="https://www.biorxiv.org/content/10.1101/2023.01.23.525140v1"> Klotzsche, Gaebler, Villringer, Sommer, Nikulin, & Ohl <i>bioRxiv</i>, 2023</a>
 
