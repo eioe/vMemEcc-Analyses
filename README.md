@@ -3,9 +3,16 @@
 ![VME](./VMECover_grey.png)
 
 <h2>Visual short-term memory related EEG components in a virtual reality setup</h2>
-Code base of: <a href="https://www.biorxiv.org/content/10.1101/2023.01.23.525140v1"> Klotzsche, Gaebler, Villringer, Sommer, Nikulin, & Ohl. <i>bioRxiv</i>, 2023</a><br>  
+Code base of:  
+
+📜 **Klotzsche, Gaebler, Villringer, Sommer, Nikulin, & Ohl (2023). <i>Psychophysiology</i>, 00, e14378.**  
+<a href="https://doi.org/10.1111/psyp.14378">https://doi.org/10.1111/psyp.14378</a><br>  
+
+💽 **Data:** https://doi.org/10.17617/3.WRDUGO 
+
+📑 **Preprint:** https://www.biorxiv.org/content/10.1101/2023.01.23.525140v1  
+
 <br/><br/>
-  
 [![Python.pm](https://img.shields.io/badge/python->3.9-brightgreen.svg?maxAge=259200)](#)
 [![R.pm](https://img.shields.io/badge/R->4.1-informational.svg?maxAge=259200)](#)
 [![version](https://img.shields.io/badge/version-1.0-yellow.svg?maxAge=259200)](#)
